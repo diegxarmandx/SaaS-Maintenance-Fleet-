@@ -1,12 +1,20 @@
 import type { Metadata } from "next";
 
-import { ModulePlaceholder } from "@/components/placeholders/module-placeholder";
-import { fleetModule } from "@/features/fleet";
+import { FleetListPage } from "@/features/fleet/components/fleet-list-page";
+import { listFleetAssets, type FleetSearchParams } from "@/features/fleet/server/queries";
 
 export const metadata: Metadata = {
   title: "Fleet Assets",
 };
 
-export default function FleetPage() {
-  return <ModulePlaceholder module={fleetModule} />;
+export const dynamic = "force-dynamic";
+
+type FleetPageProps = {
+  searchParams: Promise<FleetSearchParams>;
+};
+
+export default async function FleetPage({ searchParams }: FleetPageProps) {
+  const result = await listFleetAssets(await searchParams);
+
+  return <FleetListPage result={result} />;
 }

@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-export const fleetAssetTypeSchema = z.enum(["vehicle", "trailer", "equipment"]);
+export const fleetAssetTypeSchema = z.string().trim().min(1).max(80);
 export const fleetAssetStatusSchema = z.enum(["active", "inactive", "archived"]);
 
 export const fleetAssetSchema = z.object({
   id: z.string().uuid().optional(),
   companyId: z.string().uuid(),
-  type: fleetAssetTypeSchema,
+  type: fleetAssetTypeSchema.default("Truck"),
   unitNumber: z.string().trim().min(1).max(80),
   assetName: z.string().trim().min(1).max(120),
   vinOrSerialNumber: z.string().trim().max(120).optional(),

@@ -9,6 +9,14 @@ const migrationSql = readFileSync(
   "utf8",
 );
 
+const fleetAssetMigrationSql = readFileSync(
+  new URL(
+    "../supabase/migrations/20260610210000_fleet_asset_management.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
+
 const tenantTables = [
   "profiles",
   "companies",
@@ -76,5 +84,23 @@ describe("database migration security", () => {
     expect(migrationSql).toContain("parts_cost numeric(12, 2)");
     expect(migrationSql).toContain("check (parts_cost >= 0)");
     expect(migrationSql).toContain("check (current_mileage >= 0)");
+  });
+
+  it("adds flexible asset types for owner-facing defaults", () => {
+    expect(fleetAssetMigrationSql).toContain("alter column asset_type type text");
+    expect(fleetAssetMigrationSql).toContain("assets_asset_type_not_blank");
+  });
+
+  it("creates an authenticated meter-reading RPC scoped to the owner company", () => {
+    expect(fleetAssetMigrationSql).toContain(
+      "create or replace function public.create_meter_reading_for_asset",
+    );
+    expect(fleetAssetMigrationSql).toContain(
+      "owner_company_id uuid := public.current_company_id()",
+    );
+    expect(fleetAssetMigrationSql).toContain("auth.uid() is null");
+    expect(fleetAssetMigrationSql).toContain(
+      "grant execute on function public.create_meter_reading_for_asset",
+    );
   });
 });

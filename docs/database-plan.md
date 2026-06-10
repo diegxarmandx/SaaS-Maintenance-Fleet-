@@ -14,6 +14,12 @@ The Step 2 migration is:
 
 It creates extensions, enums, tables, constraints, indexes, helper functions, triggers, RLS policies, and Storage buckets/policies.
 
+The Step 3 migration is:
+
+- `supabase/migrations/20260610210000_fleet_asset_management.sql`
+
+It changes `assets.asset_type` from the original broad enum to constrained text so owner-facing defaults such as Truck, Van, Car, Trailer, Excavator, Backhoe, Loader, Generator, and Other equipment can be stored while still allowing future custom asset types. It also adds `public.create_meter_reading_for_asset(...)`, an authenticated security-definer RPC that creates company-scoped meter readings for assets owned by the current owner company.
+
 ## Tables
 
 - `profiles`
@@ -35,6 +41,7 @@ It creates extensions, enums, tables, constraints, indexes, helper functions, tr
 - `public.handle_new_auth_user()`
 - `public.complete_company_onboarding(...)`
 - `public.apply_meter_reading_to_asset()`
+- `public.create_meter_reading_for_asset(...)`
 
 `complete_company_onboarding` is a security-definer RPC used to create the company, complete the profile, and create the initial internal subscription record after Supabase Auth sign-up.
 
@@ -48,6 +55,7 @@ It creates extensions, enums, tables, constraints, indexes, helper functions, tr
 - `maintenance_records.total_cost` is a generated column from parts, labor, and other costs.
 - Meter readings update the asset meter through a trigger.
 - A lower meter reading requires `is_correction = true` and a note.
+- The Step 3 meter-reading RPC verifies the authenticated owner company before inserting a reading.
 - Active asset unit numbers are unique per company.
 - Storage paths are unique per company.
 - Subscription records are unique per company.
@@ -95,8 +103,14 @@ Each bucket has MIME type allow-lists and file size limits. Storage object polic
 
 ```text
 {company_id}/assets/t-101.webp
+{company_id}/assets/{asset_id}/truck.webp
 {company_id}/compliance/registration.pdf
 ```
+
+The asset form validates images before upload:
+
+- Allowed types: `image/jpeg`, `image/png`, `image/webp`
+- Maximum size: 5 MB
 
 ## Development Seed
 

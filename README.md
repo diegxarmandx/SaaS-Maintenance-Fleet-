@@ -4,7 +4,7 @@ FleetReady is an owner-only fleet maintenance SaaS foundation for small fleets o
 
 ## Current Status
 
-The repository now includes the Step 2 foundation:
+The repository now includes the Step 3 fleet asset foundation:
 
 - Next.js App Router application with TypeScript and Tailwind CSS
 - Owner-only authentication and onboarding flow backed by Supabase Auth
@@ -12,10 +12,13 @@ The repository now includes the Step 2 foundation:
 - PostgreSQL migration with tenant tables, constraints, indexes, RLS, triggers, and storage policies
 - Supabase Storage bucket preparation for asset images and fleet documents
 - Development-only seed script with fictional data
-- Zod validation, React Hook Form forms, and unit tests
+- Fleet asset CRUD screens backed by Supabase and RLS
+- Mileage and engine-hour reading capture through a secure database RPC
+- Private asset image upload preparation with MIME and size validation
+- Zod validation, React Hook Form forms, and unit/static tests
 - Centralized environment validation and error handling
 
-Complete CRUD modules and Stripe billing are intentionally deferred.
+Maintenance, compliance, documents, reports, reminders, email delivery, and Stripe billing are intentionally deferred beyond this asset-management step.
 
 ## Routes
 
@@ -32,6 +35,9 @@ Complete CRUD modules and Stripe billing are intentionally deferred.
 - `/documents`
 - `/reports`
 - `/settings`
+- `/fleet/new`
+- `/fleet/[assetId]`
+- `/fleet/[assetId]/edit`
 
 ## Development
 
@@ -60,6 +66,12 @@ npm run build
 
 Create a Supabase project, configure the environment variables below, then apply the migration in `supabase/migrations`.
 
+Apply migrations in filename order:
+
+```bash
+supabase db push
+```
+
 Development seed:
 
 ```bash
@@ -67,6 +79,12 @@ npm run db:seed
 ```
 
 The seed script refuses to run when `NODE_ENV=production` or `VERCEL_ENV=production`.
+
+Fleet asset images are stored in the private `asset-images` bucket under company-scoped paths:
+
+```text
+{company_id}/assets/{asset_id}/{filename}
+```
 
 ## Environment Variables
 
