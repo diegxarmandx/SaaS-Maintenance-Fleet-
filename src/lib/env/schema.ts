@@ -1,0 +1,33 @@
+import { z } from "zod";
+
+const emptyStringToUndefined = (value: unknown) => (value === "" ? undefined : value);
+
+const optionalString = z.preprocess(
+  emptyStringToUndefined,
+  z.string().trim().min(1).optional(),
+);
+
+const optionalUrl = z.preprocess(
+  emptyStringToUndefined,
+  z.string().trim().url().optional(),
+);
+
+export const publicEnvSchema = z.object({
+  NEXT_PUBLIC_APP_URL: optionalUrl,
+  NEXT_PUBLIC_SUPABASE_URL: optionalUrl,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: optionalString,
+});
+
+export const serverEnvSchema = publicEnvSchema.extend({
+  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  SUPABASE_SERVICE_ROLE_KEY: optionalString,
+  SUPABASE_STORAGE_BUCKET: z
+    .preprocess(emptyStringToUndefined, z.string().trim().min(1).optional())
+    .default("fleet-documents"),
+  EMAIL_PROVIDER: z.enum(["none", "resend"]).default("none"),
+  EMAIL_FROM: z.preprocess(emptyStringToUndefined, z.string().trim().email().optional()),
+  RESEND_API_KEY: optionalString,
+});
+
+export type PublicEnv = z.infer<typeof publicEnvSchema>;
+export type ServerEnv = z.infer<typeof serverEnvSchema>;
