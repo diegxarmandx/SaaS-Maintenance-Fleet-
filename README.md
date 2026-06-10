@@ -1,26 +1,30 @@
 # FleetReady Owner App
 
-FleetReady is the foundation for an owner-only fleet maintenance SaaS for small fleets of roughly 1 to 25 vehicles, trailers, or equipment assets.
+FleetReady is an owner-only fleet maintenance SaaS foundation for small fleets of roughly 1 to 25 vehicles, trailers, or equipment assets.
 
 ## Current Status
 
-This repository contains the Step 1 foundation:
+The repository now includes the Step 2 foundation:
 
 - Next.js App Router application with TypeScript and Tailwind CSS
-- Accessible shared UI primitives in `src/components/ui`
-- Branded application shell and placeholder routes
-- Zod validation schemas for the core domain
-- Supabase and transactional email provider abstractions
+- Owner-only authentication and onboarding flow backed by Supabase Auth
+- Protected owner routes through Supabase-aware middleware
+- PostgreSQL migration with tenant tables, constraints, indexes, RLS, triggers, and storage policies
+- Supabase Storage bucket preparation for asset images and fleet documents
+- Development-only seed script with fictional data
+- Zod validation, React Hook Form forms, and unit tests
 - Centralized environment validation and error handling
-- Product, architecture, database, and implementation status docs
 
-Complete feature modules are intentionally deferred.
+Complete CRUD modules and Stripe billing are intentionally deferred.
 
 ## Routes
 
 - `/`
 - `/login`
 - `/signup`
+- `/forgot-password`
+- `/reset-password`
+- `/onboarding`
 - `/dashboard`
 - `/fleet`
 - `/maintenance`
@@ -48,19 +52,36 @@ Validate the project:
 ```bash
 npm run lint
 npm run typecheck
+npm run test
 npm run build
 ```
 
+## Supabase
+
+Create a Supabase project, configure the environment variables below, then apply the migration in `supabase/migrations`.
+
+Development seed:
+
+```bash
+npm run db:seed
+```
+
+The seed script refuses to run when `NODE_ENV=production` or `VERCEL_ENV=production`.
+
 ## Environment Variables
 
-Copy `.env.example` to `.env.local` and configure real values before connecting Supabase or email delivery.
+Copy `.env.example` to `.env.local` and configure real values.
 
 Required for Supabase-backed implementation:
 
+- `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `SUPABASE_STORAGE_BUCKET`
+- `SUPABASE_ASSET_IMAGES_BUCKET`
+- `SUPABASE_MAINTENANCE_ATTACHMENTS_BUCKET`
+- `SUPABASE_COMPLIANCE_DOCUMENTS_BUCKET`
 
 Reserved for later reminders:
 

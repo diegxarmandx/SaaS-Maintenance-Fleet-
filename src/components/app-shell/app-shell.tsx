@@ -2,6 +2,8 @@ import type { PropsWithChildren } from "react";
 import Link from "next/link";
 
 import { OwnerNavigation } from "@/components/app-shell/owner-navigation";
+import { Button } from "@/components/ui/button";
+import { signOutAction } from "@/features/auth/actions";
 
 export function AppShell({ children }: PropsWithChildren) {
   return (
@@ -26,6 +28,11 @@ export function AppShell({ children }: PropsWithChildren) {
             </span>
           </Link>
           <OwnerNavigation className="mt-8" />
+          <form action={signOutAction} className="mt-8 px-2">
+            <Button className="w-full" type="submit" variant="secondary">
+              Sign out
+            </Button>
+          </form>
         </aside>
         <div className="flex min-w-0 flex-col">
           <header className="sticky top-0 z-20 border-b border-border bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
@@ -40,6 +47,11 @@ export function AppShell({ children }: PropsWithChildren) {
               </Link>
             </div>
             <OwnerNavigation className="mt-3 flex overflow-x-auto pb-1" compact />
+            <form action={signOutAction} className="mt-3">
+              <Button className="w-full" size="sm" type="submit" variant="secondary">
+                Sign out
+              </Button>
+            </form>
           </header>
           <main id="main-content" className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
             {children}

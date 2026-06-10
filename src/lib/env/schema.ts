@@ -24,6 +24,15 @@ export const serverEnvSchema = publicEnvSchema.extend({
   SUPABASE_STORAGE_BUCKET: z
     .preprocess(emptyStringToUndefined, z.string().trim().min(1).optional())
     .default("fleet-documents"),
+  SUPABASE_ASSET_IMAGES_BUCKET: z
+    .preprocess(emptyStringToUndefined, z.string().trim().min(1).optional())
+    .default("asset-images"),
+  SUPABASE_MAINTENANCE_ATTACHMENTS_BUCKET: z
+    .preprocess(emptyStringToUndefined, z.string().trim().min(1).optional())
+    .default("maintenance-attachments"),
+  SUPABASE_COMPLIANCE_DOCUMENTS_BUCKET: z
+    .preprocess(emptyStringToUndefined, z.string().trim().min(1).optional())
+    .default("compliance-documents"),
   EMAIL_PROVIDER: z.enum(["none", "resend"]).default("none"),
   EMAIL_FROM: z.preprocess(emptyStringToUndefined, z.string().trim().email().optional()),
   RESEND_API_KEY: optionalString,

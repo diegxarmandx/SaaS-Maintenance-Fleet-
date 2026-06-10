@@ -8,7 +8,7 @@ export const ownerReportKindSchema = z.enum([
 ]);
 
 export const reportFilterSchema = z.object({
-  ownerId: z.string().uuid(),
+  companyId: z.string().uuid(),
   kind: ownerReportKindSchema,
   assetId: z.string().uuid().optional(),
   from: z.coerce.date().optional(),

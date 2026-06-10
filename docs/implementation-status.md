@@ -18,24 +18,32 @@ Last updated: 2026-06-10
 - Added transactional email provider abstraction.
 - Added product, architecture, database, and implementation documentation.
 
-## Intentionally Deferred to Step 2
+## Completed in Step 2
 
-- Supabase project provisioning
-- Supabase Auth session middleware
-- Database migrations and RLS policies
-- Fleet asset CRUD
-- Reading capture
-- Preventive maintenance rule builder
-- Reminder calculation engine
-- Compliance requirement CRUD
-- Document upload and Storage policies
-- Expiration alerts and email delivery
-- Owner report queries and visualizations
-- Stripe billing
+- Added Supabase Auth actions for sign up, login, logout, password reset request, and password reset completion.
+- Added protected route middleware with onboarding redirects.
+- Added company onboarding route and form.
+- Added company-scoped PostgreSQL migration with required tables.
+- Added RLS policies for tenant-owned tables.
+- Added private Supabase Storage buckets and storage policies.
+- Added meter-reading trigger to prevent silent meter rollback.
+- Added development-only seed script.
+- Added Vitest and tests for validation, tenant access, maintenance scheduling, auth redirects, and migration security.
+- Updated documentation and environment variables.
+
+## Intentionally Deferred to Step 3
+
+- Full CRUD screens for assets, readings, maintenance, compliance, documents, reports, and settings.
+- File upload UI and signed URL previews.
+- Reminder generation jobs and transactional email delivery.
+- Live Supabase integration tests in CI.
+- Stripe billing flow and webhook handling.
+- Production observability and audit logging.
 
 ## Verification Targets
 
 - `npm install`
 - `npm run lint`
 - `npm run typecheck`
+- `npm run test`
 - `npm run build`

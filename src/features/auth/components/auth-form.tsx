@@ -8,14 +8,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  requestPasswordResetAction,
+  signInAction,
+  signUpAction,
+  type AuthActionResult,
+} from "@/features/auth/actions";
+import {
   loginFormSchema,
+  passwordResetRequestSchema,
   signupFormSchema,
   type LoginFormValues,
+  type PasswordResetRequestValues,
   type SignupFormValues,
 } from "@/features/auth/validation/auth";
+import { getErrorMessage } from "@/lib/errors";
 
 export function LoginForm() {
-  const [status, setStatus] = useState<string | null>(null);
+  const [result, setResult] = useState<AuthActionResult | null>(null);
   const {
     register,
     handleSubmit,
@@ -28,13 +37,13 @@ export function LoginForm() {
     },
   });
 
-  const onSubmit: SubmitHandler<LoginFormValues> = () => {
-    setStatus("Supabase sign-in will be connected in the next implementation step.");
+  const onSubmit: SubmitHandler<LoginFormValues> = async (values) => {
+    setResult(await signInAction(values));
   };
 
   return (
     <form className="mt-6 grid gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
-      <FieldError message={status} tone="info" />
+      <FormStatus result={result} />
       <div className="grid gap-2">
         <Label htmlFor="login-email">Email</Label>
         <Input
@@ -64,7 +73,7 @@ export function LoginForm() {
 }
 
 export function SignupForm() {
-  const [status, setStatus] = useState<string | null>(null);
+  const [result, setResult] = useState<AuthActionResult | null>(null);
   const {
     register,
     handleSubmit,
@@ -78,13 +87,13 @@ export function SignupForm() {
     },
   });
 
-  const onSubmit: SubmitHandler<SignupFormValues> = () => {
-    setStatus("Supabase sign-up will be connected in the next implementation step.");
+  const onSubmit: SubmitHandler<SignupFormValues> = async (values) => {
+    setResult(await signUpAction(values));
   };
 
   return (
     <form className="mt-6 grid gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
-      <FieldError message={status} tone="info" />
+      <FormStatus result={result} />
       <div className="grid gap-2">
         <Label htmlFor="signup-owner-name">Owner name</Label>
         <Input
@@ -123,6 +132,44 @@ export function SignupForm() {
   );
 }
 
+export function PasswordResetRequestForm() {
+  const [result, setResult] = useState<AuthActionResult | null>(null);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<PasswordResetRequestValues>({
+    resolver: zodResolver(passwordResetRequestSchema),
+    defaultValues: {
+      email: "",
+    },
+  });
+
+  const onSubmit: SubmitHandler<PasswordResetRequestValues> = async (values) => {
+    setResult(await requestPasswordResetAction(values));
+  };
+
+  return (
+    <form className="mt-6 grid gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <FormStatus result={result} />
+      <div className="grid gap-2">
+        <Label htmlFor="reset-request-email">Email</Label>
+        <Input
+          id="reset-request-email"
+          autoComplete="email"
+          inputMode="email"
+          type="email"
+          {...register("email")}
+        />
+        <FieldError message={errors.email?.message} />
+      </div>
+      <Button disabled={isSubmitting} type="submit">
+        Send reset link
+      </Button>
+    </form>
+  );
+}
+
 type FieldErrorProps = {
   message?: string | null | undefined;
   tone?: "error" | "info" | undefined;
@@ -141,4 +188,25 @@ function FieldError({ message, tone = "error" }: FieldErrorProps) {
       {message}
     </p>
   );
+}
+
+function FormStatus({ result }: { result: AuthActionResult | null }) {
+  if (!result) {
+    return null;
+  }
+
+  return (
+    <p
+      className={
+        result.status === "error" ? "text-sm text-danger" : "text-sm text-primary"
+      }
+      role="status"
+    >
+      {result.message}
+    </p>
+  );
+}
+
+export function getClientAuthErrorMessage(error: unknown) {
+  return getErrorMessage(error, "Authentication could not be completed.");
 }

@@ -2,101 +2,108 @@
 
 ## Tenancy Model
 
-Every operational record belongs to a single fleet owner. Supabase Auth should provide the owner identity, and PostgreSQL Row Level Security should restrict all owner data to `auth.uid()`.
+FleetReady is company-scoped and owner-only. Supabase Auth identifies the owner, `profiles.company_id` identifies the tenant, and Row Level Security restricts every tenant-owned table to `public.is_member_of_company(company_id)`.
 
-## Planned Tables
+Profiles can exist with `company_id = null` while onboarding is incomplete. Once onboarding is complete, the owner is linked to one company.
 
-### `owner_profiles`
+## Migration
 
-- `id uuid primary key references auth.users(id)`
-- `display_name text not null`
-- `workspace_name text`
-- `created_at timestamptz not null default now()`
-- `updated_at timestamptz not null default now()`
+The Step 2 migration is:
 
-### `fleet_assets`
+- `supabase/migrations/20260610190000_owner_tenant_security_foundation.sql`
 
-- `id uuid primary key`
-- `owner_id uuid not null references owner_profiles(id)`
-- `type text not null`
-- `name text not null`
-- `vin_or_serial_number text`
-- `license_plate text`
-- `year integer`
-- `make text`
-- `model text`
-- `status text not null`
-- `created_at timestamptz not null default now()`
-- `updated_at timestamptz not null default now()`
+It creates extensions, enums, tables, constraints, indexes, helper functions, triggers, RLS policies, and Storage buckets/policies.
 
-### `meter_readings`
+## Tables
 
-- `id uuid primary key`
-- `owner_id uuid not null references owner_profiles(id)`
-- `asset_id uuid not null references fleet_assets(id)`
-- `kind text not null`
-- `value numeric not null`
-- `recorded_at timestamptz not null`
-- `note text`
+- `profiles`
+- `companies`
+- `assets`
+- `meter_readings`
+- `maintenance_templates`
+- `maintenance_rules`
+- `maintenance_records`
+- `compliance_records`
+- `documents`
+- `notifications`
+- `subscription_records`
 
-### `maintenance_rules`
+## Security Functions
 
-- `id uuid primary key`
-- `owner_id uuid not null references owner_profiles(id)`
-- `asset_id uuid references fleet_assets(id)`
-- `name text not null`
-- `interval_value numeric not null`
-- `interval_unit text not null`
-- `lead_time_days integer not null default 14`
-- `is_active boolean not null default true`
+- `public.current_company_id()`
+- `public.is_member_of_company(company_uuid uuid)`
+- `public.handle_new_auth_user()`
+- `public.complete_company_onboarding(...)`
+- `public.apply_meter_reading_to_asset()`
 
-### `completed_maintenance`
+`complete_company_onboarding` is a security-definer RPC used to create the company, complete the profile, and create the initial internal subscription record after Supabase Auth sign-up.
 
-- `id uuid primary key`
-- `owner_id uuid not null references owner_profiles(id)`
-- `asset_id uuid not null references fleet_assets(id)`
-- `rule_id uuid references maintenance_rules(id)`
-- `completed_at timestamptz not null`
-- `odometer_miles numeric`
-- `engine_hours numeric`
-- `vendor_name text`
-- `cost_cents integer not null default 0`
-- `notes text`
+## Constraints
 
-### `compliance_requirements`
+- UUID primary keys use `gen_random_uuid()`.
+- Foreign keys connect every child table to `companies` and relevant parent records.
+- Money values use `numeric(12, 2)`.
+- Mileage and hour values use `numeric(14, 2)`.
+- Negative mileage, hours, file sizes, asset limits, and costs are rejected.
+- `maintenance_records.total_cost` is a generated column from parts, labor, and other costs.
+- Meter readings update the asset meter through a trigger.
+- A lower meter reading requires `is_correction = true` and a note.
+- Active asset unit numbers are unique per company.
+- Storage paths are unique per company.
+- Subscription records are unique per company.
 
-- `id uuid primary key`
-- `owner_id uuid not null references owner_profiles(id)`
-- `asset_id uuid references fleet_assets(id)`
-- `kind text not null`
-- `name text not null`
-- `expires_at timestamptz not null`
-- `alert_days_before integer not null default 30`
-- `notes text`
+## Indexes
 
-### `fleet_documents`
+Indexes cover:
 
-- `id uuid primary key`
-- `owner_id uuid not null references owner_profiles(id)`
-- `asset_id uuid references fleet_assets(id)`
-- `compliance_requirement_id uuid references compliance_requirements(id)`
-- `title text not null`
-- `storage_path text not null`
-- `mime_type text not null`
-- `expires_at timestamptz`
-- `created_at timestamptz not null default now()`
+- `company_id`
+- `asset_id`
+- meter reading timelines
+- compliance and document expiration dates
+- maintenance due dates, due mileage, due hours, and completion dates
+- notification due/read/email status
+- Stripe placeholder identifiers
 
-## Index Plan
+## Row-Level Security
 
-- Index every `owner_id` column.
-- Add composite indexes for owner-scoped list views, such as `(owner_id, status)` on assets and `(owner_id, expires_at)` on compliance requirements and documents.
-- Add `(owner_id, asset_id, recorded_at desc)` for readings and history timelines.
-- Add `(owner_id, completed_at desc)` for maintenance history reporting.
+RLS is enabled and forced for every tenant-owned table:
 
-## RLS Plan
+- `profiles`
+- `companies`
+- `assets`
+- `meter_readings`
+- `maintenance_templates`
+- `maintenance_rules`
+- `maintenance_records`
+- `compliance_records`
+- `documents`
+- `notifications`
+- `subscription_records`
 
-Each operational table should enable Row Level Security and use policies that require `owner_id = auth.uid()`. Storage objects should use owner-prefixed paths and matching Storage policies.
+Authenticated owners can access only rows where their completed profile belongs to the row's company. System maintenance templates use `company_id is null` and are readable, but only company-owned templates can be mutated by owners.
 
-## Migration Strategy
+## Storage
 
-No migrations are included in Step 1. Step 2 should create migrations in small slices: owner profile, fleet assets, readings, maintenance, compliance, documents, and reports.
+Private Supabase Storage buckets:
+
+- `asset-images`
+- `maintenance-attachments`
+- `compliance-documents`
+- `fleet-documents`
+
+Each bucket has MIME type allow-lists and file size limits. Storage object policies require the first path segment to be the owner company UUID, for example:
+
+```text
+{company_id}/assets/t-101.webp
+{company_id}/compliance/registration.pdf
+```
+
+## Development Seed
+
+Run:
+
+```bash
+npm run db:seed
+```
+
+The seed script creates one fictional owner, one fictional company, several assets, readings, maintenance rules and records, compliance records, and metadata-only documents. It never runs automatically and refuses production environments.

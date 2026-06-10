@@ -18,5 +18,15 @@ export const signupFormSchema = z.object({
   password: passwordSchema,
 });
 
+export const passwordResetRequestSchema = z.object({
+  email: emailSchema,
+});
+
+export const passwordResetCompletionSchema = z.object({
+  password: passwordSchema,
+});
+
 export type LoginFormValues = z.infer<typeof loginFormSchema>;
 export type SignupFormValues = z.infer<typeof signupFormSchema>;
+export type PasswordResetRequestValues = z.infer<typeof passwordResetRequestSchema>;
+export type PasswordResetCompletionValues = z.infer<typeof passwordResetCompletionSchema>;
