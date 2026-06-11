@@ -33,6 +33,14 @@ const complianceDocumentsMigrationSql = readFileSync(
   "utf8",
 );
 
+const dashboardNotificationsMigrationSql = readFileSync(
+  new URL(
+    "../supabase/migrations/20260611190000_dashboard_notifications_reports.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
+
 const tenantTables = [
   "profiles",
   "companies",
@@ -201,5 +209,30 @@ describe("database migration security", () => {
       "documents_storage_path_company_scope",
     );
     expect(complianceDocumentsMigrationSql).toContain("documents_archived_at_idx");
+  });
+
+  it("adds owner-scoped notification preferences for reminder settings", () => {
+    expect(dashboardNotificationsMigrationSql).toContain(
+      "create table if not exists public.notification_preferences",
+    );
+    expect(dashboardNotificationsMigrationSql).toContain(
+      "alter table public.notification_preferences enable row level security",
+    );
+    expect(dashboardNotificationsMigrationSql).toContain(
+      "notification_preferences_owner_access",
+    );
+    expect(dashboardNotificationsMigrationSql).toContain(
+      "preferred_summary_day between 0 and 6",
+    );
+  });
+
+  it("prevents duplicate active notifications and tracks email delivery attempts", () => {
+    expect(dashboardNotificationsMigrationSql).toContain(
+      "create unique index if not exists notifications_active_key_unique",
+    );
+    expect(dashboardNotificationsMigrationSql).toContain("where resolved_at is null");
+    expect(dashboardNotificationsMigrationSql).toContain("email_last_attempt_at");
+    expect(dashboardNotificationsMigrationSql).toContain("email_attempt_count");
+    expect(dashboardNotificationsMigrationSql).toContain("email_sent_at");
   });
 });

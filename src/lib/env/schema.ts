@@ -44,6 +44,7 @@ export const serverEnvSchema = publicEnvSchema.extend({
         .optional(),
     )
     .default(10 * 1024 * 1024),
+  CRON_SECRET: optionalString,
   EMAIL_PROVIDER: z.enum(["none", "resend"]).default("none"),
   EMAIL_FROM: z.preprocess(emptyStringToUndefined, z.string().trim().email().optional()),
   RESEND_API_KEY: optionalString,

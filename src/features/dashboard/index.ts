@@ -11,10 +11,5 @@ export const dashboardModule = {
     "Asset coverage and missing-reading indicators",
     "Owner-only report entry points",
   ],
-  deferred: [
-    "Live Supabase queries",
-    "Reminder calculations",
-    "Alert delivery",
-    "Report visualizations",
-  ],
+  deferred: ["Trend charts", "User-customizable dashboard layout"],
 } satisfies ModuleDefinition;

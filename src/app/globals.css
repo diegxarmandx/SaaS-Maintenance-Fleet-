@@ -50,3 +50,22 @@ body {
   outline: 3px solid color-mix(in oklab, var(--ring) 55%, white);
   outline-offset: 2px;
 }
+
+@media print {
+  body {
+    background: white;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  table {
+    break-inside: auto;
+  }
+
+  tr {
+    break-inside: avoid;
+  }
+}

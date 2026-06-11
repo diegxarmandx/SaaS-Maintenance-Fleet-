@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 
-import { ModulePlaceholder } from "@/components/placeholders/module-placeholder";
-import { dashboardModule } from "@/features/dashboard";
+import { DashboardPageView } from "@/features/dashboard/components/dashboard-page";
+import { getDashboardData } from "@/features/dashboard/server/queries";
 
 export const metadata: Metadata = {
   title: "Dashboard",
 };
 
-export default function DashboardPage() {
-  return <ModulePlaceholder module={dashboardModule} />;
+export const dynamic = "force-dynamic";
+
+export default async function DashboardPage() {
+  const dashboard = await getDashboardData();
+
+  return <DashboardPageView dashboard={dashboard} />;
 }

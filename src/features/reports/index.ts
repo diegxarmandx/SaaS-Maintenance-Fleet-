@@ -11,10 +11,5 @@ export const reportsModule = {
     "Compliance expiration report",
     "Asset-level history views",
   ],
-  deferred: [
-    "Report query implementation",
-    "CSV export decisions",
-    "Charts and trend views",
-    "Saved report preferences",
-  ],
+  deferred: ["Charts and trend views", "Saved report preferences", "PDF generation"],
 } satisfies ModuleDefinition;

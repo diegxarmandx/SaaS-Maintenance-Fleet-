@@ -11,7 +11,7 @@
 - Supabase Auth, PostgreSQL, Row Level Security, and Storage
 - Vercel-ready project layout
 - Stripe reserved for a later billing step
-- Transactional email provider abstraction reserved for reminders
+- Transactional email provider abstraction for reminders, with local disabled mode
 
 ## Source Structure
 
@@ -22,13 +22,14 @@
 - `src/components/ui`: Reusable UI primitives, including page headers, breadcrumbs, status badges, empty states, form controls, upload areas, tables, mobile card lists, skeletons, error messages, toast region, pagination, and confirmation submit controls
 - `src/features/auth`: Auth validation, actions, forms, and redirect rules
 - `src/features/onboarding`: Company onboarding validation, action, and form
-- `src/features/dashboard`: Owner dashboard boundary
+- `src/features/dashboard`: Owner dashboard boundary with server aggregates, attention ordering, and dashboard UI
 - `src/features/fleet`: Fleet asset boundary with constants, validation, pure helpers, server queries/actions, responsive list UI, asset forms, asset profile, and meter-reading form
 - `src/features/maintenance`: Preventive maintenance boundary with status calculations, rule forms, completed record entry, history, cost summaries, attachment handling, and server actions/queries
 - `src/features/compliance`: Compliance boundary with assigned requirements, status calculations, record forms, attachment handling, server actions/queries, and responsive overview/detail UI
 - `src/features/documents`: Document boundary with file validation, document library UI, relationship handling, signed URL helpers, and server actions/queries
-- `src/features/reports`: Reporting boundary
-- `src/features/settings`: Settings boundary
+- `src/features/notifications`: In-app notification, reminder generation, email template, cron auth, and preference logic
+- `src/features/reports`: Reporting boundary with server queries, CSV export helpers, and report UI
+- `src/features/settings`: Settings boundary with notification preferences
 - `src/lib/env`: Environment schemas and parsed config
 - `src/lib/supabase`: Browser and server Supabase client factories
 - `src/lib/email`: Transactional email provider contract
@@ -61,7 +62,7 @@ The service-role key is used only by server-side helpers and the development see
 
 The app remains a quiet operational SaaS interface. It avoids role management, dispatching, driver workflows, work orders, repair-shop scheduling, and other excluded product areas.
 
-The authenticated shell uses a desktop sidebar, mobile navigation, current company context, owner profile menu, prepared global search input, and prepared notification indicator. The company area intentionally represents one current owner company only.
+The authenticated shell uses a desktop sidebar, mobile navigation, current company context, owner profile menu, prepared global search input, and active notification menu. The company area intentionally represents one current owner company only.
 
 Statuses use text plus Lucide icons, not color alone. The current shared status vocabulary is:
 
@@ -74,6 +75,20 @@ Statuses use text plus Lucide icons, not color alone. The current shared status 
 - Archived
 
 Fleet asset screens use desktop tables and mobile card lists so small-screen owners are not forced into horizontal data tables.
+
+## Dashboard, Notifications, and Reports
+
+Step 6 implements the owner command center without introducing any additional operational user roles.
+
+- `/dashboard` shows active asset count, due-soon and overdue maintenance counts, expiring and expired document counts, missing compliance counts, a prioritized attention list, fleet status by asset, and recent maintenance, document, compliance, and meter-reading activity.
+- Dashboard attention order is deterministic: expired/overdue first, missing second, due-soon/expiring third.
+- Notifications are company-scoped database rows. Reminder processing creates or updates active notifications by stable `notification_key`, resolves stale notifications, and prevents duplicate active reminders through a partial unique index.
+- The notification menu supports unread counts, individual mark-read actions, and mark-all-read actions.
+- `/settings` exposes owner notification preferences for email enablement, reminder thresholds, weekly summary enablement, and preferred summary day.
+- `/api/cron/reminders` is a secure server-only endpoint prepared for Vercel Cron. It requires `CRON_SECRET`, uses the service-role client only on the server, and logs counts without PII or secrets.
+- Reminder email templates cover maintenance due/overdue, compliance expiring/expired/missing, document expiring/expired, and weekly summary. Local development can keep `EMAIL_PROVIDER=none`.
+- `/reports` provides owner-filtered maintenance, compliance, document, and asset-history reports with CSV exports and print-friendly views.
+- CSV exports are generated server-side from the current owner company, include company and generated date metadata, escape spreadsheet-dangerous values, and omit internal UUIDs.
 
 ## Fleet Asset Slice
 
@@ -165,12 +180,15 @@ Unit tests cover:
 - Document metadata, category mapping, and company-scoped storage path helpers
 - Static migration checks for compliance requirements, RLS, compliance RPC, document bucket metadata, and storage path constraints
 - Responsive compliance and document UI structure
+- Dashboard attention priority
+- Notification sync planning and cron authorization
+- CSV escaping and report filter parsing
+- Static migration checks for notification preferences, active notification uniqueness, and email attempt tracking
 
 Live Supabase integration tests are deferred until a project URL and service credentials are configured in CI.
 
 ## Deferred Integrations
 
-- Reminder calculation jobs and email delivery
-- Owner report queries and visualizations
+- Report charts, saved views, and reliable PDF generation
 - Document OCR, bulk import, and version history
 - Stripe billing

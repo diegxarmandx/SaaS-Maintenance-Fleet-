@@ -32,6 +32,12 @@ The Step 5 migration is:
 
 It adds assigned compliance requirements, compliance archive support, document type and storage bucket metadata, document path constraints, compliance/document indexes, and `public.create_compliance_record_with_document(...)` for transactional compliance record and document metadata creation.
 
+The Step 6 migration is:
+
+- `supabase/migrations/20260611190000_dashboard_notifications_reports.sql`
+
+It adds owner notification preferences, extends notifications with idempotent active keys, links, severity, resolution, generated timestamps, email attempt tracking, and metadata, and adds indexes used by dashboard, reminder, and report queries.
+
 ## Tables
 
 - `profiles`
@@ -45,6 +51,7 @@ It adds assigned compliance requirements, compliance archive support, document t
 - `compliance_records`
 - `documents`
 - `notifications`
+- `notification_preferences`
 - `subscription_records`
 
 ## Security Functions
@@ -78,6 +85,9 @@ It adds assigned compliance requirements, compliance archive support, document t
 - Active asset unit numbers are unique per company.
 - Active compliance requirements are unique per company, asset, and case-insensitive compliance type.
 - Storage paths are unique per company.
+- Active notifications are unique per company and notification key while unresolved, preventing duplicate active reminders.
+- Notification email attempt counts cannot be negative.
+- Notification preferences are unique per company and restrict weekly summary day to 0 through 6.
 - Document metadata stores the source bucket and checks that `storage_path` begins with the company UUID.
 - Subscription records are unique per company.
 
@@ -91,6 +101,8 @@ Indexes cover:
 - compliance and document expiration dates
 - maintenance due dates, due mileage, due hours, and completion dates
 - notification due/read/email status
+- notification active keys, resolution, unread state, and email retry scans
+- notification preference company lookups
 - Stripe placeholder identifiers
 
 ## Row-Level Security
@@ -108,6 +120,7 @@ RLS is enabled and forced for every tenant-owned table:
 - `compliance_records`
 - `documents`
 - `notifications`
+- `notification_preferences`
 - `subscription_records`
 
 Authenticated owners can access only rows where their completed profile belongs to the row's company. System maintenance templates use `company_id is null` and are readable, but only company-owned templates can be mutated by owners.
@@ -163,3 +176,15 @@ npm run db:seed
 ```
 
 The seed script creates one fictional owner, one fictional company, several assets, readings, maintenance rules and records, compliance records, and metadata-only documents. It never runs automatically and refuses production environments.
+
+## Reminder Processing
+
+The scheduled reminder job uses server-only Supabase access. It computes current due and expiration conditions from maintenance rules, compliance records and requirements, documents, and company timezone preferences. It inserts new active notifications, updates still-active notifications, resolves stale notifications, and only attempts email for unresolved notifications that have not already been sent.
+
+The scheduled endpoint must be protected by `CRON_SECRET`. Vercel Cron can call `/api/cron/reminders` once the secret is configured, but no production schedule is committed in this step.
+
+## Deferred Database Work
+
+- Report charts, saved views, and PDF exports.
+- Document OCR, bulk import, and version history.
+- Stripe billing tables beyond the current internal subscription placeholders.

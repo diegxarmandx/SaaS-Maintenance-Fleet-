@@ -87,6 +87,22 @@ await upsert("profiles", [
   },
 ]);
 
+await upsert(
+  "notification_preferences",
+  [
+    {
+      company_id: companyId,
+      email_enabled: false,
+      maintenance_reminder_days: 30,
+      compliance_reminder_days: 45,
+      document_reminder_days: 45,
+      weekly_summary_enabled: false,
+      preferred_summary_day: 1,
+    },
+  ],
+  "company_id",
+);
+
 await upsert("assets", [
   {
     id: tractorId,

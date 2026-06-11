@@ -1,14 +1,19 @@
 import type { PropsWithChildren } from "react";
 import Link from "next/link";
-import { Bell, LogOut, Search, UserCircle } from "lucide-react";
+import { LogOut, Search, UserCircle } from "lucide-react";
 
 import { OwnerNavigation } from "@/components/app-shell/owner-navigation";
 import { Button } from "@/components/ui/button";
 import { signOutAction } from "@/features/auth/actions";
+import { NotificationMenu } from "@/features/notifications/components/notification-menu";
+import { getOwnerNotifications } from "@/features/notifications/service";
 import { getOwnerWorkspaceContext } from "@/server/auth/owner-context";
 
 export async function AppShell({ children }: PropsWithChildren) {
   const ownerContext = await getOwnerWorkspaceContext();
+  const notifications = ownerContext.companyId
+    ? await getOwnerNotifications(ownerContext.companyId)
+    : [];
 
   return (
     <div className="min-h-dvh bg-background">
@@ -101,14 +106,7 @@ export async function AppShell({ children }: PropsWithChildren) {
                 </label>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  aria-label="Notifications prepared for reminders"
-                  className="relative flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-surface text-muted shadow-sm hover:text-primary"
-                  type="button"
-                >
-                  <Bell aria-hidden="true" className="h-5 w-5" />
-                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accent" />
-                </button>
+                <NotificationMenu notifications={notifications} />
                 <details className="relative">
                   <summary className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-lg border border-border bg-surface text-primary shadow-sm">
                     <UserCircle aria-hidden="true" className="h-5 w-5" />

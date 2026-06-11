@@ -13,7 +13,6 @@ export const settingsModule = {
   ],
   deferred: [
     "Supabase account updates",
-    "Email provider setup",
     "Stripe billing implementation",
     "Workspace member invitations",
   ],

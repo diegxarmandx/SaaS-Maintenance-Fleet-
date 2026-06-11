@@ -74,11 +74,23 @@ Last updated: 2026-06-11
 - Updated the development seed with fictional compliance requirements, compliance records, and metadata-only documents.
 - Added tests for compliance status calculations, document upload validation, company-scoped storage paths, document metadata helpers, compliance helpers, static UI structure, and migration security.
 
-## Intentionally Deferred to Step 6
+## Completed in Step 6
 
-- Report query implementation and charts.
-- Reminder generation jobs and transactional email delivery.
+- Added the live owner dashboard with summary counts, prioritized attention items, fleet status, and recent maintenance, document, compliance, and meter-reading activity.
+- Added company-scoped in-app notifications with unread counts, individual read actions, mark-all-read, stable active keys, stale notification resolution, and duplicate active notification prevention.
+- Added notification preferences for email enablement, maintenance/compliance/document thresholds, weekly summary enablement, and preferred summary day.
+- Added reminder email templates and a Resend transactional provider implementation while preserving `EMAIL_PROVIDER=none` for local and test environments.
+- Added the secure `/api/cron/reminders` endpoint prepared for Vercel Cron and protected by `CRON_SECRET`.
+- Added owner-facing reports for maintenance, compliance, documents, and asset history with filters, CSV exports, print-friendly views, and bounded server queries.
+- Added Step 6 migration for `notification_preferences`, notification severity/link/resolution/email-attempt fields, active notification uniqueness, and dashboard/report indexes.
+- Added tests for dashboard attention priority, notification sync planning, cron authorization, CSV escaping, report filter parsing, and Step 6 migration expectations.
+- Updated environment, architecture, database, scheduled job, notification, and README documentation.
+
+## Intentionally Deferred to Step 7
+
 - Live Supabase integration tests in CI.
+- Report charts, saved report preferences, and reliable PDF generation.
+- Notification analytics and advanced delivery preferences.
 - Document OCR, extracted fields, version history, and bulk import.
 - Stripe billing flow and webhook handling.
 - Production observability and audit logging.
