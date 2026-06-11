@@ -7,14 +7,14 @@ export const documentsModule = {
     "Supabase Storage-backed file organization for asset records, compliance files, and maintenance receipts.",
   scope: [
     "Fleet document metadata",
-    "Asset and compliance associations",
+    "Asset, maintenance, and compliance associations",
     "Expiration dates for relevant documents",
     "Owner-controlled storage paths",
+    "Private file upload, preview, replacement, archive, and signed access",
   ],
   deferred: [
-    "File upload and preview",
-    "Storage bucket policies",
     "Document versioning decisions",
-    "Document search",
+    "Bulk import",
+    "OCR or extracted document fields",
   ],
 } satisfies ModuleDefinition;

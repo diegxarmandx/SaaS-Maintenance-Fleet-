@@ -10,6 +10,7 @@ export type FleetStatusFilter = AssetStatus | "all";
 export type AssetAttentionStatus =
   | "Current"
   | "Due soon"
+  | "Expiring soon"
   | "Overdue"
   | "Expired"
   | "Missing"

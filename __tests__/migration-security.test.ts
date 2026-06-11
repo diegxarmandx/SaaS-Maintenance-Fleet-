@@ -25,6 +25,14 @@ const maintenanceMigrationSql = readFileSync(
   "utf8",
 );
 
+const complianceDocumentsMigrationSql = readFileSync(
+  new URL(
+    "../supabase/migrations/20260611170000_compliance_and_documents_module.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
+
 const tenantTables = [
   "profiles",
   "companies",
@@ -143,5 +151,55 @@ describe("database migration security", () => {
       "add column if not exists archived_at timestamptz",
     );
     expect(maintenanceMigrationSql).toContain("maintenance_records_archived_at_idx");
+  });
+
+  it("adds owner-scoped compliance requirements for missing status tracking", () => {
+    expect(complianceDocumentsMigrationSql).toContain(
+      "create table if not exists public.compliance_requirements",
+    );
+    expect(complianceDocumentsMigrationSql).toContain(
+      "alter table public.compliance_requirements enable row level security",
+    );
+    expect(complianceDocumentsMigrationSql).toContain(
+      "compliance_requirements_owner_access",
+    );
+    expect(complianceDocumentsMigrationSql).toContain(
+      "compliance_requirements_active_unique",
+    );
+  });
+
+  it("adds compliance archive support and a transactional compliance document RPC", () => {
+    expect(complianceDocumentsMigrationSql).toContain(
+      "add column if not exists requirement_id uuid",
+    );
+    expect(complianceDocumentsMigrationSql).toContain(
+      "add column if not exists archived_at timestamptz",
+    );
+    expect(complianceDocumentsMigrationSql).toContain(
+      "create or replace function public.create_compliance_record_with_document",
+    );
+    expect(complianceDocumentsMigrationSql).toContain(
+      "owner_company_id uuid := public.current_company_id()",
+    );
+    expect(complianceDocumentsMigrationSql).toContain(
+      "Document path is not scoped to this owner company",
+    );
+    expect(complianceDocumentsMigrationSql).toContain(
+      "grant execute on function public.create_compliance_record_with_document",
+    );
+  });
+
+  it("stores document bucket metadata and enforces company-scoped paths", () => {
+    expect(complianceDocumentsMigrationSql).toContain(
+      "add column if not exists document_type text",
+    );
+    expect(complianceDocumentsMigrationSql).toContain(
+      "add column if not exists storage_bucket text",
+    );
+    expect(complianceDocumentsMigrationSql).toContain("documents_storage_bucket_allowed");
+    expect(complianceDocumentsMigrationSql).toContain(
+      "documents_storage_path_company_scope",
+    );
+    expect(complianceDocumentsMigrationSql).toContain("documents_archived_at_idx");
   });
 });

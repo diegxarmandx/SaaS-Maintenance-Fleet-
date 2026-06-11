@@ -25,14 +25,23 @@ import {
 } from "@/features/fleet/helpers";
 import { archiveAssetAction } from "@/features/fleet/server/actions";
 import type { AssetProfile } from "@/features/fleet/types";
+import type { getAssetComplianceSnapshot } from "@/features/compliance/server/queries";
+import type { getAssetDocumentSnapshot } from "@/features/documents/server/queries";
 import type { getAssetMaintenanceSnapshot } from "@/features/maintenance/server/queries";
 
 type AssetProfilePageProps = {
   asset: AssetProfile;
   maintenanceSnapshot: Awaited<ReturnType<typeof getAssetMaintenanceSnapshot>>;
+  complianceSnapshot: Awaited<ReturnType<typeof getAssetComplianceSnapshot>>;
+  documentSnapshot: Awaited<ReturnType<typeof getAssetDocumentSnapshot>>;
 };
 
-export function AssetProfilePage({ asset, maintenanceSnapshot }: AssetProfilePageProps) {
+export function AssetProfilePage({
+  asset,
+  maintenanceSnapshot,
+  complianceSnapshot,
+  documentSnapshot,
+}: AssetProfilePageProps) {
   const assetTitle = `${asset.unit_number} ${asset.asset_name}`;
 
   return (
@@ -123,12 +132,12 @@ export function AssetProfilePage({ asset, maintenanceSnapshot }: AssetProfilePag
               title="Maintenance"
             />
             <PreparedSection
-              count={asset.complianceRecordCount}
+              count={complianceSnapshot.items.length}
               icon={<ShieldCheck aria-hidden="true" className="h-5 w-5" />}
               title="Compliance"
             />
             <PreparedSection
-              count={asset.documentCount}
+              count={documentSnapshot.recentDocuments.length}
               icon={<FileText aria-hidden="true" className="h-5 w-5" />}
               title="Documents"
             />
@@ -202,6 +211,164 @@ export function AssetProfilePage({ asset, maintenanceSnapshot }: AssetProfilePag
                 >
                   View maintenance
                 </a>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldCheck aria-hidden="true" className="h-5 w-5 text-primary" />
+                Compliance status
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <StatusBadge status={complianceSnapshot.status} />
+              <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                <Metric
+                  label="Tracked items"
+                  value={complianceSnapshot.items.length.toString()}
+                />
+                <Metric
+                  label="Expired"
+                  value={complianceSnapshot.expiredItems.length.toString()}
+                />
+                <Metric
+                  label="Missing"
+                  value={complianceSnapshot.missingItems.length.toString()}
+                />
+              </div>
+              {complianceSnapshot.expiredItems.length > 0 ? (
+                <div className="mt-4 rounded-lg border border-danger/25 bg-danger/10 p-3">
+                  <h3 className="text-sm font-semibold text-danger">Expired items</h3>
+                  <ul className="mt-2 grid gap-2 text-sm text-danger">
+                    {complianceSnapshot.expiredItems.slice(0, 3).map((item) => (
+                      <li key={item.id}>
+                        {item.compliance_type} - {formatShortDate(item.expiration_date)}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {complianceSnapshot.missingItems.length > 0 ? (
+                <div className="mt-4 rounded-lg border border-sky-700/20 bg-sky-50 p-3">
+                  <h3 className="text-sm font-semibold text-sky-800">
+                    Missing assigned requirements
+                  </h3>
+                  <ul className="mt-2 grid gap-2 text-sm text-sky-800">
+                    {complianceSnapshot.missingItems.slice(0, 3).map((item) => (
+                      <li key={item.id}>{item.compliance_type}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {complianceSnapshot.expiringItems.length > 0 ? (
+                <div className="mt-4">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Upcoming expirations
+                  </h3>
+                  <ul className="mt-2 grid gap-2 text-sm text-muted">
+                    {complianceSnapshot.expiringItems.slice(0, 5).map((item) => (
+                      <li key={item.id}>
+                        {item.compliance_type} - {formatShortDate(item.expiration_date)}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              <div className="mt-4">
+                <Link
+                  className="text-sm font-medium text-primary hover:underline"
+                  href="/compliance"
+                >
+                  View compliance
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText aria-hidden="true" className="h-5 w-5 text-primary" />
+                Documents
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {documentSnapshot.categoryCounts.length > 0 ? (
+                <dl className="grid gap-3 sm:grid-cols-2">
+                  {documentSnapshot.categoryCounts.slice(0, 4).map((category) => (
+                    <Metric
+                      key={category.category}
+                      label={category.category}
+                      value={category.count.toString()}
+                    />
+                  ))}
+                </dl>
+              ) : (
+                <p className="text-sm leading-6 text-muted">
+                  No documents have been linked to this asset.
+                </p>
+              )}
+              {documentSnapshot.expiredDocuments.length > 0 ? (
+                <div className="mt-4 rounded-lg border border-danger/25 bg-danger/10 p-3">
+                  <h3 className="text-sm font-semibold text-danger">Expired documents</h3>
+                  <ul className="mt-2 grid gap-2 text-sm text-danger">
+                    {documentSnapshot.expiredDocuments.slice(0, 3).map((document) => (
+                      <li key={document.id}>{document.document_name}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {documentSnapshot.expiringDocuments.length > 0 ? (
+                <div className="mt-4">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Upcoming document expirations
+                  </h3>
+                  <ul className="mt-2 grid gap-2 text-sm text-muted">
+                    {documentSnapshot.expiringDocuments.slice(0, 5).map((document) => (
+                      <li key={document.id}>
+                        {document.document_name} -{" "}
+                        {formatShortDate(document.expiration_date)}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {documentSnapshot.recentDocuments.length > 0 ? (
+                <div className="mt-4">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Recently uploaded
+                  </h3>
+                  <ul className="mt-2 grid gap-2 text-sm text-muted">
+                    {documentSnapshot.recentDocuments.slice(0, 5).map((document) => (
+                      <li key={document.id}>
+                        <a
+                          className="font-medium text-foreground hover:text-primary"
+                          href={`/documents/${document.id}`}
+                        >
+                          {document.document_name}
+                        </a>
+                        {document.signedUrl ? (
+                          <a
+                            className="ml-2 text-primary hover:underline"
+                            href={document.signedUrl}
+                          >
+                            Secure file
+                          </a>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              <div className="mt-4">
+                <Link
+                  className="text-sm font-medium text-primary hover:underline"
+                  href="/documents"
+                >
+                  View documents
+                </Link>
               </div>
             </CardContent>
           </Card>

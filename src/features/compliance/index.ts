@@ -10,11 +10,11 @@ export const complianceModule = {
     "Requirement status by asset",
     "Expiration dates and alert thresholds",
     "Compliance report source data",
+    "Secure compliance document attachments",
   ],
   deferred: [
-    "Requirement templates",
     "Expiration alert scheduling",
-    "Compliance status calculations",
     "Renewal history",
+    "Compliance report visualizations",
   ],
 } satisfies ModuleDefinition;

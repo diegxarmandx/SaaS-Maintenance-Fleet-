@@ -25,8 +25,8 @@
 - `src/features/dashboard`: Owner dashboard boundary
 - `src/features/fleet`: Fleet asset boundary with constants, validation, pure helpers, server queries/actions, responsive list UI, asset forms, asset profile, and meter-reading form
 - `src/features/maintenance`: Preventive maintenance boundary with status calculations, rule forms, completed record entry, history, cost summaries, attachment handling, and server actions/queries
-- `src/features/compliance`: Compliance boundary
-- `src/features/documents`: Document boundary
+- `src/features/compliance`: Compliance boundary with assigned requirements, status calculations, record forms, attachment handling, server actions/queries, and responsive overview/detail UI
+- `src/features/documents`: Document boundary with file validation, document library UI, relationship handling, signed URL helpers, and server actions/queries
 - `src/features/reports`: Reporting boundary
 - `src/features/settings`: Settings boundary
 - `src/lib/env`: Environment schemas and parsed config
@@ -67,6 +67,7 @@ Statuses use text plus Lucide icons, not color alone. The current shared status 
 
 - Current
 - Due soon
+- Expiring soon
 - Overdue
 - Expired
 - Missing
@@ -109,6 +110,39 @@ Completed maintenance uses `public.complete_maintenance_and_update_rule(...)`, a
 
 Attachments use the private `maintenance-attachments` bucket. Server actions validate file type and size, use company-scoped non-guessable paths, and create signed URLs for preview/download. The browser never receives storage service credentials.
 
+## Compliance Slice
+
+Step 5 implements owner-managed compliance tracking without implying that FleetReady submits, renews, or guarantees legal compliance.
+
+- `/compliance` lists compliance records and assigned requirements with search, asset/type/status filters, expiration sorting, desktop table, mobile cards, and current/expiring/expired/missing/archived counts.
+- `/compliance/requirements/new` assigns a required compliance category to an asset so missing records become visible.
+- `/compliance/new` creates a compliance record and can attach one supporting document.
+- `/compliance/[recordId]` shows status, expiration, issuer, policy or identification number, notes, and secure document access.
+- `/compliance/[recordId]/edit` supports owner corrections and optional document replacement.
+
+Compliance statuses are calculated centrally from source values:
+
+- `Expired` applies when the expiration date is before the current date in the company timezone.
+- `Expiring soon` applies when the expiration date is inside the configured reminder period.
+- `Missing` applies when an assigned required category has no active record or document evidence.
+- `Current` applies when evidence exists outside the reminder window.
+- `Archived` is shown for archived records.
+
+The compliance completion RPC verifies `auth.uid()`, resolves `public.current_company_id()`, verifies the asset and optional assigned requirement, inserts the record, and inserts optional document metadata in one transaction after the file upload succeeds. If the transaction fails, the server action removes the uploaded object.
+
+## Documents Slice
+
+Step 5 implements a private owner document library.
+
+- `/documents` lists documents with search, category/asset/status filters, date/name sorting, desktop table, mobile cards, expiring-document view, archived-document view, and empty states.
+- `/documents/upload` uploads a private file and links it to an asset, maintenance record, compliance record, or general fleet library.
+- `/documents/[documentId]` displays metadata, supported preview, and secure download.
+- `/documents/[documentId]/edit` updates metadata or replaces the private file while keeping the document record.
+
+Document metadata stores both a broad domain category and the exact owner-facing `document_type`. The database also stores `storage_bucket`, so signed URL generation does not guess which bucket contains a file.
+
+Supported uploads are PDF, JPEG, and PNG. Server actions validate declared MIME type, detected file signature, size, owner relationships, company-scoped paths, and private bucket placement. HEIC is intentionally deferred.
+
 ## Testing Strategy
 
 Unit tests cover:
@@ -126,13 +160,17 @@ Unit tests cover:
 - Completed maintenance cost calculations and cost summaries
 - Static migration checks for the maintenance transaction RPC, seeded system templates, attachment metadata ownership, and archive behavior
 - Responsive maintenance UI structure and asset-profile maintenance integration
+- Compliance status calculations for expiration, reminder windows, missing requirements, archived state, urgency, and timezone boundaries
+- Document upload validation for declared and detected file information
+- Document metadata, category mapping, and company-scoped storage path helpers
+- Static migration checks for compliance requirements, RLS, compliance RPC, document bucket metadata, and storage path constraints
+- Responsive compliance and document UI structure
 
 Live Supabase integration tests are deferred until a project URL and service credentials are configured in CI.
 
 ## Deferred Integrations
 
 - Reminder calculation jobs and email delivery
-- Compliance CRUD UI
-- Document upload UI
 - Owner report queries and visualizations
+- Document OCR, bulk import, and version history
 - Stripe billing

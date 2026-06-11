@@ -4,7 +4,7 @@ FleetReady is an owner-only fleet maintenance SaaS foundation for small fleets o
 
 ## Current Status
 
-The repository now includes the Step 4 preventive maintenance foundation:
+The repository now includes the Step 5 compliance and document-management foundation:
 
 - Next.js App Router application with TypeScript and Tailwind CSS
 - Owner-only authentication and onboarding flow backed by Supabase Auth
@@ -17,11 +17,15 @@ The repository now includes the Step 4 preventive maintenance foundation:
 - Preventive maintenance rule creation, status calculations, and overview
 - Completed maintenance records with transactional rule advancement
 - Maintenance history, cost summaries, and secure attachment preparation
+- Compliance requirement assignment, status calculations, overview, detail, edit, and archive flows
+- Compliance document attachment preparation with private signed access
+- Fleet document library with upload, preview, secure download, replacement, archive, search, filters, and expiration views
+- Asset-profile compliance and document summaries
 - Private asset image upload preparation with MIME and size validation
 - Zod validation, React Hook Form forms, and unit/static tests
 - Centralized environment validation and error handling
 
-Compliance, fleet document management, reports, reminders, email delivery, and Stripe billing are intentionally deferred beyond this maintenance step.
+Reports, reminders, email delivery, advanced document processing, and Stripe billing are intentionally deferred beyond this compliance and document step.
 
 ## Routes
 
@@ -45,6 +49,13 @@ Compliance, fleet document management, reports, reminders, email delivery, and S
 - `/maintenance/complete`
 - `/maintenance/history/[recordId]`
 - `/maintenance/history/[recordId]/edit`
+- `/compliance/new`
+- `/compliance/requirements/new`
+- `/compliance/[recordId]`
+- `/compliance/[recordId]/edit`
+- `/documents/upload`
+- `/documents/[documentId]`
+- `/documents/[documentId]/edit`
 
 ## Development
 
@@ -99,6 +110,20 @@ Maintenance receipt and invoice attachments are stored in the private `maintenan
 {company_id}/maintenance/{maintenance_record_id}/{uuid}-{filename}
 ```
 
+Compliance documents are stored in the private `compliance-documents` bucket:
+
+```text
+{company_id}/compliance/{compliance_record_id}/{uuid}-{filename}
+```
+
+General fleet documents are stored in the private `fleet-documents` bucket:
+
+```text
+{company_id}/{category}/{document_id}/{uuid}-{filename}
+```
+
+All document downloads use short-lived signed URLs created only after the server verifies the owner company can access the document metadata. Supported document uploads are PDF, JPEG, and PNG, with declared MIME type and file-signature validation. HEIC is intentionally not enabled because the current platform does not process it reliably.
+
 ## Environment Variables
 
 Copy `.env.example` to `.env.local` and configure real values.
@@ -113,6 +138,7 @@ Required for Supabase-backed implementation:
 - `SUPABASE_ASSET_IMAGES_BUCKET`
 - `SUPABASE_MAINTENANCE_ATTACHMENTS_BUCKET`
 - `SUPABASE_COMPLIANCE_DOCUMENTS_BUCKET`
+- `DOCUMENT_UPLOAD_MAX_SIZE_BYTES`
 
 Reserved for later reminders:
 

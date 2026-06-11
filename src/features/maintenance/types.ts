@@ -81,6 +81,7 @@ export type MaintenanceRecordWithAsset = MaintenanceRecord & {
 export type MaintenanceAttachment = {
   id: string;
   document_name: string;
+  storage_bucket: string;
   storage_path: string;
   mime_type: string;
   file_size: number;

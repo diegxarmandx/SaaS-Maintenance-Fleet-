@@ -1,12 +1,23 @@
 import type { Metadata } from "next";
 
-import { ModulePlaceholder } from "@/components/placeholders/module-placeholder";
-import { documentsModule } from "@/features/documents";
+import { DocumentLibraryPage } from "@/features/documents/components/document-library-page";
+import {
+  getDocumentLibrary,
+  type DocumentSearchParams,
+} from "@/features/documents/server/queries";
 
 export const metadata: Metadata = {
   title: "Documents",
 };
 
-export default function DocumentsPage() {
-  return <ModulePlaceholder module={documentsModule} />;
+export const dynamic = "force-dynamic";
+
+type DocumentsPageProps = {
+  searchParams: Promise<DocumentSearchParams>;
+};
+
+export default async function DocumentsPage({ searchParams }: DocumentsPageProps) {
+  const library = await getDocumentLibrary(await searchParams);
+
+  return <DocumentLibraryPage library={library} />;
 }

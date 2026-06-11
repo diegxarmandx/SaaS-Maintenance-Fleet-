@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 ## Completed in Step 1
 
@@ -60,13 +60,26 @@ Last updated: 2026-06-10
 - Added asset-profile maintenance integration for current status, next due items, overdue items, recent completed maintenance, and maintenance-cost summary.
 - Added tests for maintenance status calculations, combined intervals, due-soon thresholds, timezone behavior, completion payloads, cost summaries, migration expectations, and responsive maintenance UI.
 
-## Intentionally Deferred to Step 5
+## Completed in Step 5
 
-- Compliance CRUD screens.
-- Document upload and document-management screens beyond asset image upload.
+- Added assigned compliance requirements so required asset categories can show a missing status before a record exists.
+- Added centralized compliance status calculations for current, expiring soon, expired, missing, archived, urgency ordering, reminder windows, and company-timezone boundaries.
+- Added compliance overview, counts, search, filters, expiration sorting, desktop table, mobile cards, empty states, add record, edit record, detail, archive, and assign requirement routes.
+- Added optional compliance document attachment with private upload, declared MIME and detected file-signature validation, company-scoped non-guessable paths, transactional metadata creation, and cleanup on failure.
+- Added document metadata support for owner-facing document types and stored bucket IDs.
+- Added document library upload, preview, secure download, replacement, archive, search, category/asset/status filters, expiration sorting, expiring-document view, archived-document view, desktop table, and mobile cards.
+- Linked maintenance receipts and invoices through the shared document metadata model so one file can appear in maintenance history, asset documents, and the global library.
+- Added asset-profile compliance status, upcoming expirations, expired items, missing assigned requirements, recent documents, document category counts, and secure document links.
+- Added Step 5 migration for compliance requirements, document bucket metadata, document storage constraints, compliance archive support, and compliance record/document RPC.
+- Updated the development seed with fictional compliance requirements, compliance records, and metadata-only documents.
+- Added tests for compliance status calculations, document upload validation, company-scoped storage paths, document metadata helpers, compliance helpers, static UI structure, and migration security.
+
+## Intentionally Deferred to Step 6
+
 - Report query implementation and charts.
 - Reminder generation jobs and transactional email delivery.
 - Live Supabase integration tests in CI.
+- Document OCR, extracted fields, version history, and bulk import.
 - Stripe billing flow and webhook handling.
 - Production observability and audit logging.
 

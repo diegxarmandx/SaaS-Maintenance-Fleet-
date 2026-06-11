@@ -18,6 +18,7 @@ type StatusBadgeProps = {
 const statusStyles: Record<AssetAttentionStatus, string> = {
   Current: "border-primary/25 bg-primary/10 text-primary",
   "Due soon": "border-accent/35 bg-accent/10 text-accent-foreground",
+  "Expiring soon": "border-accent/35 bg-accent/10 text-accent-foreground",
   Overdue: "border-danger/25 bg-danger/10 text-danger",
   Expired: "border-danger/25 bg-danger/10 text-danger",
   Missing: "border-sky-700/25 bg-sky-50 text-sky-800",
@@ -27,6 +28,7 @@ const statusStyles: Record<AssetAttentionStatus, string> = {
 const statusIcons = {
   Current: CheckCircle2,
   "Due soon": Clock3,
+  "Expiring soon": Clock3,
   Overdue: AlertTriangle,
   Expired: XCircle,
   Missing: CircleHelp,

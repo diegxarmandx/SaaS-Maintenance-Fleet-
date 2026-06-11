@@ -26,6 +26,12 @@ The Step 4 migration is:
 
 It adds archive support for completed maintenance records, seeds system preventive maintenance templates, and creates `public.complete_maintenance_and_update_rule(...)` for transactional completed-maintenance entry and rule advancement.
 
+The Step 5 migration is:
+
+- `supabase/migrations/20260611170000_compliance_and_documents_module.sql`
+
+It adds assigned compliance requirements, compliance archive support, document type and storage bucket metadata, document path constraints, compliance/document indexes, and `public.create_compliance_record_with_document(...)` for transactional compliance record and document metadata creation.
+
 ## Tables
 
 - `profiles`
@@ -35,6 +41,7 @@ It adds archive support for completed maintenance records, seeds system preventi
 - `maintenance_templates`
 - `maintenance_rules`
 - `maintenance_records`
+- `compliance_requirements`
 - `compliance_records`
 - `documents`
 - `notifications`
@@ -49,6 +56,7 @@ It adds archive support for completed maintenance records, seeds system preventi
 - `public.apply_meter_reading_to_asset()`
 - `public.create_meter_reading_for_asset(...)`
 - `public.complete_maintenance_and_update_rule(...)`
+- `public.create_compliance_record_with_document(...)`
 
 `complete_company_onboarding` is a security-definer RPC used to create the company, complete the profile, and create the initial internal subscription record after Supabase Auth sign-up.
 
@@ -64,9 +72,13 @@ It adds archive support for completed maintenance records, seeds system preventi
 - A lower meter reading requires `is_correction = true` and a note.
 - The Step 3 meter-reading RPC verifies the authenticated owner company before inserting a reading.
 - The Step 4 maintenance completion RPC verifies the authenticated owner company, asset, and optional rule before inserting the record and advancing next due values.
+- The Step 5 compliance RPC verifies the authenticated owner company, asset, optional assigned requirement, and company-scoped document path before inserting the compliance record and optional document metadata.
 - Completed maintenance records can be archived with `archived_at`; the app does not expose destructive delete as the default owner workflow.
+- Compliance records and assigned requirements can be archived with `archived_at`; the app does not expose destructive delete as the default owner workflow.
 - Active asset unit numbers are unique per company.
+- Active compliance requirements are unique per company, asset, and case-insensitive compliance type.
 - Storage paths are unique per company.
+- Document metadata stores the source bucket and checks that `storage_path` begins with the company UUID.
 - Subscription records are unique per company.
 
 ## Indexes
@@ -92,6 +104,7 @@ RLS is enabled and forced for every tenant-owned table:
 - `maintenance_templates`
 - `maintenance_rules`
 - `maintenance_records`
+- `compliance_requirements`
 - `compliance_records`
 - `documents`
 - `notifications`
@@ -127,6 +140,19 @@ Maintenance attachments use `maintenance-attachments` and are validated before u
 - Maximum size: 10 MB
 - Path shape: `{company_id}/maintenance/{maintenance_record_id}/{uuid}-{filename}`
 - Attachment metadata is inserted into `documents` with `category = 'maintenance'` and the matching company, asset, and maintenance record IDs.
+
+Compliance and fleet documents are validated before upload:
+
+- Allowed types: `application/pdf`, `image/jpeg`, `image/png`
+- Maximum size: configurable by `DOCUMENT_UPLOAD_MAX_SIZE_BYTES`, capped at 10 MB to match the private bucket limit
+- Validation checks both declared MIME type and detected file signature
+- Compliance path shape: `{company_id}/compliance/{compliance_record_id}/{uuid}-{filename}`
+- Fleet library path shape: `{company_id}/{category}/{document_id}/{uuid}-{filename}`
+- Metadata records the `storage_bucket`, `storage_path`, exact `document_type`, broad category, and optional asset, maintenance, or compliance relationship
+- Signed URLs are created only after server-side owner-company metadata lookup
+- If upload succeeds but metadata creation fails, the server action removes the uploaded object
+- If file replacement succeeds but metadata update fails, the new object is removed and the existing file remains referenced
+- HEIC is intentionally not enabled in Step 5
 
 ## Development Seed
 

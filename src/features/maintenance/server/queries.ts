@@ -7,6 +7,7 @@ import {
   calculateMaintenanceStatus,
 } from "@/features/maintenance/schedule";
 import { summarizeMaintenanceCosts } from "@/features/maintenance/helpers";
+import { createAuthorizedSignedDocumentUrl } from "@/features/documents/server/storage";
 import type {
   MaintenanceAssetOption,
   MaintenanceAttachment,
@@ -20,7 +21,6 @@ import type {
   MaintenanceTemplate,
 } from "@/features/maintenance/types";
 import { AppError } from "@/lib/errors";
-import { serverEnv } from "@/lib/env/server";
 import {
   getOwnerDatabaseContext,
   type SupabaseServerClient,
@@ -433,6 +433,7 @@ async function decorateRecordsWithAssets(
   const assetsById = new Map(assets.map((asset) => [asset.id, asset]));
   const attachments = await getMaintenanceAttachments(
     supabase,
+    records[0]?.company_id ?? "",
     records.map((record) => record.id),
   );
 
@@ -449,6 +450,7 @@ async function decorateRecordsWithAssets(
 
 async function getMaintenanceAttachments(
   supabase: SupabaseServerClient,
+  companyId: string,
   recordIds: string[],
 ) {
   const attachmentsByRecord = new Map<string, MaintenanceAttachment>();
@@ -459,7 +461,10 @@ async function getMaintenanceAttachments(
 
   const { data, error } = await supabase
     .from("documents")
-    .select("id,maintenance_record_id,document_name,storage_path,mime_type,file_size")
+    .select(
+      "id,maintenance_record_id,document_name,storage_bucket,storage_path,mime_type,file_size",
+    )
+    .eq("company_id", companyId)
     .in("maintenance_record_id", recordIds)
     .is("archived_at", null);
 
@@ -469,17 +474,20 @@ async function getMaintenanceAttachments(
 
   await Promise.all(
     (data ?? []).map(async (document) => {
-      const { data: signedUrl } = await supabase.storage
-        .from(serverEnv.SUPABASE_MAINTENANCE_ATTACHMENTS_BUCKET)
-        .createSignedUrl(document.storage_path, 60 * 10);
+      const signedUrl = await createAuthorizedSignedDocumentUrl(
+        supabase,
+        companyId,
+        document,
+      );
 
       attachmentsByRecord.set(String(document.maintenance_record_id), {
         id: document.id,
         document_name: document.document_name,
+        storage_bucket: document.storage_bucket,
         storage_path: document.storage_path,
         mime_type: document.mime_type,
         file_size: Number(document.file_size ?? 0),
-        signedUrl: signedUrl?.signedUrl ?? null,
+        signedUrl,
       });
     }),
   );

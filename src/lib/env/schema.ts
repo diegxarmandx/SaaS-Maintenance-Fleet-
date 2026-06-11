@@ -33,6 +33,17 @@ export const serverEnvSchema = publicEnvSchema.extend({
   SUPABASE_COMPLIANCE_DOCUMENTS_BUCKET: z
     .preprocess(emptyStringToUndefined, z.string().trim().min(1).optional())
     .default("compliance-documents"),
+  DOCUMENT_UPLOAD_MAX_SIZE_BYTES: z
+    .preprocess(
+      emptyStringToUndefined,
+      z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(10 * 1024 * 1024)
+        .optional(),
+    )
+    .default(10 * 1024 * 1024),
   EMAIL_PROVIDER: z.enum(["none", "resend"]).default("none"),
   EMAIL_FROM: z.preprocess(emptyStringToUndefined, z.string().trim().email().optional()),
   RESEND_API_KEY: optionalString,
