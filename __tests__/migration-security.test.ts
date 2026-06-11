@@ -17,6 +17,14 @@ const fleetAssetMigrationSql = readFileSync(
   "utf8",
 );
 
+const maintenanceMigrationSql = readFileSync(
+  new URL(
+    "../supabase/migrations/20260610230000_preventive_maintenance_module.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
+
 const tenantTables = [
   "profiles",
   "companies",
@@ -102,5 +110,38 @@ describe("database migration security", () => {
     expect(fleetAssetMigrationSql).toContain(
       "grant execute on function public.create_meter_reading_for_asset",
     );
+  });
+
+  it("seeds system preventive maintenance templates", () => {
+    [
+      "Engine oil and filter",
+      "Fuel filter",
+      "Air filter",
+      "Transmission service",
+      "Annual preventive maintenance",
+      "Custom maintenance item",
+    ].forEach((templateName) => {
+      expect(maintenanceMigrationSql).toContain(templateName);
+    });
+  });
+
+  it("creates a transactional completed-maintenance RPC scoped to owner company", () => {
+    expect(maintenanceMigrationSql).toContain(
+      "create or replace function public.complete_maintenance_and_update_rule",
+    );
+    expect(maintenanceMigrationSql).toContain(
+      "owner_company_id uuid := public.current_company_id()",
+    );
+    expect(maintenanceMigrationSql).toContain("for update");
+    expect(maintenanceMigrationSql).toContain("update public.maintenance_rules");
+    expect(maintenanceMigrationSql).toContain("insert into public.maintenance_records");
+    expect(maintenanceMigrationSql).toContain("insert into public.documents");
+  });
+
+  it("adds archive support for maintenance history instead of destructive deletion", () => {
+    expect(maintenanceMigrationSql).toContain(
+      "add column if not exists archived_at timestamptz",
+    );
+    expect(maintenanceMigrationSql).toContain("maintenance_records_archived_at_idx");
   });
 });

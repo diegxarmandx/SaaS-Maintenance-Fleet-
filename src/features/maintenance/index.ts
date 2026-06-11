@@ -12,9 +12,8 @@ export const maintenanceModule = {
     "Reminder state derived from readings and dates",
   ],
   deferred: [
-    "Rule builder forms",
     "Reminder engine",
-    "Maintenance history entry",
-    "Cost reporting calculations",
+    "Scheduled notification delivery",
+    "Advanced report visualizations",
   ],
 } satisfies ModuleDefinition;

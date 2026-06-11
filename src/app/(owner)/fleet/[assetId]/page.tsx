@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { AssetProfilePage } from "@/features/fleet/components/asset-profile-page";
 import { getFleetAsset } from "@/features/fleet/server/queries";
+import { getAssetMaintenanceSnapshot } from "@/features/maintenance/server/queries";
 
 type FleetAssetPageProps = {
   params: Promise<{
@@ -18,11 +19,14 @@ export const dynamic = "force-dynamic";
 
 export default async function FleetAssetPage({ params }: FleetAssetPageProps) {
   const { assetId } = await params;
-  const asset = await getFleetAsset(assetId);
+  const [asset, maintenanceSnapshot] = await Promise.all([
+    getFleetAsset(assetId),
+    getAssetMaintenanceSnapshot(assetId),
+  ]);
 
   if (!asset) {
     notFound();
   }
 
-  return <AssetProfilePage asset={asset} />;
+  return <AssetProfilePage asset={asset} maintenanceSnapshot={maintenanceSnapshot} />;
 }

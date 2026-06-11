@@ -24,7 +24,7 @@
 - `src/features/onboarding`: Company onboarding validation, action, and form
 - `src/features/dashboard`: Owner dashboard boundary
 - `src/features/fleet`: Fleet asset boundary with constants, validation, pure helpers, server queries/actions, responsive list UI, asset forms, asset profile, and meter-reading form
-- `src/features/maintenance`: Maintenance boundary and interval calculations
+- `src/features/maintenance`: Preventive maintenance boundary with status calculations, rule forms, completed record entry, history, cost summaries, attachment handling, and server actions/queries
 - `src/features/compliance`: Compliance boundary
 - `src/features/documents`: Document boundary
 - `src/features/reports`: Reporting boundary
@@ -87,6 +87,28 @@ Asset writes use server actions. Browser code never receives a Supabase service-
 
 Meter readings are created through `public.create_meter_reading_for_asset(...)`, which resolves the owner company from `auth.uid()`, verifies the asset belongs to that company, inserts the reading, and lets the existing trigger update current mileage or hours transactionally. Decreasing readings require the explicit correction flag and a note.
 
+## Maintenance Slice
+
+Step 4 implements owner-managed preventive maintenance without adding repair-shop management workflows.
+
+- `/maintenance` lists active maintenance rules with search, asset/type/status filters, urgency sorting, desktop table, mobile cards, current/due-soon/overdue counts, history filters, and cost summaries.
+- `/maintenance/rules/new` creates owner maintenance rules from system templates or custom rule names.
+- `/maintenance/complete` records completed maintenance, optional receipt or invoice attachment metadata, and advances a related rule when selected.
+- `/maintenance/history/[recordId]` displays completed maintenance detail, costs, and secure attachment download.
+- `/maintenance/history/[recordId]/edit` supports correction edits while preserving the historical record identity.
+
+Maintenance status is calculated from source values, not stored permanently:
+
+- `Overdue` wins when any enabled interval has passed.
+- `Due soon` wins when any enabled reminder threshold has been reached and no interval is overdue.
+- `Current` applies when all enabled intervals remain outside reminder thresholds.
+
+Date calculations use the company configured timezone via the centralized maintenance schedule service. Mileage and engine-hour calculations use the asset's current meter values.
+
+Completed maintenance uses `public.complete_maintenance_and_update_rule(...)`, a security-definer RPC that resolves the owner company from `auth.uid()`, verifies asset/rule ownership, inserts the historical record, updates the related rule's last completed and next due values, and inserts optional attachment metadata in one database transaction.
+
+Attachments use the private `maintenance-attachments` bucket. Server actions validate file type and size, use company-scoped non-guessable paths, and create signed URLs for preview/download. The browser never receives storage service credentials.
+
 ## Testing Strategy
 
 Unit tests cover:
@@ -100,12 +122,15 @@ Unit tests cover:
 - Tenant filtering helpers
 - Mileage and engine-hour update calculations and correction rejection
 - Responsive fleet list structure
+- Maintenance status calculations for date, mileage, hours, combined intervals, reminder thresholds, and timezone behavior
+- Completed maintenance cost calculations and cost summaries
+- Static migration checks for the maintenance transaction RPC, seeded system templates, attachment metadata ownership, and archive behavior
+- Responsive maintenance UI structure and asset-profile maintenance integration
 
 Live Supabase integration tests are deferred until a project URL and service credentials are configured in CI.
 
 ## Deferred Integrations
 
-- Preventive maintenance rule builder
 - Reminder calculation jobs and email delivery
 - Compliance CRUD UI
 - Document upload UI

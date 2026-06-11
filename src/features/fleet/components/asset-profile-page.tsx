@@ -25,12 +25,14 @@ import {
 } from "@/features/fleet/helpers";
 import { archiveAssetAction } from "@/features/fleet/server/actions";
 import type { AssetProfile } from "@/features/fleet/types";
+import type { getAssetMaintenanceSnapshot } from "@/features/maintenance/server/queries";
 
 type AssetProfilePageProps = {
   asset: AssetProfile;
+  maintenanceSnapshot: Awaited<ReturnType<typeof getAssetMaintenanceSnapshot>>;
 };
 
-export function AssetProfilePage({ asset }: AssetProfilePageProps) {
+export function AssetProfilePage({ asset, maintenanceSnapshot }: AssetProfilePageProps) {
   const assetTitle = `${asset.unit_number} ${asset.asset_name}`;
 
   return (
@@ -116,7 +118,7 @@ export function AssetProfilePage({ asset }: AssetProfilePageProps) {
 
           <section className="grid gap-5 lg:grid-cols-2">
             <PreparedSection
-              count={asset.maintenanceRecordCount}
+              count={maintenanceSnapshot.rules.length}
               icon={<ClipboardCheck aria-hidden="true" className="h-5 w-5" />}
               title="Maintenance"
             />
@@ -151,6 +153,62 @@ export function AssetProfilePage({ asset }: AssetProfilePageProps) {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
+                <ClipboardCheck aria-hidden="true" className="h-5 w-5 text-primary" />
+                Maintenance status
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <StatusBadge status={maintenanceSnapshot.status} />
+              <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                <Metric
+                  label="Active rules"
+                  value={maintenanceSnapshot.rules.length.toString()}
+                />
+                <Metric
+                  label="Overdue"
+                  value={maintenanceSnapshot.overdueItems.length.toString()}
+                />
+                <Metric
+                  label="Maintenance cost"
+                  value={formatCurrency(maintenanceSnapshot.costSummary.totalCost)}
+                />
+              </div>
+              {maintenanceSnapshot.overdueItems.length > 0 ? (
+                <div className="mt-4 rounded-lg border border-danger/25 bg-danger/10 p-3">
+                  <h3 className="text-sm font-semibold text-danger">Overdue items</h3>
+                  <ul className="mt-2 grid gap-2 text-sm text-danger">
+                    {maintenanceSnapshot.overdueItems.slice(0, 3).map((rule) => (
+                      <li key={rule.id}>{rule.name}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {maintenanceSnapshot.nextDueItems.length > 0 ? (
+                <div className="mt-4">
+                  <h3 className="text-sm font-semibold text-foreground">Next due</h3>
+                  <ul className="mt-2 grid gap-2 text-sm text-muted">
+                    {maintenanceSnapshot.nextDueItems.map((rule) => (
+                      <li key={rule.id}>
+                        {rule.name} - {formatShortDate(rule.next_due_date)}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              <div className="mt-4">
+                <a
+                  className="text-sm font-medium text-primary hover:underline"
+                  href="/maintenance"
+                >
+                  View maintenance
+                </a>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
                 <Gauge aria-hidden="true" className="h-5 w-5 text-primary" />
                 Meter history
               </CardTitle>
@@ -180,6 +238,43 @@ export function AssetProfilePage({ asset }: AssetProfilePageProps) {
                       {reading.notes ? (
                         <p className="text-muted sm:col-span-3">{reading.notes}</p>
                       ) : null}
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent completed maintenance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {maintenanceSnapshot.recentRecords.length === 0 ? (
+                <p className="text-sm leading-6 text-muted">
+                  No completed maintenance has been recorded for this asset.
+                </p>
+              ) : (
+                <ol className="divide-y divide-border">
+                  {maintenanceSnapshot.recentRecords.map((record) => (
+                    <li
+                      className="flex items-center justify-between gap-3 py-3"
+                      key={record.id}
+                    >
+                      <div>
+                        <a
+                          className="text-sm font-medium text-foreground hover:text-primary"
+                          href={`/maintenance/history/${record.id}`}
+                        >
+                          {record.maintenance_type}
+                        </a>
+                        <p className="mt-1 text-xs text-muted">
+                          {formatShortDate(record.completion_date)}
+                        </p>
+                      </div>
+                      <span className="font-mono text-sm text-foreground">
+                        {formatCurrency(record.total_cost)}
+                      </span>
                     </li>
                   ))}
                 </ol>

@@ -46,9 +46,22 @@ Last updated: 2026-06-10
 - Updated the development seed to use owner-facing asset type labels.
 - Added tests for asset validation, create/edit/archive payloads, tenant filtering helpers, meter update logic, invalid decreases, responsive fleet UI structure, and the Step 3 migration.
 
-## Intentionally Deferred to Step 4
+## Completed in Step 4
 
-- Preventive maintenance rule builder and maintenance CRUD screens.
+- Added system preventive maintenance templates in a migration.
+- Added centralized, deterministic maintenance status calculations for current, due-soon, and overdue states.
+- Added timezone-aware calendar status behavior based on the company preferred timezone.
+- Added maintenance overview with active rules, search, asset/type/status filters, urgency sorting, desktop table, mobile cards, and status counts.
+- Added maintenance rule creation from templates or custom owner rule names.
+- Added completed maintenance entry with parts/labor/other costs, automatically displayed total cost, optional rule selection, and attachment upload preparation.
+- Added transactional completion RPC that inserts the maintenance record, advances the related rule, and stores attachment metadata together.
+- Added maintenance history with search, asset/type/date/cost filters, secure attachment links, detail view, correction edit flow, and archive confirmation.
+- Added maintenance cost summaries for total, parts, labor, other, by asset, and by maintenance category.
+- Added asset-profile maintenance integration for current status, next due items, overdue items, recent completed maintenance, and maintenance-cost summary.
+- Added tests for maintenance status calculations, combined intervals, due-soon thresholds, timezone behavior, completion payloads, cost summaries, migration expectations, and responsive maintenance UI.
+
+## Intentionally Deferred to Step 5
+
 - Compliance CRUD screens.
 - Document upload and document-management screens beyond asset image upload.
 - Report query implementation and charts.

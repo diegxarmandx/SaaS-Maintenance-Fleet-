@@ -11,6 +11,7 @@ export type OwnerDatabaseContext = {
   ownerId: string;
   companyId: string;
   companyName: string;
+  preferredTimezone: string;
 };
 
 export async function getOwnerDatabaseContext(): Promise<OwnerDatabaseContext | null> {
@@ -43,7 +44,7 @@ export async function getOwnerDatabaseContext(): Promise<OwnerDatabaseContext | 
 
   const { data: company, error: companyError } = await supabase
     .from("companies")
-    .select("company_name")
+    .select("company_name,preferred_timezone")
     .eq("id", profile.company_id)
     .maybeSingle();
 
@@ -56,6 +57,7 @@ export async function getOwnerDatabaseContext(): Promise<OwnerDatabaseContext | 
     ownerId: user.id,
     companyId: profile.company_id,
     companyName: company?.company_name ?? "FleetReady workspace",
+    preferredTimezone: company?.preferred_timezone ?? "UTC",
   };
 }
 

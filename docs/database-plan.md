@@ -20,6 +20,12 @@ The Step 3 migration is:
 
 It changes `assets.asset_type` from the original broad enum to constrained text so owner-facing defaults such as Truck, Van, Car, Trailer, Excavator, Backhoe, Loader, Generator, and Other equipment can be stored while still allowing future custom asset types. It also adds `public.create_meter_reading_for_asset(...)`, an authenticated security-definer RPC that creates company-scoped meter readings for assets owned by the current owner company.
 
+The Step 4 migration is:
+
+- `supabase/migrations/20260610230000_preventive_maintenance_module.sql`
+
+It adds archive support for completed maintenance records, seeds system preventive maintenance templates, and creates `public.complete_maintenance_and_update_rule(...)` for transactional completed-maintenance entry and rule advancement.
+
 ## Tables
 
 - `profiles`
@@ -42,6 +48,7 @@ It changes `assets.asset_type` from the original broad enum to constrained text 
 - `public.complete_company_onboarding(...)`
 - `public.apply_meter_reading_to_asset()`
 - `public.create_meter_reading_for_asset(...)`
+- `public.complete_maintenance_and_update_rule(...)`
 
 `complete_company_onboarding` is a security-definer RPC used to create the company, complete the profile, and create the initial internal subscription record after Supabase Auth sign-up.
 
@@ -56,6 +63,8 @@ It changes `assets.asset_type` from the original broad enum to constrained text 
 - Meter readings update the asset meter through a trigger.
 - A lower meter reading requires `is_correction = true` and a note.
 - The Step 3 meter-reading RPC verifies the authenticated owner company before inserting a reading.
+- The Step 4 maintenance completion RPC verifies the authenticated owner company, asset, and optional rule before inserting the record and advancing next due values.
+- Completed maintenance records can be archived with `archived_at`; the app does not expose destructive delete as the default owner workflow.
 - Active asset unit numbers are unique per company.
 - Storage paths are unique per company.
 - Subscription records are unique per company.
@@ -111,6 +120,13 @@ The asset form validates images before upload:
 
 - Allowed types: `image/jpeg`, `image/png`, `image/webp`
 - Maximum size: 5 MB
+
+Maintenance attachments use `maintenance-attachments` and are validated before upload:
+
+- Allowed types: `application/pdf`, `image/jpeg`, `image/png`, `image/webp`
+- Maximum size: 10 MB
+- Path shape: `{company_id}/maintenance/{maintenance_record_id}/{uuid}-{filename}`
+- Attachment metadata is inserted into `documents` with `category = 'maintenance'` and the matching company, asset, and maintenance record IDs.
 
 ## Development Seed
 

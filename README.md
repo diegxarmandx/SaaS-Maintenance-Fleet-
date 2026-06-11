@@ -4,7 +4,7 @@ FleetReady is an owner-only fleet maintenance SaaS foundation for small fleets o
 
 ## Current Status
 
-The repository now includes the Step 3 fleet asset foundation:
+The repository now includes the Step 4 preventive maintenance foundation:
 
 - Next.js App Router application with TypeScript and Tailwind CSS
 - Owner-only authentication and onboarding flow backed by Supabase Auth
@@ -14,11 +14,14 @@ The repository now includes the Step 3 fleet asset foundation:
 - Development-only seed script with fictional data
 - Fleet asset CRUD screens backed by Supabase and RLS
 - Mileage and engine-hour reading capture through a secure database RPC
+- Preventive maintenance rule creation, status calculations, and overview
+- Completed maintenance records with transactional rule advancement
+- Maintenance history, cost summaries, and secure attachment preparation
 - Private asset image upload preparation with MIME and size validation
 - Zod validation, React Hook Form forms, and unit/static tests
 - Centralized environment validation and error handling
 
-Maintenance, compliance, documents, reports, reminders, email delivery, and Stripe billing are intentionally deferred beyond this asset-management step.
+Compliance, fleet document management, reports, reminders, email delivery, and Stripe billing are intentionally deferred beyond this maintenance step.
 
 ## Routes
 
@@ -38,6 +41,10 @@ Maintenance, compliance, documents, reports, reminders, email delivery, and Stri
 - `/fleet/new`
 - `/fleet/[assetId]`
 - `/fleet/[assetId]/edit`
+- `/maintenance/rules/new`
+- `/maintenance/complete`
+- `/maintenance/history/[recordId]`
+- `/maintenance/history/[recordId]/edit`
 
 ## Development
 
@@ -84,6 +91,12 @@ Fleet asset images are stored in the private `asset-images` bucket under company
 
 ```text
 {company_id}/assets/{asset_id}/{filename}
+```
+
+Maintenance receipt and invoice attachments are stored in the private `maintenance-attachments` bucket under company-scoped, non-guessable paths:
+
+```text
+{company_id}/maintenance/{maintenance_record_id}/{uuid}-{filename}
 ```
 
 ## Environment Variables
