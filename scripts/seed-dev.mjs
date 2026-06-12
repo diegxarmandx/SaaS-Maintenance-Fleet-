@@ -96,8 +96,25 @@ await upsert(
       maintenance_reminder_days: 30,
       compliance_reminder_days: 45,
       document_reminder_days: 45,
+      email_warning_enabled: true,
+      email_critical_enabled: true,
+      quiet_hours_start: null,
+      quiet_hours_end: null,
       weekly_summary_enabled: false,
       preferred_summary_day: 1,
+    },
+  ],
+  "company_id",
+);
+
+await upsert(
+  "report_preferences",
+  [
+    {
+      company_id: companyId,
+      default_asset_id: null,
+      default_lookback_days: 180,
+      show_charts_by_default: true,
     },
   ],
   "company_id",

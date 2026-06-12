@@ -86,14 +86,25 @@ Last updated: 2026-06-11
 - Added tests for dashboard attention priority, notification sync planning, cron authorization, CSV escaping, report filter parsing, and Step 6 migration expectations.
 - Updated environment, architecture, database, scheduled job, notification, and README documentation.
 
-## Intentionally Deferred to Step 7
+## Completed in Step 7 Doable Scope
+
+- Added saved report defaults with company-scoped `report_preferences` and a `/reports` save-defaults control.
+- Added compact report chart summaries for maintenance costs by asset, maintenance costs by category, and documents by category.
+- Added advanced notification delivery preferences for warning emails, critical emails, and company-timezone quiet hours.
+- Added notification analytics cards on `/settings` for active, unread, critical, and failed-email counts.
+- Added document version-history metadata through `document_versions`, recorded upload/replacement versions, preserved previous storage objects on replacement, and exposed version history on document detail.
+- Added owner-scoped audit event foundation and non-blocking audit logging for report preferences, notification preferences, and document actions.
+- Added GitHub Actions CI for install, lint, type checking, tests, and production build.
+- Added Step 7 migration for report preferences, notification preference delivery controls, document versions, and audit events.
+- Added tests for saved report defaults, notification email eligibility, quiet hours, and Step 7 migration expectations.
+
+## Still Deferred Beyond Step 7 Doable Scope
 
 - Live Supabase integration tests in CI.
-- Report charts, saved report preferences, and reliable PDF generation.
-- Notification analytics and advanced delivery preferences.
-- Document OCR, extracted fields, version history, and bulk import.
+- Reliable PDF generation.
+- Document OCR, extracted fields, and bulk import.
 - Stripe billing flow and webhook handling.
-- Production observability and audit logging.
+- Production observability dashboards, alerting, and audit review UI.
 
 ## Verification Targets
 

@@ -15,9 +15,11 @@ import {
   type DocumentFormInput,
 } from "@/features/documents/validation";
 import { validateDocumentFile } from "@/features/documents/file-validation";
+import { recordDocumentVersion } from "@/features/documents/server/versions";
 import { AppError, getErrorMessage } from "@/lib/errors";
 import { serverEnv } from "@/lib/env/server";
 import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
+import { recordAuditEvent } from "@/server/audit/log";
 
 export async function uploadFleetDocumentAction(
   _previousState: DocumentFormState,
@@ -94,6 +96,34 @@ export async function uploadFleetDocumentAction(
 
       return { status: "error", message: error.message, fields, errors: {} };
     }
+
+    try {
+      await recordDocumentVersion(context, {
+        documentId,
+        storageBucket: uploaded.storageBucket,
+        storagePath: uploaded.storagePath,
+        mimeType: uploaded.mimeType,
+        fileSize: uploaded.fileSize,
+        changeReason: "upload",
+      });
+      await recordAuditEvent(context, {
+        eventType: "document.uploaded",
+        entityType: "document",
+        entityId: documentId,
+        metadata: { documentType: relationshipResult.input.documentType },
+      });
+    } catch (error) {
+      await context.supabase
+        .from("documents")
+        .delete()
+        .eq("id", documentId)
+        .eq("company_id", context.companyId);
+      await context.supabase.storage
+        .from(uploaded.storageBucket)
+        .remove([uploaded.storagePath]);
+
+      return { status: "error", message: getErrorMessage(error), fields, errors: {} };
+    }
   } catch (error) {
     if (uploaded) {
       const context = await requireOwnerDatabaseContext();
@@ -132,7 +162,7 @@ export async function updateFleetDocumentAction(
     const context = await requireOwnerDatabaseContext();
     const { data: existingDocument, error: lookupError } = await context.supabase
       .from("documents")
-      .select("storage_bucket,storage_path")
+      .select("id")
       .eq("id", documentId)
       .eq("company_id", context.companyId)
       .maybeSingle();
@@ -173,6 +203,18 @@ export async function updateFleetDocumentAction(
     }
 
     uploaded = upload.file;
+    let version: { id: string; versionNumber: number } | null = null;
+
+    if (uploaded) {
+      version = await recordDocumentVersion(context, {
+        documentId,
+        storageBucket: uploaded.storageBucket,
+        storagePath: uploaded.storagePath,
+        mimeType: uploaded.mimeType,
+        fileSize: uploaded.fileSize,
+        changeReason: "replacement",
+      });
+    }
 
     const updatePayload = {
       ...buildDocumentUpdatePayload(relationshipResult.input),
@@ -193,6 +235,14 @@ export async function updateFleetDocumentAction(
 
     if (error) {
       if (uploaded) {
+        if (version) {
+          await context.supabase
+            .from("document_versions")
+            .delete()
+            .eq("id", version.id)
+            .eq("company_id", context.companyId);
+        }
+
         await context.supabase.storage
           .from(uploaded.storageBucket)
           .remove([uploaded.storagePath]);
@@ -201,10 +251,13 @@ export async function updateFleetDocumentAction(
       return { status: "error", message: error.message, fields, errors: {} };
     }
 
-    if (uploaded) {
-      await context.supabase.storage
-        .from(existingDocument.storage_bucket)
-        .remove([existingDocument.storage_path]);
+    if (uploaded && version) {
+      await recordAuditEvent(context, {
+        eventType: "document.replaced",
+        entityType: "document",
+        entityId: documentId,
+        metadata: { versionNumber: version.versionNumber },
+      });
     }
   } catch (error) {
     if (uploaded) {
@@ -233,6 +286,12 @@ export async function archiveFleetDocumentAction(documentId: string) {
   if (error) {
     throw new AppError("DATA_ACCESS_ERROR", error.message);
   }
+
+  await recordAuditEvent(context, {
+    eventType: "document.archived",
+    entityType: "document",
+    entityId: documentId,
+  });
 
   revalidatePath("/documents");
   redirect("/documents");

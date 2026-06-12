@@ -38,6 +38,12 @@ The Step 6 migration is:
 
 It adds owner notification preferences, extends notifications with idempotent active keys, links, severity, resolution, generated timestamps, email attempt tracking, and metadata, and adds indexes used by dashboard, reminder, and report queries.
 
+The Step 7 local-foundation migration is:
+
+- `supabase/migrations/20260611210000_step7_reporting_notifications_documents.sql`
+
+It adds saved report preferences, advanced notification delivery columns, document version history, and owner-scoped audit events.
+
 ## Tables
 
 - `profiles`
@@ -50,8 +56,11 @@ It adds owner notification preferences, extends notifications with idempotent ac
 - `compliance_requirements`
 - `compliance_records`
 - `documents`
+- `document_versions`
 - `notifications`
 - `notification_preferences`
+- `report_preferences`
+- `audit_events`
 - `subscription_records`
 
 ## Security Functions
@@ -88,7 +97,11 @@ It adds owner notification preferences, extends notifications with idempotent ac
 - Active notifications are unique per company and notification key while unresolved, preventing duplicate active reminders.
 - Notification email attempt counts cannot be negative.
 - Notification preferences are unique per company and restrict weekly summary day to 0 through 6.
+- Notification quiet hours must either include both start and end times or neither.
+- Report preferences are unique per company and limit default lookback windows to 0 through 3650 days.
 - Document metadata stores the source bucket and checks that `storage_path` begins with the company UUID.
+- Document versions preserve company-scoped storage paths and unique version numbers per document.
+- Audit events require nonblank event and entity types and are append-only from the app policy perspective.
 - Subscription records are unique per company.
 
 ## Indexes
@@ -103,6 +116,9 @@ Indexes cover:
 - notification due/read/email status
 - notification active keys, resolution, unread state, and email retry scans
 - notification preference company lookups
+- report preference company lookups
+- document version history by company and document
+- audit event timelines by company and entity
 - Stripe placeholder identifiers
 
 ## Row-Level Security
@@ -119,8 +135,11 @@ RLS is enabled and forced for every tenant-owned table:
 - `compliance_requirements`
 - `compliance_records`
 - `documents`
+- `document_versions`
 - `notifications`
 - `notification_preferences`
+- `report_preferences`
+- `audit_events`
 - `subscription_records`
 
 Authenticated owners can access only rows where their completed profile belongs to the row's company. System maintenance templates use `company_id is null` and are readable, but only company-owned templates can be mutated by owners.
@@ -165,7 +184,8 @@ Compliance and fleet documents are validated before upload:
 - Signed URLs are created only after server-side owner-company metadata lookup
 - If upload succeeds but metadata creation fails, the server action removes the uploaded object
 - If file replacement succeeds but metadata update fails, the new object is removed and the existing file remains referenced
-- HEIC is intentionally not enabled in Step 5
+- Successful file replacement now records a new `document_versions` row and keeps previous storage objects available as history.
+- HEIC is intentionally not enabled.
 
 ## Development Seed
 
@@ -185,6 +205,7 @@ The scheduled endpoint must be protected by `CRON_SECRET`. Vercel Cron can call 
 
 ## Deferred Database Work
 
-- Report charts, saved views, and PDF exports.
-- Document OCR, bulk import, and version history.
+- Reliable PDF exports.
+- Document OCR, extracted fields, and bulk import.
+- Live Supabase integration-test execution in CI.
 - Stripe billing tables beyond the current internal subscription placeholders.

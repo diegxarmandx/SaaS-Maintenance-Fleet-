@@ -97,6 +97,10 @@ const defaultPreference = (companyId: string): NotificationPreference => ({
   maintenance_reminder_days: 14,
   compliance_reminder_days: 30,
   document_reminder_days: 30,
+  email_warning_enabled: true,
+  email_critical_enabled: true,
+  quiet_hours_start: null,
+  quiet_hours_end: null,
   weekly_summary_enabled: false,
   preferred_summary_day: 1,
 });
@@ -628,6 +632,18 @@ async function sendEligibleReminderEmails(
       continue;
     }
 
+    if (
+      !isReminderEmailEligible(
+        candidate,
+        preference,
+        new Date(),
+        company.preferred_timezone,
+      )
+    ) {
+      emailsSkipped += 1;
+      continue;
+    }
+
     if (!provider) {
       await supabase
         .from("notifications")
@@ -776,4 +792,80 @@ function urgencyDistance(metadata: Record<string, string | number | boolean | nu
 
 function numberOrNull(value: number | null) {
   return value === null ? null : Number(value);
+}
+
+export function isReminderEmailEligible(
+  candidate: Pick<ReminderNotificationCandidate, "severity">,
+  preference: Pick<
+    NotificationPreference,
+    | "email_warning_enabled"
+    | "email_critical_enabled"
+    | "quiet_hours_start"
+    | "quiet_hours_end"
+  >,
+  now: Date = new Date(),
+  timezone = "UTC",
+) {
+  if (candidate.severity === "warning" && !preference.email_warning_enabled) {
+    return false;
+  }
+
+  if (candidate.severity === "critical" && !preference.email_critical_enabled) {
+    return false;
+  }
+
+  if (
+    preference.quiet_hours_start &&
+    preference.quiet_hours_end &&
+    isWithinQuietHours(
+      now,
+      preference.quiet_hours_start,
+      preference.quiet_hours_end,
+      timezone,
+    )
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+export function isWithinQuietHours(
+  now: Date,
+  start: string,
+  end: string,
+  timezone = "UTC",
+) {
+  const currentMinutes = getTimeZoneMinutes(now, timezone);
+  const startMinutes = parseTimeToMinutes(start);
+  const endMinutes = parseTimeToMinutes(end);
+
+  if (startMinutes === endMinutes) {
+    return false;
+  }
+
+  if (startMinutes < endMinutes) {
+    return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+  }
+
+  return currentMinutes >= startMinutes || currentMinutes < endMinutes;
+}
+
+function parseTimeToMinutes(value: string) {
+  const [hours = "0", minutes = "0"] = value.split(":");
+
+  return Number(hours) * 60 + Number(minutes);
+}
+
+function getTimeZoneMinutes(now: Date, timezone: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: timezone,
+  }).formatToParts(now);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? 0);
+  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? 0);
+
+  return hour * 60 + minute;
 }

@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import type { NotificationPreference } from "@/features/notifications/types";
 import { AppError } from "@/lib/errors";
 import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
+import { recordAuditEvent } from "@/server/audit/log";
 
 export async function markNotificationReadAction(notificationId: string) {
   const context = await requireOwnerDatabaseContext();
@@ -40,11 +41,17 @@ export async function markAllNotificationsReadAction() {
 
 export async function updateNotificationPreferencesAction(formData: FormData) {
   const context = await requireOwnerDatabaseContext();
+  const quietHoursStart = parseOptionalTime(formData.get("quietHoursStart"));
+  const quietHoursEnd = parseOptionalTime(formData.get("quietHoursEnd"));
   const payload: Omit<NotificationPreference, "company_id"> = {
     email_enabled: formData.get("emailEnabled") === "on",
     maintenance_reminder_days: parseReminderDays(formData.get("maintenanceReminderDays")),
     compliance_reminder_days: parseReminderDays(formData.get("complianceReminderDays")),
     document_reminder_days: parseReminderDays(formData.get("documentReminderDays")),
+    email_warning_enabled: formData.get("emailWarningEnabled") === "on",
+    email_critical_enabled: formData.get("emailCriticalEnabled") === "on",
+    quiet_hours_start: quietHoursStart && quietHoursEnd ? quietHoursStart : null,
+    quiet_hours_end: quietHoursStart && quietHoursEnd ? quietHoursEnd : null,
     weekly_summary_enabled: formData.get("weeklySummaryEnabled") === "on",
     preferred_summary_day: parseSummaryDay(formData.get("preferredSummaryDay")),
   };
@@ -59,6 +66,17 @@ export async function updateNotificationPreferencesAction(formData: FormData) {
   if (error) {
     throw new AppError("DATA_ACCESS_ERROR", error.message);
   }
+
+  await recordAuditEvent(context, {
+    eventType: "notification_preferences.updated",
+    entityType: "notification_preferences",
+    entityId: context.companyId,
+    metadata: {
+      emailEnabled: payload.email_enabled,
+      warningEmail: payload.email_warning_enabled,
+      criticalEmail: payload.email_critical_enabled,
+    },
+  });
 
   revalidatePath("/settings");
   redirect("/settings");
@@ -82,4 +100,10 @@ function parseSummaryDay(value: FormDataEntryValue | null) {
   }
 
   return Math.floor(parsed);
+}
+
+function parseOptionalTime(value: FormDataEntryValue | null) {
+  const text = String(value ?? "").trim();
+
+  return /^\d{2}:\d{2}$/.test(text) ? text : null;
 }

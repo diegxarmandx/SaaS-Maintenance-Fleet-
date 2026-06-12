@@ -2,6 +2,11 @@ import { calculateComplianceStatus } from "@/features/compliance/status";
 import { calculateDocumentStatus } from "@/features/documents/status";
 import { formatCurrency } from "@/features/fleet/helpers";
 import { calculateMaintenanceStatus } from "@/features/maintenance/schedule";
+import {
+  buildPreferredReportSearchParams,
+  defaultReportPreference,
+  type ReportPreference,
+} from "@/features/reports/preferences";
 import { AppError } from "@/lib/errors";
 import {
   getOwnerDatabaseContext,
@@ -40,6 +45,7 @@ export type ReportData = {
   isConfigured: boolean;
   companyName: string;
   filters: ReportFilters;
+  preference: ReportPreference;
   assets: ReportAsset[];
   upcomingMaintenance: ReportRow[];
   overdueMaintenance: ReportRow[];
@@ -72,13 +78,19 @@ export function parseReportFilters(searchParams: ReportSearchParams): ReportFilt
 export async function getReportData(
   searchParams: ReportSearchParams,
 ): Promise<ReportData> {
-  const filters = parseReportFilters(searchParams);
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return emptyReportData(filters);
+    return emptyReportData(parseReportFilters(searchParams));
   }
 
+  const preference = await getReportPreference(context.supabase, context.companyId);
+  const preferredSearchParams = buildPreferredReportSearchParams({
+    searchParams,
+    preference,
+    timezone: context.preferredTimezone,
+  });
+  const filters = parseReportFilters(preferredSearchParams);
   const [
     assets,
     rules,
@@ -97,9 +109,6 @@ export async function getReportData(
     getMeterReadings(context.supabase, context.companyId, filters),
   ]);
   const assetsById = new Map(assets.map((asset) => [asset.id, asset]));
-  const filteredAssets = filters.assetId
-    ? assets.filter((asset) => asset.id === filters.assetId)
-    : assets;
   const maintenanceRows = rules.flatMap((rule) => {
     const asset = assetsById.get(rule.asset_id);
 
@@ -199,7 +208,8 @@ export async function getReportData(
     isConfigured: true,
     companyName: context.companyName,
     filters,
-    assets: filteredAssets,
+    preference,
+    assets,
     upcomingMaintenance: maintenanceRows.filter((row) => row.status === "Due soon"),
     overdueMaintenance: maintenanceRows.filter((row) => row.status === "Overdue"),
     completedMaintenance,
@@ -223,6 +233,7 @@ function emptyReportData(filters: ReportFilters): ReportData {
     isConfigured: false,
     companyName: "FleetReady workspace",
     filters,
+    preference: defaultReportPreference(""),
     assets: [],
     upcomingMaintenance: [],
     overdueMaintenance: [],
@@ -240,6 +251,20 @@ function emptyReportData(filters: ReportFilters): ReportData {
     documentsByCategory: [],
     assetHistory: [],
   };
+}
+
+async function getReportPreference(supabase: SupabaseServerClient, companyId: string) {
+  const { data, error } = await supabase
+    .from("report_preferences")
+    .select("*")
+    .eq("company_id", companyId)
+    .maybeSingle();
+
+  if (error) {
+    throw new AppError("DATA_ACCESS_ERROR", error.message);
+  }
+
+  return (data as ReportPreference | null) ?? defaultReportPreference(companyId);
 }
 
 function buildComplianceRows({

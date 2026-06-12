@@ -10,6 +10,7 @@ import type {
   DocumentFilters,
   DocumentRelationshipOption,
   FleetDocument,
+  FleetDocumentVersion,
   FleetDocumentWithRelations,
 } from "@/features/documents/types";
 import { AppError } from "@/lib/errors";
@@ -218,7 +219,20 @@ export async function getDocumentDetail(documentId: string) {
     complianceRecords,
   });
 
-  return decoratedDocument ?? null;
+  if (!decoratedDocument) {
+    return null;
+  }
+
+  const versions = await getDocumentVersions(
+    context.supabase,
+    context.companyId,
+    documentId,
+  );
+
+  return {
+    ...decoratedDocument,
+    versions,
+  };
 }
 
 export async function getAssetDocumentSnapshot(assetId: string) {
@@ -308,6 +322,38 @@ async function getDocuments(
   }
 
   return (data ?? []) as FleetDocument[];
+}
+
+async function getDocumentVersions(
+  supabase: SupabaseServerClient,
+  companyId: string,
+  documentId: string,
+): Promise<FleetDocumentVersion[]> {
+  const { data, error } = await supabase
+    .from("document_versions")
+    .select(
+      "id,version_number,storage_bucket,storage_path,mime_type,file_size,change_reason,created_at",
+    )
+    .eq("company_id", companyId)
+    .eq("document_id", documentId)
+    .order("version_number", { ascending: false })
+    .limit(12);
+
+  if (error) {
+    throw new AppError("DATA_ACCESS_ERROR", error.message);
+  }
+
+  return Promise.all(
+    (
+      (data ?? []) as Array<
+        Omit<FleetDocumentVersion, "signedUrl"> & { file_size: number | string }
+      >
+    ).map(async (version) => ({
+      ...version,
+      file_size: Number(version.file_size ?? 0),
+      signedUrl: await createAuthorizedSignedDocumentUrl(supabase, companyId, version),
+    })),
+  );
 }
 
 async function getMaintenanceRecordOptions(

@@ -161,6 +161,50 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
               </p>
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Version history</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {document.versions && document.versions.length > 0 ? (
+                <ol className="divide-y divide-border">
+                  {document.versions.map((version) => (
+                    <li
+                      className="flex items-center justify-between gap-3 py-3"
+                      key={version.id}
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          Version {version.version_number}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-muted">
+                          {version.change_reason.replace("_", " ")} ·{" "}
+                          {formatFileSize(version.file_size)} ·{" "}
+                          {formatShortDate(version.created_at)}
+                        </p>
+                      </div>
+                      {version.signedUrl ? (
+                        <a
+                          className={buttonClassName({
+                            variant: "secondary",
+                            size: "sm",
+                          })}
+                          href={version.signedUrl}
+                        >
+                          <Download aria-hidden="true" className="h-4 w-4" />
+                          Download
+                        </a>
+                      ) : null}
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="text-sm leading-6 text-muted">
+                  No version history recorded yet.
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </aside>
       </div>
     </>

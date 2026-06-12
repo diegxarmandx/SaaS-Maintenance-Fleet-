@@ -29,6 +29,10 @@ export type NotificationPreference = {
   maintenance_reminder_days: number;
   compliance_reminder_days: number;
   document_reminder_days: number;
+  email_warning_enabled: boolean;
+  email_critical_enabled: boolean;
+  quiet_hours_start: string | null;
+  quiet_hours_end: string | null;
   weekly_summary_enabled: boolean;
   preferred_summary_day: number;
 };

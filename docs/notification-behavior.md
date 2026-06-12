@@ -21,6 +21,8 @@ Each active reminder has a stable `notification_key`. The database prevents dupl
 4. Unread notifications appear in the owner shell notification menu.
 5. Owners can mark one notification or all active notifications as read.
 6. Email is attempted only when notification preferences enable email and the notification has not already been sent.
+7. Warning and critical email categories can be enabled independently.
+8. Optional quiet hours suppress reminder email attempts in the company timezone while preserving in-app notifications.
 
 ## Email Delivery
 
@@ -39,3 +41,5 @@ RESEND_API_KEY=<secret>
 ```
 
 Failed email attempts are recorded with status, attempt timestamp, attempt count, and an error message. The browser never receives email-provider secrets.
+
+Settings also show lightweight notification analytics for active, unread, critical, and failed-email counts. These are read-only operational counts for the owner and do not introduce manager, driver, mechanic, or employee workflows.

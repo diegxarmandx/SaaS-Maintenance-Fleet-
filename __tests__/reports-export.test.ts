@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildCsv, escapeCsvValue } from "../src/features/reports/export";
+import { buildPreferredReportSearchParams } from "../src/features/reports/preferences";
 import { parseReportFilters } from "../src/features/reports/server/queries";
 
 describe("report exports", () => {
@@ -36,5 +37,35 @@ describe("report exports", () => {
       from: "2026-01-01",
       to: "2026-06-30",
     });
+  });
+
+  it("applies saved report defaults only when explicit filters are absent", () => {
+    const preference = {
+      company_id: "company-1",
+      default_asset_id: "asset-1",
+      default_lookback_days: 30,
+      show_charts_by_default: true,
+    };
+
+    expect(
+      buildPreferredReportSearchParams({
+        searchParams: {},
+        preference,
+        timezone: "UTC",
+        now: new Date("2026-06-11T12:00:00.000Z"),
+      }),
+    ).toEqual({
+      assetId: "asset-1",
+      from: "2026-05-12",
+      to: "2026-06-11",
+    });
+    expect(
+      buildPreferredReportSearchParams({
+        searchParams: { assetId: "asset-2" },
+        preference,
+        timezone: "UTC",
+        now: new Date("2026-06-11T12:00:00.000Z"),
+      }),
+    ).toEqual({ assetId: "asset-2" });
   });
 });

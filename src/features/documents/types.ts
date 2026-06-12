@@ -42,6 +42,19 @@ export type FleetDocumentWithRelations = FleetDocument & {
   status: DocumentStatus;
   daysUntilExpiration: number | null;
   canPreview: boolean;
+  versions?: FleetDocumentVersion[];
+};
+
+export type FleetDocumentVersion = {
+  id: string;
+  version_number: number;
+  storage_bucket: string;
+  storage_path: string;
+  mime_type: string;
+  file_size: number;
+  change_reason: "upload" | "replacement" | "metadata_import";
+  created_at: string;
+  signedUrl: string | null;
 };
 
 export type DocumentFilters = {

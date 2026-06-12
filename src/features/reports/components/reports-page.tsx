@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Download, FileSpreadsheet, Filter } from "lucide-react";
+import { BarChart3, Download, FileSpreadsheet, Filter, Save } from "lucide-react";
 
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { buttonClassName } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { Select } from "@/components/ui/select";
+import { updateReportPreferencesAction } from "@/features/reports/actions";
 import type {
   ReportData,
   ReportFilters,
@@ -102,6 +103,7 @@ export function ReportsPageView({ reports }: ReportsPageViewProps) {
       ) : (
         <div className="grid gap-6">
           <ReportFiltersForm reports={reports} />
+          <ReportPreferencesForm reports={reports} />
 
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <Metric
@@ -119,6 +121,28 @@ export function ReportsPageView({ reports }: ReportsPageViewProps) {
             />
             <Metric label="Expired documents" value={reports.expiredDocuments.length} />
           </section>
+
+          {reports.preference.show_charts_by_default ? (
+            <section className="grid gap-5 xl:grid-cols-3">
+              <BarChartCard
+                amount
+                items={reports.maintenanceCostsByAsset}
+                title="Maintenance cost by asset"
+              />
+              <BarChartCard
+                amount
+                items={reports.maintenanceCostsByCategory}
+                title="Maintenance cost by category"
+              />
+              <BarChartCard
+                items={reports.documentsByCategory.map((item) => ({
+                  label: item.label,
+                  value: item.count,
+                }))}
+                title="Documents by category"
+              />
+            </section>
+          ) : null}
 
           <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
             <ReportTable
@@ -192,6 +216,56 @@ export function ReportsPageView({ reports }: ReportsPageViewProps) {
         </div>
       )}
     </>
+  );
+}
+
+function ReportPreferencesForm({ reports }: { reports: ReportData }) {
+  return (
+    <form
+      action={updateReportPreferencesAction}
+      className="print:hidden grid gap-4 rounded-lg border border-border bg-surface p-4 shadow-sm lg:grid-cols-[minmax(180px,1fr)_180px_auto_auto]"
+    >
+      <label className="grid gap-2 text-sm font-medium text-foreground">
+        Default asset
+        <Select
+          defaultValue={reports.preference.default_asset_id ?? ""}
+          name="defaultAssetId"
+        >
+          <option value="">All assets</option>
+          {reports.assets.map((asset) => (
+            <option key={asset.id} value={asset.id}>
+              {asset.unit_number} {asset.asset_name}
+            </option>
+          ))}
+        </Select>
+      </label>
+      <label className="grid gap-2 text-sm font-medium text-foreground">
+        Default lookback days
+        <Input
+          defaultValue={reports.preference.default_lookback_days}
+          max="3650"
+          min="0"
+          name="defaultLookbackDays"
+          type="number"
+        />
+      </label>
+      <label className="flex items-end gap-3 pb-3 text-sm font-medium text-foreground">
+        <input
+          className="h-4 w-4 rounded border-border text-primary"
+          defaultChecked={reports.preference.show_charts_by_default}
+          name="showChartsByDefault"
+          type="checkbox"
+        />
+        Show charts
+      </label>
+      <button
+        className={buttonClassName({ variant: "secondary", className: "self-end" })}
+        type="submit"
+      >
+        <Save aria-hidden="true" className="h-4 w-4" />
+        Save defaults
+      </button>
+    </form>
   );
 }
 
@@ -310,6 +384,71 @@ function SummaryList({
               </li>
             ))}
           </ol>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function BarChartCard({
+  title,
+  items,
+  amount = false,
+}: {
+  title: string;
+  items: Array<{ label: string; amount?: number; value?: number }>;
+  amount?: boolean;
+}) {
+  const normalizedItems = items
+    .map((item) => ({
+      label: item.label,
+      value: item.amount ?? item.value ?? 0,
+    }))
+    .filter((item) => item.value > 0)
+    .slice(0, 6);
+  const maxValue = Math.max(...normalizedItems.map((item) => item.value), 1);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <span className="inline-flex items-center gap-2">
+            <BarChart3 aria-hidden="true" className="h-4 w-4 text-primary" />
+            {title}
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {normalizedItems.length === 0 ? (
+          <p className="text-sm leading-6 text-muted">
+            No chartable data in this filter.
+          </p>
+        ) : (
+          <figure aria-label={title} className="grid gap-3">
+            {normalizedItems.map((item, index) => (
+              <div className="grid gap-1" key={item.label}>
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="truncate font-medium text-foreground">
+                    {item.label}
+                  </span>
+                  <span className="font-mono text-xs text-muted">
+                    {amount ? formatReportAmount(item.value) : item.value}
+                  </span>
+                </div>
+                <div className="h-3 rounded-full bg-surface-muted">
+                  <div
+                    aria-hidden="true"
+                    className={
+                      index % 2 === 0
+                        ? "h-3 rounded-full bg-primary"
+                        : "h-3 rounded-full bg-accent"
+                    }
+                    style={{ width: `${Math.max(8, (item.value / maxValue) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </figure>
         )}
       </CardContent>
     </Card>

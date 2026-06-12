@@ -26,10 +26,11 @@
 - `src/features/fleet`: Fleet asset boundary with constants, validation, pure helpers, server queries/actions, responsive list UI, asset forms, asset profile, and meter-reading form
 - `src/features/maintenance`: Preventive maintenance boundary with status calculations, rule forms, completed record entry, history, cost summaries, attachment handling, and server actions/queries
 - `src/features/compliance`: Compliance boundary with assigned requirements, status calculations, record forms, attachment handling, server actions/queries, and responsive overview/detail UI
-- `src/features/documents`: Document boundary with file validation, document library UI, relationship handling, signed URL helpers, and server actions/queries
+- `src/features/documents`: Document boundary with file validation, document library UI, relationship handling, signed URL helpers, document version history, and server actions/queries
 - `src/features/notifications`: In-app notification, reminder generation, email template, cron auth, and preference logic
-- `src/features/reports`: Reporting boundary with server queries, CSV export helpers, and report UI
-- `src/features/settings`: Settings boundary with notification preferences
+- `src/features/reports`: Reporting boundary with server queries, saved defaults, chart summaries, CSV export helpers, and report UI
+- `src/features/settings`: Settings boundary with notification preferences and notification analytics
+- `src/server/audit`: Non-blocking audit event recording for important owner actions
 - `src/lib/env`: Environment schemas and parsed config
 - `src/lib/supabase`: Browser and server Supabase client factories
 - `src/lib/email`: Transactional email provider contract
@@ -78,16 +79,16 @@ Fleet asset screens use desktop tables and mobile card lists so small-screen own
 
 ## Dashboard, Notifications, and Reports
 
-Step 6 implements the owner command center without introducing any additional operational user roles.
+Steps 6 and 7 implement the owner command center without introducing any additional operational user roles.
 
 - `/dashboard` shows active asset count, due-soon and overdue maintenance counts, expiring and expired document counts, missing compliance counts, a prioritized attention list, fleet status by asset, and recent maintenance, document, compliance, and meter-reading activity.
 - Dashboard attention order is deterministic: expired/overdue first, missing second, due-soon/expiring third.
 - Notifications are company-scoped database rows. Reminder processing creates or updates active notifications by stable `notification_key`, resolves stale notifications, and prevents duplicate active reminders through a partial unique index.
 - The notification menu supports unread counts, individual mark-read actions, and mark-all-read actions.
-- `/settings` exposes owner notification preferences for email enablement, reminder thresholds, weekly summary enablement, and preferred summary day.
+- `/settings` exposes owner notification analytics and preferences for email enablement, warning/critical delivery controls, quiet hours, reminder thresholds, weekly summary enablement, and preferred summary day.
 - `/api/cron/reminders` is a secure server-only endpoint prepared for Vercel Cron. It requires `CRON_SECRET`, uses the service-role client only on the server, and logs counts without PII or secrets.
 - Reminder email templates cover maintenance due/overdue, compliance expiring/expired/missing, document expiring/expired, and weekly summary. Local development can keep `EMAIL_PROVIDER=none`.
-- `/reports` provides owner-filtered maintenance, compliance, document, and asset-history reports with CSV exports and print-friendly views.
+- `/reports` provides owner-filtered maintenance, compliance, document, and asset-history reports with saved defaults, compact chart summaries, CSV exports, and print-friendly views.
 - CSV exports are generated server-side from the current owner company, include company and generated date metadata, escape spreadsheet-dangerous values, and omit internal UUIDs.
 
 ## Fleet Asset Slice
@@ -156,7 +157,7 @@ Step 5 implements a private owner document library.
 
 Document metadata stores both a broad domain category and the exact owner-facing `document_type`. The database also stores `storage_bucket`, so signed URL generation does not guess which bucket contains a file.
 
-Supported uploads are PDF, JPEG, and PNG. Server actions validate declared MIME type, detected file signature, size, owner relationships, company-scoped paths, and private bucket placement. HEIC is intentionally deferred.
+Supported uploads are PDF, JPEG, and PNG. Server actions validate declared MIME type, detected file signature, size, owner relationships, company-scoped paths, and private bucket placement. Replacements create `document_versions` records and preserve previous storage objects as history. HEIC is intentionally deferred.
 
 ## Testing Strategy
 
@@ -182,13 +183,16 @@ Unit tests cover:
 - Responsive compliance and document UI structure
 - Dashboard attention priority
 - Notification sync planning and cron authorization
-- CSV escaping and report filter parsing
+- CSV escaping, report filter parsing, and saved report default behavior
 - Static migration checks for notification preferences, active notification uniqueness, and email attempt tracking
+- Notification delivery eligibility and quiet-hour calculations
+- Static migration checks for report preferences, document versions, and audit event policies
 
-Live Supabase integration tests are deferred until a project URL and service credentials are configured in CI.
+GitHub Actions runs install, lint, type checking, tests, and production build. Live Supabase integration tests are deferred until a project URL and service credentials are configured in CI.
 
 ## Deferred Integrations
 
-- Report charts, saved views, and reliable PDF generation
-- Document OCR, bulk import, and version history
+- Reliable PDF generation
+- Document OCR, extracted fields, and bulk import
+- Live Supabase integration-test execution
 - Stripe billing

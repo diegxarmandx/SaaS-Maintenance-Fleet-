@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { isAuthorizedCronRequest } from "../src/features/notifications/cron-auth";
+import {
+  isReminderEmailEligible,
+  isWithinQuietHours,
+} from "../src/features/notifications/service";
 import { planNotificationSync } from "../src/features/notifications/sync-plan";
 
 describe("notification reminder processing helpers", () => {
@@ -42,5 +46,36 @@ describe("notification reminder processing helpers", () => {
       updateKeys: ["maintenance:overdue:1"],
       resolveKeys: ["document:expired:1"],
     });
+  });
+
+  it("respects warning and critical email delivery preferences", () => {
+    const preference = {
+      email_warning_enabled: false,
+      email_critical_enabled: true,
+      quiet_hours_start: null,
+      quiet_hours_end: null,
+    };
+
+    expect(isReminderEmailEligible({ severity: "warning" }, preference)).toBe(false);
+    expect(isReminderEmailEligible({ severity: "critical" }, preference)).toBe(true);
+  });
+
+  it("detects quiet hours across midnight in the company timezone", () => {
+    expect(
+      isWithinQuietHours(
+        new Date("2026-06-11T02:30:00.000Z"),
+        "21:00",
+        "06:00",
+        "America/Puerto_Rico",
+      ),
+    ).toBe(true);
+    expect(
+      isWithinQuietHours(
+        new Date("2026-06-11T14:30:00.000Z"),
+        "21:00",
+        "06:00",
+        "America/Puerto_Rico",
+      ),
+    ).toBe(false);
   });
 });

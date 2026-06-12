@@ -41,6 +41,14 @@ const dashboardNotificationsMigrationSql = readFileSync(
   "utf8",
 );
 
+const step7MigrationSql = readFileSync(
+  new URL(
+    "../supabase/migrations/20260611210000_step7_reporting_notifications_documents.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
+
 const tenantTables = [
   "profiles",
   "companies",
@@ -234,5 +242,34 @@ describe("database migration security", () => {
     expect(dashboardNotificationsMigrationSql).toContain("email_last_attempt_at");
     expect(dashboardNotificationsMigrationSql).toContain("email_attempt_count");
     expect(dashboardNotificationsMigrationSql).toContain("email_sent_at");
+  });
+
+  it("adds owner-scoped report preferences for saved report defaults", () => {
+    expect(step7MigrationSql).toContain(
+      "create table if not exists public.report_preferences",
+    );
+    expect(step7MigrationSql).toContain(
+      "alter table public.report_preferences enable row level security",
+    );
+    expect(step7MigrationSql).toContain("report_preferences_owner_access");
+    expect(step7MigrationSql).toContain("default_lookback_days >= 0");
+  });
+
+  it("adds document versions with company-scoped storage paths", () => {
+    expect(step7MigrationSql).toContain(
+      "create table if not exists public.document_versions",
+    );
+    expect(step7MigrationSql).toContain("document_versions_storage_path_company_scope");
+    expect(step7MigrationSql).toContain(
+      "alter table public.document_versions enable row level security",
+    );
+    expect(step7MigrationSql).toContain("document_versions_owner_access");
+  });
+
+  it("adds append-only owner audit event insert and select policies", () => {
+    expect(step7MigrationSql).toContain("create table if not exists public.audit_events");
+    expect(step7MigrationSql).toContain("audit_events_owner_select");
+    expect(step7MigrationSql).toContain("audit_events_owner_insert");
+    expect(step7MigrationSql).not.toContain("audit_events_owner_update");
   });
 });
