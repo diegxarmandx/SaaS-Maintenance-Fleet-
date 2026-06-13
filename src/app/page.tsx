@@ -18,12 +18,12 @@ const readinessItems = [
   },
   {
     title: "Compliance",
-    description: "Requirements, documents, and expiration alerts are prepared.",
+    description: "Requirements, documents, and expiration alerts stay visible.",
     icon: ShieldCheck,
   },
   {
     title: "Reports",
-    description: "Owner-facing summaries are planned without dispatch or payroll.",
+    description: "Owner-facing summaries stay focused on fleet readiness.",
     icon: FileClock,
   },
 ] as const;
@@ -73,11 +73,11 @@ export default function Home() {
         <section aria-labelledby="prepared-routes" className="grid gap-3 md:grid-cols-2">
           <div>
             <h2 id="prepared-routes" className="text-xl font-semibold text-foreground">
-              Prepared routes
+              Owner workspace
             </h2>
             <p className="mt-2 max-w-xl text-sm leading-6 text-muted">
-              Each route has a placeholder surface and scoped module boundary ready for
-              implementation.
+              Open the focused modules for assets, maintenance, compliance, documents,
+              reports, and settings.
             </p>
           </div>
           <div className="grid gap-2">

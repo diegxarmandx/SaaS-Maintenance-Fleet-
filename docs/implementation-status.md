@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-06-11
+Last updated: 2026-06-12
 
 ## Completed in Step 1
 
@@ -80,7 +80,7 @@ Last updated: 2026-06-11
 - Added company-scoped in-app notifications with unread counts, individual read actions, mark-all-read, stable active keys, stale notification resolution, and duplicate active notification prevention.
 - Added notification preferences for email enablement, maintenance/compliance/document thresholds, weekly summary enablement, and preferred summary day.
 - Added reminder email templates and a Resend transactional provider implementation while preserving `EMAIL_PROVIDER=none` for local and test environments.
-- Added the secure `/api/cron/reminders` endpoint prepared for Vercel Cron and protected by `CRON_SECRET`.
+- Added the secure `/api/cron/reminders` endpoint prepared for a future scheduler and protected by `CRON_SECRET`.
 - Added owner-facing reports for maintenance, compliance, documents, and asset history with filters, CSV exports, print-friendly views, and bounded server queries.
 - Added Step 6 migration for `notification_preferences`, notification severity/link/resolution/email-attempt fields, active notification uniqueness, and dashboard/report indexes.
 - Added tests for dashboard attention priority, notification sync planning, cron authorization, CSV escaping, report filter parsing, and Step 6 migration expectations.
@@ -98,13 +98,31 @@ Last updated: 2026-06-11
 - Added Step 7 migration for report preferences, notification preference delivery controls, document versions, and audit events.
 - Added tests for saved report defaults, notification email eligibility, quiet hours, and Step 7 migration expectations.
 
-## Still Deferred Beyond Step 7 Doable Scope
+## Completed in Subscription and Frontend Readiness Step
+
+- Added packaged IBM Plex Sans typography and refined centralized light-mode color/status tokens.
+- Improved the authenticated shell with an actual fleet search form, clearer owner/company context, and tokenized surfaces.
+- Reworked Settings into structured company, owner, measurement/defaults, account security, subscription/billing, and notification sections.
+- Added responsive report mobile cards so report data is not forced into desktop tables on phones.
+- Added subscription plans for Starter, Small Fleet, and Growing Fleet with active-asset limits of 5, 15, and 30.
+- Added Stripe Checkout server action, Stripe Billing Portal server action, verified webhook route, and idempotent `stripe_events` persistence.
+- Added webhook handling for checkout completion, subscription creation/update/deletion, successful invoice payment, and failed invoice payment.
+- Added subscription-state helpers for full-access, read-only, billing-access, report-export, upload, edit, and asset-create capabilities.
+- Added server-action active-asset limit checks for asset creation and reactivation.
+- Added database-level active-asset limit enforcement through `public.enforce_active_asset_limit()` so direct authenticated Supabase writes cannot bypass the limit.
+- Updated onboarding and development seed behavior to create Starter trial subscription records.
+- Added tests for subscription access rules, Stripe webhook static behavior, Stripe event persistence, and active-asset limit migration expectations.
+- Added `docs/design-system.md` and `docs/launch-checklist.md`.
+
+## Still Deferred Beyond Current Local Scope
 
 - Live Supabase integration tests in CI.
 - Reliable PDF generation.
 - Document OCR, extracted fields, and bulk import.
-- Stripe billing flow and webhook handling.
 - Production observability dashboards, alerting, and audit review UI.
+- Stripe product/price creation or reuse verification after Stripe connector re-authentication.
+- End-to-end Stripe Checkout/Portal testing against a configured Stripe test account.
+- Production deployment, domain configuration, scheduler configuration, and Vercel setup.
 
 ## Verification Targets
 

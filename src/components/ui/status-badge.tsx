@@ -17,22 +17,30 @@ type StatusBadgeProps = {
 
 const statusStyles: Record<AssetAttentionStatus, string> = {
   Current: "border-primary/25 bg-primary/10 text-primary",
+  Active: "border-primary/25 bg-primary/10 text-primary",
   "Due soon": "border-accent/35 bg-accent/10 text-accent-foreground",
   "Expiring soon": "border-accent/35 bg-accent/10 text-accent-foreground",
   Overdue: "border-danger/25 bg-danger/10 text-danger",
   Expired: "border-danger/25 bg-danger/10 text-danger",
-  Missing: "border-sky-700/25 bg-sky-50 text-sky-800",
+  "Past due": "border-danger/25 bg-danger/10 text-danger",
+  Missing: "border-info/25 bg-info/10 text-info",
   Archived: "border-border bg-surface-muted text-muted",
+  Canceled: "border-border bg-surface-muted text-muted",
+  "Read-only": "border-warning/35 bg-warning/10 text-warning-foreground",
 };
 
 const statusIcons = {
   Current: CheckCircle2,
+  Active: CheckCircle2,
   "Due soon": Clock3,
   "Expiring soon": Clock3,
   Overdue: AlertTriangle,
   Expired: XCircle,
+  "Past due": AlertTriangle,
   Missing: CircleHelp,
   Archived: Archive,
+  Canceled: XCircle,
+  "Read-only": Clock3,
 } as const;
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {

@@ -25,6 +25,7 @@ import { assetFormSchema, meterReadingFormSchema } from "@/features/fleet/valida
 import { AppError, getErrorMessage } from "@/lib/errors";
 import { serverEnv } from "@/lib/env/server";
 import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
+import { requireActiveAssetCapacity } from "@/features/billing/server/subscription";
 
 export async function createAssetAction(
   _previousState: AssetFormState,
@@ -46,6 +47,11 @@ export async function createAssetAction(
 
   try {
     const context = await requireOwnerDatabaseContext();
+
+    if (parsed.data.status === "active") {
+      await requireActiveAssetCapacity(context);
+    }
+
     const assetId = crypto.randomUUID();
     const imageUpload = await uploadAssetImage(context, assetId, formData);
 
@@ -119,7 +125,7 @@ export async function updateAssetAction(
     const context = await requireOwnerDatabaseContext();
     const { data: existingAsset, error: lookupError } = await context.supabase
       .from("assets")
-      .select("id,asset_image_path")
+      .select("id,asset_image_path,status,archived_at")
       .eq("id", assetId)
       .eq("company_id", context.companyId)
       .maybeSingle();
@@ -137,6 +143,19 @@ export async function updateAssetAction(
       };
     }
 
+    const previousAssetState = existingAsset as {
+      asset_image_path: string | null;
+      status: string;
+      archived_at: string | null;
+    };
+    const isReactivating =
+      parsed.data.status === "active" &&
+      (previousAssetState.status !== "active" || Boolean(previousAssetState.archived_at));
+
+    if (isReactivating) {
+      await requireActiveAssetCapacity(context);
+    }
+
     const imageUpload = await uploadAssetImage(context, assetId, formData);
 
     if (imageUpload.error) {
@@ -148,7 +167,8 @@ export async function updateAssetAction(
       };
     }
 
-    const assetImagePath = imageUpload.path ?? existingAsset.asset_image_path ?? null;
+    const assetImagePath =
+      imageUpload.path ?? previousAssetState.asset_image_path ?? null;
     const payload = buildAssetUpdatePayload(parsed.data, assetImagePath);
 
     const { error } = await context.supabase

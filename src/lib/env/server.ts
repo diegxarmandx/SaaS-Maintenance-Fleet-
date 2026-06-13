@@ -17,6 +17,11 @@ const parsedServerEnv = serverEnvSchema.safeParse({
   EMAIL_PROVIDER: process.env.EMAIL_PROVIDER,
   EMAIL_FROM: process.env.EMAIL_FROM,
   RESEND_API_KEY: process.env.RESEND_API_KEY,
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+  STRIPE_STARTER_PRICE_ID: process.env.STRIPE_STARTER_PRICE_ID,
+  STRIPE_SMALL_FLEET_PRICE_ID: process.env.STRIPE_SMALL_FLEET_PRICE_ID,
+  STRIPE_GROWING_FLEET_PRICE_ID: process.env.STRIPE_GROWING_FLEET_PRICE_ID,
 });
 
 if (!parsedServerEnv.success) {

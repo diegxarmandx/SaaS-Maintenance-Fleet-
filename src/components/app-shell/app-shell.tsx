@@ -38,7 +38,7 @@ export async function AppShell({ children }: PropsWithChildren) {
           </Link>
           <section
             aria-label="Current company"
-            className="mt-6 rounded-lg border border-border bg-background p-3"
+            className="mt-6 rounded-lg border border-border bg-surface-subtle p-3"
           >
             <p className="text-xs font-medium uppercase tracking-normal text-muted">
               Company
@@ -50,7 +50,7 @@ export async function AppShell({ children }: PropsWithChildren) {
           </section>
           <OwnerNavigation className="mt-8" />
           <div className="mt-auto grid gap-3 px-2 pt-8">
-            <details className="group rounded-lg border border-border bg-background p-3 text-sm">
+            <details className="group rounded-lg border border-border bg-surface-subtle p-3 text-sm">
               <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 text-foreground">
                 <UserCircle aria-hidden="true" className="h-5 w-5 text-primary" />
                 <span className="min-w-0">
@@ -90,7 +90,10 @@ export async function AppShell({ children }: PropsWithChildren) {
                   <span className="block text-xs text-muted">Owner workspace</span>
                 </span>
               </Link>
-              <div className="hidden min-w-0 flex-1 items-center justify-center px-4 md:flex">
+              <form
+                action="/fleet"
+                className="hidden min-w-0 flex-1 items-center justify-center px-4 md:flex"
+              >
                 <label className="relative w-full max-w-md" htmlFor="global-search">
                   <Search
                     aria-hidden="true"
@@ -100,11 +103,12 @@ export async function AppShell({ children }: PropsWithChildren) {
                     aria-label="Search fleet records"
                     className="min-h-11 w-full rounded-lg border border-border bg-surface px-9 text-sm text-foreground shadow-sm placeholder:text-muted focus:border-primary focus:outline-none focus:ring-3 focus:ring-primary/20"
                     id="global-search"
-                    placeholder="Search assets, documents, or reminders"
+                    name="q"
+                    placeholder="Search fleet assets"
                     type="search"
                   />
                 </label>
-              </div>
+              </form>
               <div className="flex items-center gap-2">
                 <NotificationMenu notifications={notifications} />
                 <details className="relative">
@@ -136,7 +140,7 @@ export async function AppShell({ children }: PropsWithChildren) {
                 </details>
               </div>
             </div>
-            <div className="mt-3 md:hidden">
+            <form action="/fleet" className="mt-3 md:hidden">
               <label className="relative block" htmlFor="mobile-global-search">
                 <Search
                   aria-hidden="true"
@@ -146,11 +150,12 @@ export async function AppShell({ children }: PropsWithChildren) {
                   aria-label="Search fleet records"
                   className="min-h-11 w-full rounded-lg border border-border bg-surface px-9 text-sm text-foreground shadow-sm placeholder:text-muted focus:border-primary focus:outline-none focus:ring-3 focus:ring-primary/20"
                   id="mobile-global-search"
+                  name="q"
                   placeholder="Search fleet records"
                   type="search"
                 />
               </label>
-            </div>
+            </form>
             <OwnerNavigation
               className="mt-3 flex overflow-x-auto pb-1 lg:hidden"
               compact

@@ -5,11 +5,26 @@ export const subscriptionRecordSchema = z.object({
   stripeCustomerId: z.string().trim().optional(),
   stripeSubscriptionId: z.string().trim().optional(),
   stripePriceId: z.string().trim().optional(),
+  planKey: z.enum(["starter", "small_fleet", "growing_fleet"]).optional(),
   status: z
-    .enum(["trial", "active", "past_due", "canceled", "incomplete"])
+    .enum([
+      "trial",
+      "trialing",
+      "active",
+      "past_due",
+      "unpaid",
+      "canceled",
+      "incomplete",
+      "incomplete_expired",
+      "paused",
+    ])
     .default("trial"),
+  currentPeriodStart: z.coerce.date().optional(),
   currentPeriodEnd: z.coerce.date().optional(),
-  assetLimit: z.number().int().positive().default(25),
+  trialEnd: z.coerce.date().optional(),
+  cancelAtPeriodEnd: z.boolean().default(false),
+  assetLimit: z.number().int().positive().default(5),
+  lastPaymentStatus: z.string().trim().optional(),
 });
 
 export type SubscriptionRecordInput = z.infer<typeof subscriptionRecordSchema>;

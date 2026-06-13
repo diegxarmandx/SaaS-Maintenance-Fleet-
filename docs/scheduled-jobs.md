@@ -25,8 +25,8 @@ If `CRON_SECRET` is missing, the endpoint returns `503`. If the header is invali
 curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/reminders
 ```
 
-## Vercel Cron Preparation
+## Future Scheduler Preparation
 
-No production schedule is committed in Step 6. When production is ready, configure Vercel Cron to call `/api/cron/reminders` with the secret header and a cadence appropriate for owner reminders, usually once daily.
+No production schedule is committed. When production is ready, configure the approved scheduler to call `/api/cron/reminders` with the secret header and a cadence appropriate for owner reminders, usually once daily.
 
 Logs intentionally include only aggregate counts and duration. They must not include owner emails, company names, file paths, secrets, or document contents.

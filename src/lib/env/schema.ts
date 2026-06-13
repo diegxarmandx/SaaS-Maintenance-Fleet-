@@ -48,6 +48,11 @@ export const serverEnvSchema = publicEnvSchema.extend({
   EMAIL_PROVIDER: z.enum(["none", "resend"]).default("none"),
   EMAIL_FROM: z.preprocess(emptyStringToUndefined, z.string().trim().email().optional()),
   RESEND_API_KEY: optionalString,
+  STRIPE_SECRET_KEY: optionalString,
+  STRIPE_WEBHOOK_SECRET: optionalString,
+  STRIPE_STARTER_PRICE_ID: optionalString,
+  STRIPE_SMALL_FLEET_PRICE_ID: optionalString,
+  STRIPE_GROWING_FLEET_PRICE_ID: optionalString,
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;

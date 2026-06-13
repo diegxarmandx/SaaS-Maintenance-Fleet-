@@ -14,7 +14,11 @@ export type AssetAttentionStatus =
   | "Overdue"
   | "Expired"
   | "Missing"
-  | "Archived";
+  | "Archived"
+  | "Active"
+  | "Past due"
+  | "Canceled"
+  | "Read-only";
 
 export type FleetAsset = {
   id: string;

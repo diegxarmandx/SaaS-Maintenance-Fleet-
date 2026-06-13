@@ -1,10 +1,10 @@
 # FleetReady Owner App
 
-FleetReady is an owner-only fleet maintenance SaaS foundation for small fleets of roughly 1 to 25 vehicles, trailers, or equipment assets.
+FleetReady is an owner-only fleet maintenance SaaS foundation for small fleets of roughly 1 to 25 vehicles, trailers, or equipment assets. The initial subscription envelope supports active-asset limits up to 30 while keeping the product focused on small-fleet owners.
 
 ## Current Status
 
-The repository now includes the Step 7 local foundation work:
+The repository now includes the local product foundation plus subscription-billing readiness:
 
 - Next.js App Router application with TypeScript and Tailwind CSS
 - Owner-only authentication and onboarding flow backed by Supabase Auth
@@ -23,18 +23,21 @@ The repository now includes the Step 7 local foundation work:
 - Asset-profile compliance and document summaries
 - Live owner dashboard with attention counts, prioritized overdue/expired/missing/due-soon items, fleet status, and recent activity
 - In-app notifications with company-scoped read state, duplicate prevention, automatic stale resolution, and notification preferences
-- Secure scheduled reminder endpoint prepared for Vercel Cron
+- Secure scheduled reminder endpoint prepared for a future scheduler
 - Transactional email provider implementation for Resend plus a local `none` provider mode
 - Owner-facing reports with filters, saved defaults, charts, print-friendly views, and CSV exports
 - Document version-history metadata and document detail version listing
 - Notification delivery analytics, warning/critical email controls, and quiet hours
 - Owner-scoped audit event foundation for important server actions
+- Cohesive light-mode SaaS visual system with packaged IBM Plex Sans typography, shared status badges, responsive shell/search, and mobile report cards
+- Stripe Checkout server action for subscriptions, Stripe Billing Portal entry point, verified webhook route, idempotent Stripe event persistence, and subscription-state synchronization
+- Server-side and database-level active-asset limit enforcement based on active, non-archived assets
 - GitHub Actions CI quality gate for install, lint, type checking, tests, and build
 - Private asset image upload preparation with MIME and size validation
 - Zod validation, React Hook Form forms, and unit/static tests
 - Centralized environment validation and error handling
 
-Reliable PDF generation, OCR/extracted fields, bulk import, live Supabase CI execution, and Stripe billing are intentionally deferred until the required external services and credentials are configured.
+Reliable PDF generation, OCR/extracted fields, bulk import, live Supabase CI execution, production observability service wiring, and deployment are intentionally deferred. Stripe code is implemented for test mode, but actual Stripe products/prices must be configured with real test price IDs before checkout can be used.
 
 ## Routes
 
@@ -53,6 +56,7 @@ Reliable PDF generation, OCR/extracted fields, bulk import, live Supabase CI exe
 - `/reports/export`
 - `/settings`
 - `/api/cron/reminders`
+- `/api/stripe/webhook`
 - `/fleet/new`
 - `/fleet/[assetId]`
 - `/fleet/[assetId]/edit`
@@ -172,6 +176,47 @@ Required before enabling reminder email delivery:
 - `RESEND_API_KEY`
 
 Use `EMAIL_PROVIDER=none` locally to keep notification generation active without sending email.
+
+Required before enabling Stripe test-mode billing:
+
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_STARTER_PRICE_ID`
+- `STRIPE_SMALL_FLEET_PRICE_ID`
+- `STRIPE_GROWING_FLEET_PRICE_ID`
+
+## Stripe Test Mode
+
+The app expects three recurring Stripe test prices configured outside the codebase:
+
+- Starter: up to 5 active assets, suggested $19-$29 monthly
+- Small Fleet: up to 15 active assets, suggested $49-$69 monthly
+- Growing Fleet: up to 30 active assets, suggested $89-$119 monthly
+
+After creating or reusing test-mode products/prices, copy the price IDs into `.env.local`. Configure the Stripe CLI or dashboard webhook endpoint to send events to:
+
+```text
+http://localhost:3000/api/stripe/webhook
+```
+
+Required events:
+
+- `checkout.session.completed`
+- `customer.subscription.created`
+- `customer.subscription.updated`
+- `customer.subscription.deleted`
+- `invoice.payment_succeeded`
+- `invoice.payment_failed`
+
+The app does not trust the checkout success redirect as proof of payment. Verified Stripe webhooks update `subscription_records`, `companies.subscription_status`, and the idempotent `stripe_events` table.
+
+## Asset Limits
+
+Plan limits count active, non-archived assets. Archived assets remain accessible and do not count. Owners at or above the limit can still view records, access billing, and archive assets, but the app blocks creating or reactivating another active asset through both server actions and a PostgreSQL trigger.
+
+## Deployment Status
+
+This repository has not been deployed in this step. No Vercel project, domain, environment variables, cron schedule, or production deployment has been created or modified.
 
 ## Product Boundary
 

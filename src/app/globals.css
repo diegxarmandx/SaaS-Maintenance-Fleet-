@@ -1,20 +1,26 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f8f4;
-  --foreground: #17211a;
+  --background: #f6f7f9;
+  --foreground: #17202a;
   --surface: #ffffff;
-  --surface-muted: #eef1ea;
-  --primary: #1f6f4a;
+  --surface-muted: #eef2f5;
+  --surface-subtle: #f9fafb;
+  --primary: #155e63;
   --primary-foreground: #ffffff;
-  --accent: #c9862d;
-  --accent-foreground: #21160a;
-  --muted: #667267;
-  --border: #d9dfd5;
+  --accent: #b7791f;
+  --accent-foreground: #2f1f05;
+  --muted: #65727f;
+  --border: #d7dee6;
   --danger: #b42318;
-  --ring: #27795a;
+  --success: #16803c;
+  --warning: #b7791f;
+  --warning-foreground: #3d2704;
+  --info: #1d5f99;
+  --ring: #26757a;
   --app-font-sans:
-    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    "IBM Plex Sans Variable", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
   --app-font-mono:
     "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
 }
@@ -24,6 +30,7 @@
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
+  --color-surface-subtle: var(--surface-subtle);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-accent: var(--accent);
@@ -31,6 +38,10 @@
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
   --color-ring: var(--ring);
   --font-sans: var(--app-font-sans);
   --font-mono: var(--app-font-mono);
@@ -40,6 +51,8 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--app-font-sans);
+  font-variant-numeric: tabular-nums;
+  text-rendering: optimizeLegibility;
 }
 
 ::selection {

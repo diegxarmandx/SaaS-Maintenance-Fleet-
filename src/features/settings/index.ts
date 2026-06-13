@@ -3,17 +3,12 @@ import type { ModuleDefinition } from "@/features/module-definition";
 export const settingsModule = {
   title: "Settings",
   href: "/settings",
-  summary:
-    "Owner account, workspace, notification, and product configuration boundaries for future setup.",
+  summary: "Owner account, workspace, billing, notification, and product configuration.",
   scope: [
     "Owner profile settings",
     "Workspace identity",
     "Reminder notification preferences",
-    "Billing entry point reserved for Stripe",
+    "Stripe subscription and billing portal entry points",
   ],
-  deferred: [
-    "Supabase account updates",
-    "Stripe billing implementation",
-    "Workspace member invitations",
-  ],
+  deferred: ["In-app account email changes"],
 } satisfies ModuleDefinition;

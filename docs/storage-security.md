@@ -42,4 +42,4 @@ The app creates signed URLs only after a server-side query verifies the document
 
 - If file upload fails, no metadata is created.
 - If file upload succeeds but metadata creation fails, the uploaded object is removed.
-- For file replacement, the new file is uploaded first. If metadata update fails, the new object is removed. If metadata update succeeds, the old object is removed.
+- For file replacement, the new file is uploaded first. If metadata update fails, the new object is removed. If metadata update succeeds, a new `document_versions` row is recorded and previous storage objects are preserved as document history.

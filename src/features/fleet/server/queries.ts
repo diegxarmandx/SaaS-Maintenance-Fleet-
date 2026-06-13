@@ -12,6 +12,19 @@ import {
   getOwnerDatabaseContext,
   type SupabaseServerClient,
 } from "@/features/fleet/server/owner";
+import { getSubscriptionCapabilities } from "@/features/billing/access";
+import { getSubscriptionSnapshot } from "@/features/billing/server/subscription";
+import type { SubscriptionStatus } from "@/features/billing/access";
+
+export type FleetSubscriptionSummary = {
+  status: SubscriptionStatus;
+  activeAssetCount: number;
+  assetLimit: number;
+  canCreateActiveAsset: boolean;
+  isOverAssetLimit: boolean;
+  remainingActiveAssets: number;
+  reason: string | null;
+};
 
 export type FleetListResult = {
   assets: FleetAssetListItem[];
@@ -20,6 +33,7 @@ export type FleetListResult = {
   filters: FleetListFilters;
   companyName: string;
   isConfigured: boolean;
+  subscription: FleetSubscriptionSummary | null;
 };
 
 export type FleetSearchParams = Record<string, string | string[] | undefined>;
@@ -75,6 +89,7 @@ export async function listFleetAssets(
       filters,
       companyName: "FleetReady workspace",
       isConfigured: false,
+      subscription: null,
     };
   }
 
@@ -123,6 +138,8 @@ export async function listFleetAssets(
     (data ?? []) as FleetAsset[],
   );
 
+  const subscription = await getFleetSubscriptionSummary(context);
+
   return {
     assets,
     totalCount: count ?? 0,
@@ -130,7 +147,18 @@ export async function listFleetAssets(
     filters,
     companyName: context.companyName,
     isConfigured: true,
+    subscription,
   };
+}
+
+export async function getCurrentFleetSubscriptionSummary() {
+  const context = await getOwnerDatabaseContext();
+
+  if (!context) {
+    return null;
+  }
+
+  return getFleetSubscriptionSummary(context);
 }
 
 export async function getFleetAsset(assetId: string): Promise<AssetProfile | null> {
@@ -232,6 +260,27 @@ async function addAssetDisplayData(
       attentionStatus: deriveAssetAttentionStatus(asset),
     })),
   );
+}
+
+async function getFleetSubscriptionSummary(
+  context: NonNullable<Awaited<ReturnType<typeof getOwnerDatabaseContext>>>,
+): Promise<FleetSubscriptionSummary> {
+  const snapshot = await getSubscriptionSnapshot(context);
+  const capabilities = getSubscriptionCapabilities({
+    status: snapshot.status,
+    activeAssetCount: snapshot.activeAssetCount,
+    assetLimit: snapshot.assetLimit,
+  });
+
+  return {
+    status: capabilities.status,
+    activeAssetCount: snapshot.activeAssetCount,
+    assetLimit: snapshot.assetLimit,
+    canCreateActiveAsset: capabilities.canCreateAssets,
+    isOverAssetLimit: capabilities.isOverAssetLimit,
+    remainingActiveAssets: capabilities.remainingActiveAssets,
+    reason: capabilities.reason,
+  };
 }
 
 async function getSignedAssetImageUrl(

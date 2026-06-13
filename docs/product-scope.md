@@ -2,7 +2,7 @@
 
 ## Product Outcome
 
-FleetReady helps a single fleet owner manage maintenance readiness, compliance obligations, documents, expirations, and owner-facing reports for a small fleet of approximately 1 to 25 vehicles, trailers, or pieces of equipment.
+FleetReady helps a single fleet owner manage maintenance readiness, compliance obligations, documents, expirations, subscription access, and owner-facing reports for a small fleet of approximately 1 to 25 vehicles, trailers, or pieces of equipment. The initial billing plan envelope supports up to 30 active assets while preserving the small-fleet focus.
 
 ## Operational User Type
 
@@ -24,6 +24,7 @@ FleetReady manages only these areas:
 - Fleet documents
 - Expiration alerts
 - Owner-facing reports
+- Subscription billing based on active-asset limits
 
 ## Excluded Capabilities
 
@@ -49,6 +50,7 @@ FleetReady must not expand into these areas:
 - Parts inventory
 - Repair approval workflows
 - Repair-status workflows
+- User-seat pricing or role-based billing
 
 ## Product Guardrails
 
@@ -57,10 +59,14 @@ FleetReady must not expand into these areas:
 - Do not add logistics, driver, dispatch, payroll, invoicing, fuel, GPS, ELD, shop scheduling, work order, or repair-status behavior.
 - Keep reminders derived from owner-managed readings, dates, maintenance rules, compliance requirements, and document expirations.
 - Keep reports owner-facing and limited to included data domains.
+- Keep subscription limits tied to active, non-archived assets rather than managers, drivers, mechanics, employees, or user seats.
+- Do not hide, delete, or mutate an owner's fleet records because of a billing-state change.
 
-## Step 1 Acceptance
+## Billing Guardrails
 
-- The application shell and route placeholders exist.
-- The domain scope is documented and reflected in module boundaries.
-- No complete operational module is implemented yet.
-- No fake production data or unrelated fleet operations are introduced.
+- Starter: up to 5 active assets.
+- Small Fleet: up to 15 active assets.
+- Growing Fleet: up to 30 active assets.
+- Archived assets do not count toward active-asset limits.
+- Owners above a downgraded limit can view records, access billing, and archive assets, but cannot create or reactivate another active asset until they archive assets or upgrade.
+- Verified Stripe webhooks, not checkout redirects, are the source of truth for subscription state.

@@ -44,6 +44,12 @@ The Step 7 local-foundation migration is:
 
 It adds saved report preferences, advanced notification delivery columns, document version history, and owner-scoped audit events.
 
+The subscription billing and active-asset limit migration is:
+
+- `supabase/migrations/20260612120000_subscription_billing_and_limits.sql`
+
+It extends subscription statuses, adds plan and Stripe sync columns to `subscription_records`, creates the idempotent `stripe_events` table, updates onboarding to create a Starter trial record, and adds the database trigger that prevents creating or reactivating active assets above the current plan limit or while subscription access is restricted.
+
 ## Tables
 
 - `profiles`
@@ -62,6 +68,7 @@ It adds saved report preferences, advanced notification delivery columns, docume
 - `report_preferences`
 - `audit_events`
 - `subscription_records`
+- `stripe_events`
 
 ## Security Functions
 
@@ -73,8 +80,9 @@ It adds saved report preferences, advanced notification delivery columns, docume
 - `public.create_meter_reading_for_asset(...)`
 - `public.complete_maintenance_and_update_rule(...)`
 - `public.create_compliance_record_with_document(...)`
+- `public.enforce_active_asset_limit()`
 
-`complete_company_onboarding` is a security-definer RPC used to create the company, complete the profile, and create the initial internal subscription record after Supabase Auth sign-up.
+`complete_company_onboarding` is a security-definer RPC used to create the company, complete the profile, and create the initial internal Starter trial subscription record after Supabase Auth sign-up.
 
 ## Constraints
 
@@ -103,6 +111,10 @@ It adds saved report preferences, advanced notification delivery columns, docume
 - Document versions preserve company-scoped storage paths and unique version numbers per document.
 - Audit events require nonblank event and entity types and are append-only from the app policy perspective.
 - Subscription records are unique per company.
+- Subscription plan keys are restricted to `starter`, `small_fleet`, and `growing_fleet`.
+- Stripe event IDs are unique and processed idempotently.
+- New or reactivated active assets are blocked when the current subscription is not `trial`, `trialing`, or `active`.
+- New or reactivated active assets are blocked when active, non-archived asset count is already at the current plan limit.
 
 ## Indexes
 
@@ -119,7 +131,8 @@ Indexes cover:
 - report preference company lookups
 - document version history by company and document
 - audit event timelines by company and entity
-- Stripe placeholder identifiers
+- subscription status, plan key, and current period end
+- Stripe customer, subscription, and event identifiers
 
 ## Row-Level Security
 
@@ -141,8 +154,11 @@ RLS is enabled and forced for every tenant-owned table:
 - `report_preferences`
 - `audit_events`
 - `subscription_records`
+- `stripe_events`
 
-Authenticated owners can access only rows where their completed profile belongs to the row's company. System maintenance templates use `company_id is null` and are readable, but only company-owned templates can be mutated by owners.
+Authenticated owners can access tenant rows only where their completed profile belongs to the row's company. System maintenance templates use `company_id is null` and are readable, but only company-owned templates can be mutated by owners.
+
+`stripe_events` is deliberately different: it has RLS enabled and forced but no owner access policy. It is written by server-side service-role webhook processing only and stores a minimized event payload for idempotency and troubleshooting.
 
 ## Storage
 
@@ -201,11 +217,32 @@ The seed script creates one fictional owner, one fictional company, several asse
 
 The scheduled reminder job uses server-only Supabase access. It computes current due and expiration conditions from maintenance rules, compliance records and requirements, documents, and company timezone preferences. It inserts new active notifications, updates still-active notifications, resolves stale notifications, and only attempts email for unresolved notifications that have not already been sent.
 
-The scheduled endpoint must be protected by `CRON_SECRET`. Vercel Cron can call `/api/cron/reminders` once the secret is configured, but no production schedule is committed in this step.
+The scheduled endpoint must be protected by `CRON_SECRET`. A future scheduler can call `/api/cron/reminders` once the secret is configured, but no production schedule is committed in this step.
+
+## Stripe Billing Persistence
+
+Stripe sync uses:
+
+- `subscription_records.stripe_customer_id`
+- `subscription_records.stripe_subscription_id`
+- `subscription_records.stripe_price_id`
+- `subscription_records.plan_key`
+- `subscription_records.status`
+- `subscription_records.current_period_start`
+- `subscription_records.current_period_end`
+- `subscription_records.trial_end`
+- `subscription_records.cancel_at_period_end`
+- `subscription_records.asset_limit`
+- `subscription_records.last_payment_status`
+- `subscription_records.restricted_at`
+- `subscription_records.updated_from_stripe_at`
+- `stripe_events`
+
+Verified Stripe webhooks are authoritative for subscription state. Checkout success redirects do not mark a subscription active.
 
 ## Deferred Database Work
 
 - Reliable PDF exports.
 - Document OCR, extracted fields, and bulk import.
 - Live Supabase integration-test execution in CI.
-- Stripe billing tables beyond the current internal subscription placeholders.
+- Additional billing analytics beyond the operational Stripe sync fields.

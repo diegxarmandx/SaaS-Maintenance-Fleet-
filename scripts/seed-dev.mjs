@@ -88,6 +88,19 @@ await upsert("profiles", [
 ]);
 
 await upsert(
+  "subscription_records",
+  [
+    {
+      company_id: companyId,
+      status: "trial",
+      asset_limit: 5,
+      plan_key: "starter",
+    },
+  ],
+  "company_id",
+);
+
+await upsert(
   "notification_preferences",
   [
     {

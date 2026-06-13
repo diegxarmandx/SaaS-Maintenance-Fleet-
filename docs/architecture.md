@@ -9,8 +9,8 @@
 - Zod validation
 - React Hook Form for forms
 - Supabase Auth, PostgreSQL, Row Level Security, and Storage
-- Vercel-ready project layout
-- Stripe reserved for a later billing step
+- Deployment-ready project layout, with no deployment performed in this step
+- Stripe SDK for test-mode Checkout, Billing Portal, and verified webhook processing
 - Transactional email provider abstraction for reminders, with local disabled mode
 
 ## Source Structure
@@ -18,10 +18,10 @@
 - `src/app`: App Router routes, route groups, loading states, and error boundaries
 - `src/proxy.ts`: Supabase session check and route redirects
 - `src/components/app-shell`: Owner workspace shell and navigation
-- `src/components/placeholders`: Shared placeholder surfaces
 - `src/components/ui`: Reusable UI primitives, including page headers, breadcrumbs, status badges, empty states, form controls, upload areas, tables, mobile card lists, skeletons, error messages, toast region, pagination, and confirmation submit controls
 - `src/features/auth`: Auth validation, actions, forms, and redirect rules
 - `src/features/onboarding`: Company onboarding validation, action, and form
+- `src/features/billing`: Subscription plans, access-state helpers, Stripe actions, verified webhook processing, and billing UI
 - `src/features/dashboard`: Owner dashboard boundary with server aggregates, attention ordering, and dashboard UI
 - `src/features/fleet`: Fleet asset boundary with constants, validation, pure helpers, server queries/actions, responsive list UI, asset forms, asset profile, and meter-reading form
 - `src/features/maintenance`: Preventive maintenance boundary with status calculations, rule forms, completed record entry, history, cost summaries, attachment handling, and server actions/queries
@@ -29,7 +29,7 @@
 - `src/features/documents`: Document boundary with file validation, document library UI, relationship handling, signed URL helpers, document version history, and server actions/queries
 - `src/features/notifications`: In-app notification, reminder generation, email template, cron auth, and preference logic
 - `src/features/reports`: Reporting boundary with server queries, saved defaults, chart summaries, CSV export helpers, and report UI
-- `src/features/settings`: Settings boundary with notification preferences and notification analytics
+- `src/features/settings`: Settings boundary with notification preferences and notification analytics; subscription billing UI is supplied by `src/features/billing`
 - `src/server/audit`: Non-blocking audit event recording for important owner actions
 - `src/lib/env`: Environment schemas and parsed config
 - `src/lib/supabase`: Browser and server Supabase client factories
@@ -48,7 +48,7 @@
 3. The database trigger creates an incomplete `profiles` row.
 4. Middleware redirects incomplete authenticated owners to `/onboarding`.
 5. Onboarding calls `complete_company_onboarding`.
-6. The RPC creates the company, links the owner profile, and creates the internal subscription record.
+6. The RPC creates the company, links the owner profile, and creates the internal Starter trial subscription record.
 7. Completed owners can access protected application routes.
 
 The app also supports login, logout, password-reset request, and password-reset completion.
@@ -63,7 +63,7 @@ The service-role key is used only by server-side helpers and the development see
 
 The app remains a quiet operational SaaS interface. It avoids role management, dispatching, driver workflows, work orders, repair-shop scheduling, and other excluded product areas.
 
-The authenticated shell uses a desktop sidebar, mobile navigation, current company context, owner profile menu, prepared global search input, and active notification menu. The company area intentionally represents one current owner company only.
+The authenticated shell uses a desktop sidebar, mobile navigation, current company context, owner profile menu, fleet asset search, and active notification menu. The company area intentionally represents one current owner company only.
 
 Statuses use text plus Lucide icons, not color alone. The current shared status vocabulary is:
 
@@ -74,8 +74,34 @@ Statuses use text plus Lucide icons, not color alone. The current shared status 
 - Expired
 - Missing
 - Archived
+- Active
+- Past due
+- Canceled
+- Read-only
 
-Fleet asset screens use desktop tables and mobile card lists so small-screen owners are not forced into horizontal data tables.
+Fleet asset and report screens use desktop tables and mobile card lists so small-screen owners are not forced into horizontal data tables.
+
+## Subscription Billing
+
+Subscription billing is based on active assets, not user seats. The initial configured plan keys are:
+
+- `starter`: up to 5 active assets
+- `small_fleet`: up to 15 active assets
+- `growing_fleet`: up to 30 active assets
+
+Stripe price IDs are environment variables. The code does not hard-code live prices and does not create live-mode products.
+
+Checkout is started from a server action after owner and company context are verified. Billing Portal access is also server initiated and requires an existing Stripe customer ID. Checkout success redirects are treated as informational only. The verified `/api/stripe/webhook` route uses Stripe signature verification and then persists event IDs in `stripe_events` before processing, so duplicate webhooks are idempotent.
+
+Webhook processing syncs `subscription_records` and `companies` for checkout completion, subscription create/update/delete, and successful or failed invoice payment. The service-role Supabase client is used only in server code. Event payload persistence is intentionally minimal and avoids storing complete customer, invoice, or payment objects.
+
+Subscription-state behavior:
+
+- `trial`, `trialing`, and `active`: full application access, record editing, uploads, exports, and new active assets while under the plan limit.
+- `past_due`, `unpaid`, `canceled`, `incomplete`, `incomplete_expired`, and `paused`: read-only application access with billing access preserved. Report exports remain available so owners can retain access to their own records.
+- Accounts above a downgraded active-asset limit can view existing records and access billing. Creating or reactivating another active asset is blocked until the owner archives assets or upgrades.
+
+Active-asset limits are enforced in two places: Next.js server actions provide owner-friendly validation messages, and `public.enforce_active_asset_limit()` blocks direct authenticated Supabase writes that would bypass the UI.
 
 ## Dashboard, Notifications, and Reports
 
@@ -85,8 +111,8 @@ Steps 6 and 7 implement the owner command center without introducing any additio
 - Dashboard attention order is deterministic: expired/overdue first, missing second, due-soon/expiring third.
 - Notifications are company-scoped database rows. Reminder processing creates or updates active notifications by stable `notification_key`, resolves stale notifications, and prevents duplicate active reminders through a partial unique index.
 - The notification menu supports unread counts, individual mark-read actions, and mark-all-read actions.
-- `/settings` exposes owner notification analytics and preferences for email enablement, warning/critical delivery controls, quiet hours, reminder thresholds, weekly summary enablement, and preferred summary day.
-- `/api/cron/reminders` is a secure server-only endpoint prepared for Vercel Cron. It requires `CRON_SECRET`, uses the service-role client only on the server, and logs counts without PII or secrets.
+- `/settings` exposes sectioned company, owner, measurement, security, subscription, billing, notification analytics, and notification preference surfaces.
+- `/api/cron/reminders` is a secure server-only endpoint prepared for a future scheduler. It requires `CRON_SECRET`, uses the service-role client only on the server, and logs counts without PII or secrets.
 - Reminder email templates cover maintenance due/overdue, compliance expiring/expired/missing, document expiring/expired, and weekly summary. Local development can keep `EMAIL_PROVIDER=none`.
 - `/reports` provides owner-filtered maintenance, compliance, document, and asset-history reports with saved defaults, compact chart summaries, CSV exports, and print-friendly views.
 - CSV exports are generated server-side from the current owner company, include company and generated date metadata, escape spreadsheet-dangerous values, and omit internal UUIDs.
@@ -187,6 +213,9 @@ Unit tests cover:
 - Static migration checks for notification preferences, active notification uniqueness, and email attempt tracking
 - Notification delivery eligibility and quiet-hour calculations
 - Static migration checks for report preferences, document versions, and audit event policies
+- Subscription access-state calculations
+- Static migration checks for Stripe event persistence, subscription state columns, and active-asset limit triggers
+- Static webhook checks for Stripe signature verification, idempotent event handling, and covered billing events
 
 GitHub Actions runs install, lint, type checking, tests, and production build. Live Supabase integration tests are deferred until a project URL and service credentials are configured in CI.
 
@@ -195,4 +224,5 @@ GitHub Actions runs install, lint, type checking, tests, and production build. L
 - Reliable PDF generation
 - Document OCR, extracted fields, and bulk import
 - Live Supabase integration-test execution
-- Stripe billing
+- Stripe product/price creation or reuse confirmation after the Stripe connector is re-authenticated
+- Production deployment, domain configuration, scheduler configuration, and observability service wiring

@@ -16,7 +16,7 @@ const baseButtonClassName =
 
 const variantClassNames: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary text-primary-foreground shadow-sm hover:bg-[#185d3e] focus-visible:outline-ring",
+    "bg-primary text-primary-foreground shadow-sm hover:bg-[#0f4f54] focus-visible:outline-ring",
   secondary:
     "border border-border bg-surface text-foreground shadow-sm hover:border-primary hover:text-primary focus-visible:outline-ring",
   ghost: "text-foreground hover:bg-surface-muted focus-visible:outline-ring",

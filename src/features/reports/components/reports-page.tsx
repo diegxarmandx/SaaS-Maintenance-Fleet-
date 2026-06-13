@@ -344,7 +344,54 @@ function ReportTable({
             No records match the current filters.
           </p>
         ) : (
-          <DataTable caption={title} columns={reportColumns} rows={rows.slice(0, 100)} />
+          <>
+            <div className="hidden md:block">
+              <DataTable
+                caption={title}
+                columns={reportColumns}
+                rows={rows.slice(0, 100)}
+              />
+            </div>
+            <div className="grid gap-3 md:hidden">
+              {rows.slice(0, 100).map((row) => (
+                <article
+                  className="rounded-lg border border-border bg-surface-subtle p-3"
+                  key={row.id}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <Link
+                        className="font-semibold text-foreground hover:text-primary"
+                        href={row.href}
+                      >
+                        {row.label}
+                      </Link>
+                      <p className="mt-1 text-sm text-muted">{row.asset}</p>
+                    </div>
+                    <ReportStatus status={row.status} />
+                  </div>
+                  <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <dt className="text-muted">Category</dt>
+                      <dd className="mt-1 font-medium text-foreground">{row.category}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted">Date</dt>
+                      <dd className="mt-1 font-medium text-foreground">
+                        {row.date ?? "Not set"}
+                      </dd>
+                    </div>
+                    <div className="col-span-2">
+                      <dt className="text-muted">Amount</dt>
+                      <dd className="mt-1 font-mono font-medium text-foreground">
+                        {formatReportAmount(row.amount)}
+                      </dd>
+                    </div>
+                  </dl>
+                </article>
+              ))}
+            </div>
+          </>
         )}
       </CardContent>
     </Card>
@@ -462,7 +509,7 @@ function ReportStatus({ status }: { status: string }) {
       : status === "Due soon" || status === "Expiring soon"
         ? "border-accent/35 bg-accent/10 text-accent-foreground"
         : status === "Missing"
-          ? "border-sky-700/25 bg-sky-50 text-sky-800"
+          ? "border-info/25 bg-info/10 text-info"
           : "border-primary/25 bg-primary/10 text-primary";
 
   return (

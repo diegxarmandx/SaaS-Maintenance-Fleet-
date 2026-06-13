@@ -13,7 +13,7 @@ export default function NotFound() {
           This FleetReady route is not available.
         </h1>
         <p className="mt-3 text-sm leading-6 text-muted">
-          Return to the owner dashboard or choose one of the prepared module routes.
+          Return to the owner dashboard or choose one of the available owner modules.
         </p>
         <Link className={buttonClassName({ className: "mt-6" })} href="/dashboard">
           Go to dashboard

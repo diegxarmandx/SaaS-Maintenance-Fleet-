@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { Gauge, Plus, Search, SlidersHorizontal } from "lucide-react";
+import {
+  AlertTriangle,
+  CreditCard,
+  Gauge,
+  Plus,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
 
 import { AssetPhoto } from "@/features/fleet/components/asset-photo";
 import {
@@ -27,6 +34,7 @@ type FleetListPageProps = {
 
 export function FleetListPage({ result }: FleetListPageProps) {
   const { assets, filters } = result;
+  const canCreateAsset = result.subscription?.canCreateActiveAsset ?? true;
   const hasFilters = Boolean(
     filters.query || filters.assetType || filters.status !== "all",
   );
@@ -38,15 +46,48 @@ export function FleetListPage({ result }: FleetListPageProps) {
       />
       <PageHeader
         actions={
-          <Link className={buttonClassName()} href="/fleet/new">
-            <Plus aria-hidden="true" className="h-4 w-4" />
-            Add asset
-          </Link>
+          canCreateAsset ? (
+            <Link className={buttonClassName()} href="/fleet/new">
+              <Plus aria-hidden="true" className="h-4 w-4" />
+              Add asset
+            </Link>
+          ) : (
+            <Link
+              className={buttonClassName({ variant: "secondary" })}
+              href="/settings#subscription"
+            >
+              <CreditCard aria-hidden="true" className="h-4 w-4" />
+              Review plan
+            </Link>
+          )
         }
         description="Track vehicles, trailers, and equipment with owner-managed meter values, documents, and maintenance context."
         eyebrow={result.companyName}
         title="Fleet assets"
       />
+
+      {result.subscription?.reason ? (
+        <section className="mb-4 rounded-lg border border-warning/30 bg-warning/10 p-4">
+          <div className="flex gap-3">
+            <AlertTriangle
+              aria-hidden="true"
+              className="mt-0.5 h-5 w-5 shrink-0 text-warning"
+            />
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold text-foreground">
+                Active asset limit
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-muted">
+                {result.subscription.reason}
+              </p>
+              <p className="mt-2 text-sm text-foreground">
+                {result.subscription.activeAssetCount} active of{" "}
+                {result.subscription.assetLimit} allowed.
+              </p>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <section className="mb-4 rounded-lg border border-border bg-surface p-4">
         <form
@@ -118,10 +159,20 @@ export function FleetListPage({ result }: FleetListPageProps) {
       ) : assets.length === 0 ? (
         <EmptyState
           action={
-            <Link className={buttonClassName()} href="/fleet/new">
-              <Plus aria-hidden="true" className="h-4 w-4" />
-              Add first asset
-            </Link>
+            canCreateAsset ? (
+              <Link className={buttonClassName()} href="/fleet/new">
+                <Plus aria-hidden="true" className="h-4 w-4" />
+                Add first asset
+              </Link>
+            ) : (
+              <Link
+                className={buttonClassName({ variant: "secondary" })}
+                href="/settings#subscription"
+              >
+                <CreditCard aria-hidden="true" className="h-4 w-4" />
+                Review plan
+              </Link>
+            )
           }
           description={
             hasFilters
