@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Bell, Building2, Gauge, Shield, UserCircle } from "lucide-react";
+import { Bell, Building2, Gauge, Settings, Shield, UserCircle } from "lucide-react";
 
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import {
@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { SubscriptionSettings } from "@/features/billing/components/subscription-settings";
 import { getSubscriptionSnapshot } from "@/features/billing/server/subscription";
@@ -19,7 +20,7 @@ import {
 } from "@/features/settings/components/notification-analytics";
 import { NotificationPreferencesForm } from "@/features/settings/components/notification-preferences-form";
 import type { NotificationPreference } from "@/features/notifications/types";
-import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
+import { getOwnerDatabaseContext } from "@/features/fleet/server/owner";
 
 export const metadata: Metadata = {
   title: "Settings",
@@ -28,7 +29,28 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const context = await requireOwnerDatabaseContext();
+  const context = await getOwnerDatabaseContext();
+
+  if (!context) {
+    return (
+      <>
+        <Breadcrumbs
+          items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Settings" }]}
+        />
+        <PageHeader
+          description="Manage company identity, owner preferences, billing, notifications, and account safety."
+          eyebrow="FleetReady workspace"
+          title="Settings"
+        />
+        <EmptyState
+          description="Configure Supabase environment variables and apply the migrations to manage owner settings."
+          icon={<Settings aria-hidden="true" className="h-5 w-5" />}
+          title="Settings are not connected"
+        />
+      </>
+    );
+  }
+
   const [
     { data },
     { data: notificationRows },
