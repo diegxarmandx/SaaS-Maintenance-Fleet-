@@ -115,13 +115,33 @@ Apply migrations in filename order:
 supabase db push
 ```
 
-Development seed:
+Development demo seed:
 
 ```bash
-npm run db:seed
+npm run seed:demo
 ```
 
-The seed script refuses to run when `NODE_ENV=production` or `VERCEL_ENV=production`.
+Useful demo seed commands:
+
+```bash
+npm run seed:demo
+npm run seed:demo:reset
+npm run seed:minimal
+npm run seed:empty
+```
+
+`npm run db:seed` remains a compatibility alias for the full demo seed.
+
+The seed scripts refuse to run when `NODE_ENV=production`, `VERCEL_ENV=production`, or `DEMO_SEED_TARGET=production`. Reset is scoped to the fictional demo company ID and requires `DEMO_SEED_RESET=confirm`.
+
+Default demo login for local review:
+
+```text
+Email: demo-owner@example.test
+Password: ChangeMe-Demo-Only-123!
+```
+
+Set `DEMO_OWNER_PASSWORD` before running the seed if you want a different development-only password. The seed does not send emails, does not create live Stripe charges, and does not deploy anything.
 
 Fleet asset images are stored in the private `asset-images` bucket under company-scoped paths:
 
@@ -184,6 +204,13 @@ Required before enabling Stripe test-mode billing:
 - `STRIPE_STARTER_PRICE_ID`
 - `STRIPE_SMALL_FLEET_PRICE_ID`
 - `STRIPE_GROWING_FLEET_PRICE_ID`
+
+Optional for development demo data:
+
+- `DEMO_OWNER_PASSWORD`
+- `DEMO_SEED_METADATA_ONLY`
+
+The npm seed scripts set `DEMO_SEED_ALLOW=1` for local convenience. Do not set demo seed flags in production environments.
 
 ## Stripe Test Mode
 

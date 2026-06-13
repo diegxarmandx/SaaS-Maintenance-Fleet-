@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-06-12
+Last updated: 2026-06-13
 
 ## Completed in Step 1
 
@@ -113,6 +113,16 @@ Last updated: 2026-06-12
 - Updated onboarding and development seed behavior to create Starter trial subscription records.
 - Added tests for subscription access rules, Stripe webhook static behavior, Stripe event persistence, and active-asset limit migration expectations.
 - Added `docs/design-system.md` and `docs/launch-checklist.md`.
+
+## Completed in Development Demo Data Step
+
+- Added a comprehensive development-only demo seed data module with stable fictional identifiers and relative dates.
+- Added full, reset, minimal, and empty seed commands.
+- Added production safeguards requiring development intent and reset confirmation.
+- Added one fictional owner company, 15 varied assets, meter readings, maintenance rules, completed maintenance records, compliance requirements and records, document metadata, document versions, notifications, audit events, report preferences, notification preferences, and internal subscription state.
+- Added optional generated demo PDF/PNG uploads with metadata-only fallback.
+- Added tests for demo dataset integrity, idempotent IDs, meter consistency, maintenance/compliance/document status coverage, notification references, subscription fixtures, reset scoping, and production guards.
+- Added `docs/demo-data.md`.
 
 ## Still Deferred Beyond Current Local Scope
 

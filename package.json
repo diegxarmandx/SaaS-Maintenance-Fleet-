@@ -10,7 +10,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:seed": "node scripts/seed-dev.mjs",
+    "db:seed": "DEMO_SEED_ALLOW=1 node scripts/seed-dev.mjs",
+    "seed:demo": "DEMO_SEED_ALLOW=1 node scripts/seed-demo.mjs full",
+    "seed:demo:reset": "DEMO_SEED_ALLOW=1 DEMO_SEED_RESET=confirm node scripts/seed-demo.mjs reset full",
+    "seed:minimal": "DEMO_SEED_ALLOW=1 node scripts/seed-demo.mjs minimal",
+    "seed:empty": "DEMO_SEED_ALLOW=1 node scripts/seed-demo.mjs empty",
     "format": "prettier --check .",
     "format:write": "prettier --write ."
   },
