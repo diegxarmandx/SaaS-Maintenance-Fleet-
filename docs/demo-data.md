@@ -1,10 +1,12 @@
 # Demo Data
 
-FleetReady includes a development-only demo seed system for reviewing the existing owner-only application with realistic fictional data. It does not add product features.
+FleetReady includes development-only demo data for reviewing the existing owner-only application with realistic fictional data. It does not add product features.
 
 ## Purpose
 
-The demo seed populates one fictional owner company so dashboard cards, fleet lists, asset profiles, meter history, maintenance, compliance, documents, notifications, reports, settings, subscription display, search, filters, sorting, pagination, and asset-limit behavior can be reviewed locally.
+When Supabase is not configured, read-only application pages automatically use the same fictional dataset so dashboard cards, fleet lists, asset profiles, meter history, maintenance, compliance, documents, reports, settings, subscription display, search, filters, sorting, pagination, and asset-limit behavior can be reviewed immediately with `npm run dev`.
+
+The seed script remains available for loading the same fictional owner company into a local Supabase project when persistence, authentication, uploads, RLS, and server actions need to be tested.
 
 ## Demo Company
 
@@ -19,7 +21,9 @@ All values are fictional. Demo VIN-like values, license plates, policy numbers, 
 
 ## Demo Login
 
-Run the seed against a local Supabase project after migrations are applied:
+No login is required for the automatic local read-only demo when Supabase environment variables are absent.
+
+Run the seed against a local Supabase project after migrations are applied when you want database-backed demo data:
 
 ```bash
 npm run seed:demo
@@ -55,6 +59,23 @@ npm run db:seed
 - `seed:minimal`: creates a smaller demo with the company and a few assets.
 - `seed:empty`: creates an onboarded owner company with no operational records for empty-state review.
 - `db:seed`: compatibility alias for `seed:demo`.
+
+## Automatic Local Demo Mode
+
+If `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are not configured, the owner app renders read-only dummy data directly from the committed demo dataset.
+
+Covered local read-only views:
+
+- App shell identity
+- Dashboard
+- Fleet list and asset profiles
+- Maintenance overview, history, details, and asset snapshots
+- Compliance overview, details, and asset snapshots
+- Document library, details, and asset snapshots
+- Reports
+- Settings summary, subscription display, and notification analytics
+
+Write actions, authenticated persistence, file downloads, signed URLs, uploads, Stripe Checkout, Billing Portal, and server-side tenant enforcement still require Supabase and the relevant provider environment variables. Local demo documents display metadata without pretending that private storage downloads exist.
 
 ## Production Safeguards
 
@@ -132,7 +153,7 @@ The seed does not contact Stripe, create products, create subscriptions, create 
 
 - The seed uses metadata and generated placeholder files, not official forms, manuals, permits, invoices, or certificates.
 - Notification rows are seeded directly for demonstration because the CLI seed does not run the Next.js scheduled reminder endpoint.
-- End-to-end UI verification still requires a configured local Supabase project and browser session.
+- End-to-end write-flow verification still requires a configured local Supabase project and browser session.
 - The seed does not create live Stripe records or send email.
 
 ## Remove Demo Data

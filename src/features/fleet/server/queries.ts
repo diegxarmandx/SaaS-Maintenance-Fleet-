@@ -15,6 +15,7 @@ import {
 import { getSubscriptionCapabilities } from "@/features/billing/access";
 import { getSubscriptionSnapshot } from "@/features/billing/server/subscription";
 import type { SubscriptionStatus } from "@/features/billing/access";
+import { getLocalDemoDataset, localDemoIdentity } from "@/features/demo/local-data";
 
 export type FleetSubscriptionSummary = {
   status: SubscriptionStatus;
@@ -82,15 +83,7 @@ export async function listFleetAssets(
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return {
-      assets: [],
-      totalCount: 0,
-      pageSize: FLEET_PAGE_SIZE,
-      filters,
-      companyName: "FleetReady workspace",
-      isConfigured: false,
-      subscription: null,
-    };
+    return getLocalDemoFleetList(filters);
   }
 
   const { column, ascending } = sortMap[filters.sort];
@@ -155,7 +148,7 @@ export async function getCurrentFleetSubscriptionSummary() {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return null;
+    return getLocalDemoFleetSubscriptionSummary();
   }
 
   return getFleetSubscriptionSummary(context);
@@ -165,7 +158,7 @@ export async function getFleetAsset(assetId: string): Promise<AssetProfile | nul
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return null;
+    return getLocalDemoFleetAsset(assetId);
   }
 
   const { data: asset, error } = await context.supabase
@@ -246,6 +239,116 @@ export async function getFleetAsset(assetId: string): Promise<AssetProfile | nul
     complianceRecordCount: complianceRecordCount ?? 0,
     documentCount: documentCount ?? 0,
     expenseTotal,
+  };
+}
+
+function getLocalDemoFleetList(filters: FleetListFilters): FleetListResult {
+  const { column, ascending } = sortMap[filters.sort];
+  const assets = addLocalAssetDisplayData(
+    getLocalDemoDataset().assets as unknown as FleetAsset[],
+  );
+  const filteredAssets = assets.filter((asset) => {
+    const query = filters.query.toLowerCase();
+    const matchesQuery =
+      !query ||
+      asset.unit_number.toLowerCase().includes(query) ||
+      asset.asset_name.toLowerCase().includes(query) ||
+      asset.asset_type.toLowerCase().includes(query) ||
+      (asset.make?.toLowerCase().includes(query) ?? false) ||
+      (asset.model?.toLowerCase().includes(query) ?? false) ||
+      (asset.vin_or_serial_number?.toLowerCase().includes(query) ?? false) ||
+      (asset.license_plate?.toLowerCase().includes(query) ?? false);
+    const matchesStatus = filters.status === "all" || asset.status === filters.status;
+    const matchesAssetType = !filters.assetType || asset.asset_type === filters.assetType;
+
+    return matchesQuery && matchesStatus && matchesAssetType;
+  });
+  const sortedAssets = filteredAssets.sort((left, right) => {
+    const leftValue = left[column];
+    const rightValue = right[column];
+    const result = String(leftValue ?? "").localeCompare(String(rightValue ?? ""));
+    return ascending ? result : -result;
+  });
+  const from = (filters.page - 1) * FLEET_PAGE_SIZE;
+
+  return {
+    assets: sortedAssets.slice(from, from + FLEET_PAGE_SIZE),
+    totalCount: filteredAssets.length,
+    pageSize: FLEET_PAGE_SIZE,
+    filters,
+    companyName: localDemoIdentity.companyName,
+    isConfigured: true,
+    subscription: getLocalDemoFleetSubscriptionSummary(),
+  };
+}
+
+function getLocalDemoFleetAsset(assetId: string): AssetProfile | null {
+  const dataset = getLocalDemoDataset();
+  const asset = (dataset.assets as unknown as FleetAsset[]).find(
+    (candidate) => candidate.id === assetId,
+  );
+
+  if (!asset) {
+    return null;
+  }
+
+  const [displayAsset] = addLocalAssetDisplayData([asset]);
+
+  if (!displayAsset) {
+    return null;
+  }
+
+  const maintenanceRecords = dataset.maintenanceRecords.filter(
+    (record) => record.asset_id === assetId,
+  );
+
+  return {
+    ...displayAsset,
+    meterReadings: (dataset.meterReadings as unknown as AssetProfile["meterReadings"])
+      .filter((reading) => reading.asset_id === assetId)
+      .sort((left, right) => right.reading_date.localeCompare(left.reading_date))
+      .slice(0, 10),
+    maintenanceRecordCount: maintenanceRecords.length,
+    complianceRecordCount: dataset.complianceRecords.filter(
+      (record) => record.asset_id === assetId,
+    ).length,
+    documentCount: dataset.documents.filter((document) => document.asset_id === assetId)
+      .length,
+    expenseTotal: maintenanceRecords.reduce(
+      (total, record) => total + Number(record.total_cost ?? 0),
+      0,
+    ),
+  };
+}
+
+function addLocalAssetDisplayData(assets: FleetAsset[]): FleetAssetListItem[] {
+  return assets.map((asset) => ({
+    ...asset,
+    assetImageUrl: null,
+    attentionStatus: deriveAssetAttentionStatus(asset),
+  }));
+}
+
+function getLocalDemoFleetSubscriptionSummary(): FleetSubscriptionSummary {
+  const dataset = getLocalDemoDataset();
+  const activeAssetCount = dataset.assets.filter(
+    (asset) => asset.status === "active" && !asset.archived_at,
+  ).length;
+  const assetLimit = dataset.subscriptionRecord.asset_limit;
+  const capabilities = getSubscriptionCapabilities({
+    status: "active",
+    activeAssetCount,
+    assetLimit,
+  });
+
+  return {
+    status: capabilities.status,
+    activeAssetCount,
+    assetLimit,
+    canCreateActiveAsset: capabilities.canCreateAssets,
+    isOverAssetLimit: capabilities.isOverAssetLimit,
+    remainingActiveAssets: capabilities.remainingActiveAssets,
+    reason: capabilities.reason,
   };
 }
 

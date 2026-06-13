@@ -67,6 +67,18 @@ export interface DemoMaintenanceRecord extends DemoIdentifiedRow {
   company_id: string;
   asset_id: string;
   maintenance_type: string;
+  completion_date: string;
+  mileage: number | null;
+  engine_hours: number | null;
+  service_provider: string | null;
+  parts_cost: number;
+  labor_cost: number;
+  other_cost: number;
+  total_cost: number;
+  notes: string | null;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface DemoComplianceRequirement extends DemoIdentifiedRow {
@@ -81,9 +93,17 @@ export interface DemoComplianceRecord extends DemoIdentifiedRow {
   company_id: string;
   requirement_id: string | null;
   asset_id: string | null;
+  compliance_type: string;
+  issuing_organization: string | null;
+  identification_number: string | null;
+  effective_date: string | null;
   expiration_date: string | null;
   reminder_days: number;
+  status_override: string | null;
+  notes: string | null;
   archived_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface DemoDocument extends DemoIdentifiedRow {
@@ -92,23 +112,52 @@ export interface DemoDocument extends DemoIdentifiedRow {
   maintenance_record_id: string | null;
   compliance_record_id: string | null;
   document_name: string;
+  category: "asset" | "maintenance" | "compliance" | "general";
+  document_type: string;
+  storage_bucket: string;
   storage_path: string;
+  mime_type: string;
+  file_size: number;
+  issue_date: string | null;
   expiration_date: string | null;
+  document_number: string | null;
+  notes: string | null;
   archived_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface DemoDocumentVersion extends DemoIdentifiedRow {
   company_id: string;
   document_id: string;
+  version_number: number;
+  storage_bucket: string;
   storage_path: string;
+  mime_type: string;
+  file_size: number;
+  change_reason: "upload" | "replacement" | "metadata_import";
+  created_at: string;
 }
 
 export interface DemoNotification extends DemoIdentifiedRow {
   company_id: string;
   asset_id: string | null;
+  notification_type: string;
   related_entity_type: string;
   related_entity_id: string;
   notification_key: string;
+  title: string;
+  message: string;
+  href: string | null;
+  due_date: string | null;
+  severity: string;
+  read_at: string | null;
+  resolved_at: string | null;
+  email_delivery_status: string;
+  email_sent_at: string | null;
+  email_attempt_count: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface DemoAuditEvent extends DemoIdentifiedRow {
@@ -123,7 +172,14 @@ export interface DemoSubscriptionRecord {
   stripe_price_id: string | null;
   plan_key: string;
   status: string;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  trial_end: string | null;
+  cancel_at_period_end: boolean;
   asset_limit: number;
+  last_payment_status: string | null;
+  restricted_at: string | null;
+  updated_from_stripe_at: string | null;
 }
 
 export interface DemoNotificationPreference {

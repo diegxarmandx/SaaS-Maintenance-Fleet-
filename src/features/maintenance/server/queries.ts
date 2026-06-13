@@ -25,6 +25,7 @@ import {
   getOwnerDatabaseContext,
   type SupabaseServerClient,
 } from "@/features/fleet/server/owner";
+import { getLocalDemoDataset, localDemoIdentity } from "@/features/demo/local-data";
 
 export type MaintenanceSearchParams = Record<string, string | string[] | undefined>;
 
@@ -110,19 +111,7 @@ export async function getMaintenanceOverview(
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return {
-      isConfigured: false,
-      companyName: "FleetReady workspace",
-      timezone: "UTC",
-      rules: [],
-      allRules: [],
-      assets: [],
-      templates: [],
-      counts: { Current: 0, "Due soon": 0, Overdue: 0 },
-      filters,
-      pageSize: MAINTENANCE_PAGE_SIZE,
-      totalCount: 0,
-    };
+    return getLocalDemoMaintenanceOverview(filters);
   }
 
   const [assets, templates, rules] = await Promise.all([
@@ -168,7 +157,16 @@ export async function getMaintenanceFormOptions(): Promise<MaintenanceFormOption
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return { isConfigured: false, assets: [], templates: [], rules: [] };
+    const assets = getLocalDemoMaintenanceAssets();
+    const templates = getLocalDemoDataset()
+      .maintenanceTemplates as unknown as MaintenanceTemplate[];
+    const rules = decorateRulesWithAssets(
+      getLocalDemoDataset().maintenanceRules as unknown as MaintenanceRule[],
+      assets,
+      localDemoIdentity.timezone,
+    );
+
+    return { isConfigured: true, assets, templates, rules };
   }
 
   const [assets, templates, rules] = await Promise.all([
@@ -192,16 +190,7 @@ export async function getMaintenanceHistory(
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return {
-      isConfigured: false,
-      records: [],
-      allRecords: [],
-      assets: [],
-      filters,
-      pageSize: MAINTENANCE_HISTORY_PAGE_SIZE,
-      totalCount: 0,
-      costSummary: summarizeMaintenanceCosts([]),
-    };
+    return getLocalDemoMaintenanceHistory(filters);
   }
 
   const [assets, records] = await Promise.all([
@@ -232,7 +221,7 @@ export async function getMaintenanceRecordDetail(recordId: string) {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return null;
+    return getLocalDemoMaintenanceRecordDetail(recordId);
   }
 
   const [assets, { data: record, error }] = await Promise.all([
@@ -266,14 +255,7 @@ export async function getAssetMaintenanceSnapshot(assetId: string) {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return {
-      rules: [],
-      nextDueItems: [],
-      overdueItems: [],
-      recentRecords: [],
-      costSummary: summarizeMaintenanceCosts([]),
-      status: "Current" as const,
-    };
+    return getLocalDemoAssetMaintenanceSnapshot(assetId);
   }
 
   const [assets, allRules, allRecords] = await Promise.all([
@@ -303,6 +285,160 @@ export async function getAssetMaintenanceSnapshot(assetId: string) {
           ? ("Due soon" as const)
           : ("Current" as const),
   };
+}
+
+function getLocalDemoMaintenanceOverview(
+  filters: MaintenanceRuleFilters,
+): MaintenanceOverviewResult {
+  const assets = getLocalDemoMaintenanceAssets();
+  const templates = getLocalDemoDataset()
+    .maintenanceTemplates as unknown as MaintenanceTemplate[];
+  const rulesWithStatus = decorateRulesWithAssets(
+    getLocalDemoDataset().maintenanceRules as unknown as MaintenanceRule[],
+    assets,
+    localDemoIdentity.timezone,
+  );
+  const counts = rulesWithStatus.reduce(
+    (current, rule) => ({
+      ...current,
+      [rule.status]: current[rule.status] + 1,
+    }),
+    { Current: 0, "Due soon": 0, Overdue: 0 },
+  );
+  const filteredRules = filterMaintenanceRules(rulesWithStatus, filters).sort((a, b) =>
+    sortRules(a, b, filters.sort),
+  );
+  const from = (filters.page - 1) * MAINTENANCE_PAGE_SIZE;
+
+  return {
+    isConfigured: true,
+    companyName: localDemoIdentity.companyName,
+    timezone: localDemoIdentity.timezone,
+    rules: filteredRules.slice(from, from + MAINTENANCE_PAGE_SIZE),
+    allRules: rulesWithStatus,
+    assets,
+    templates,
+    counts,
+    filters,
+    pageSize: MAINTENANCE_PAGE_SIZE,
+    totalCount: filteredRules.length,
+  };
+}
+
+function getLocalDemoMaintenanceHistory(
+  filters: MaintenanceHistoryFilters,
+): MaintenanceHistoryResult {
+  const assets = getLocalDemoMaintenanceAssets();
+  const records = decorateLocalMaintenanceRecordsWithAssets(
+    getLocalDemoDataset().maintenanceRecords as unknown as MaintenanceRecord[],
+    assets,
+  );
+  const filteredRecords = filterMaintenanceRecords(records, filters);
+  const from = (filters.page - 1) * MAINTENANCE_HISTORY_PAGE_SIZE;
+
+  return {
+    isConfigured: true,
+    records: filteredRecords.slice(from, from + MAINTENANCE_HISTORY_PAGE_SIZE),
+    allRecords: records,
+    assets,
+    filters,
+    pageSize: MAINTENANCE_HISTORY_PAGE_SIZE,
+    totalCount: filteredRecords.length,
+    costSummary: summarizeMaintenanceCosts(filteredRecords),
+  };
+}
+
+function getLocalDemoMaintenanceRecordDetail(recordId: string) {
+  const assets = getLocalDemoMaintenanceAssets();
+  const record = (
+    getLocalDemoDataset().maintenanceRecords as unknown as MaintenanceRecord[]
+  ).find((candidate) => candidate.id === recordId);
+
+  if (!record) {
+    return null;
+  }
+
+  return decorateLocalMaintenanceRecordsWithAssets([record], assets)[0] ?? null;
+}
+
+function getLocalDemoAssetMaintenanceSnapshot(assetId: string) {
+  const assets = getLocalDemoMaintenanceAssets();
+  const allRules = getLocalDemoDataset().maintenanceRules as unknown as MaintenanceRule[];
+  const allRecords = getLocalDemoDataset()
+    .maintenanceRecords as unknown as MaintenanceRecord[];
+  const assetRules = allRules.filter((rule) => rule.asset_id === assetId);
+  const rules = decorateRulesWithAssets(assetRules, assets, localDemoIdentity.timezone);
+  const records = decorateLocalMaintenanceRecordsWithAssets(
+    allRecords.filter((record) => record.asset_id === assetId),
+    assets,
+  );
+  const overdueItems = rules.filter((rule) => rule.status === "Overdue");
+  const nextDueItems = rules
+    .filter((rule) => rule.status !== "Overdue")
+    .sort((a, b) => sortRules(a, b, "urgency"))
+    .slice(0, 5);
+
+  return {
+    rules,
+    nextDueItems,
+    overdueItems,
+    recentRecords: records.slice(0, 5),
+    costSummary: summarizeMaintenanceCosts(records),
+    status:
+      overdueItems.length > 0
+        ? ("Overdue" as const)
+        : rules.some((rule) => rule.status === "Due soon")
+          ? ("Due soon" as const)
+          : ("Current" as const),
+  };
+}
+
+function getLocalDemoMaintenanceAssets(): MaintenanceAssetOption[] {
+  return (
+    getLocalDemoDataset().assets as unknown as Array<
+      MaintenanceAssetOption & { archived_at?: string | null }
+    >
+  )
+    .filter((asset) => !asset.archived_at)
+    .sort((left, right) => left.unit_number.localeCompare(right.unit_number));
+}
+
+function decorateLocalMaintenanceRecordsWithAssets(
+  records: MaintenanceRecord[],
+  assets: MaintenanceAssetOption[],
+): MaintenanceRecordWithAsset[] {
+  const assetsById = new Map(assets.map((asset) => [asset.id, asset]));
+  const documents = getLocalDemoDataset().documents;
+
+  return records.flatMap((record) => {
+    const asset = assetsById.get(record.asset_id);
+
+    if (!asset) {
+      return [];
+    }
+
+    const attachment = documents.find(
+      (document) => document.maintenance_record_id === record.id && !document.archived_at,
+    );
+
+    return [
+      {
+        ...record,
+        asset,
+        attachment: attachment
+          ? {
+              id: attachment.id,
+              document_name: attachment.document_name,
+              storage_bucket: attachment.storage_bucket,
+              storage_path: attachment.storage_path,
+              mime_type: attachment.mime_type,
+              file_size: Number(attachment.file_size ?? 0),
+              signedUrl: null,
+            }
+          : null,
+      },
+    ];
+  });
 }
 
 async function getMaintenanceAssets(

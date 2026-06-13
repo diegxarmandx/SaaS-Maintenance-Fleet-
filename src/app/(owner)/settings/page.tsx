@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Bell, Building2, Gauge, Settings, Shield, UserCircle } from "lucide-react";
+import { Bell, Building2, Gauge, Shield, UserCircle } from "lucide-react";
 
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import {
@@ -10,10 +10,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { SubscriptionSettings } from "@/features/billing/components/subscription-settings";
 import { getSubscriptionSnapshot } from "@/features/billing/server/subscription";
+import type { SubscriptionSnapshot } from "@/features/billing/types";
+import { getLocalDemoDataset, localDemoIdentity } from "@/features/demo/local-data";
 import {
   NotificationAnalyticsCards,
   type NotificationAnalytics,
@@ -32,23 +33,7 @@ export default async function SettingsPage() {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return (
-      <>
-        <Breadcrumbs
-          items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Settings" }]}
-        />
-        <PageHeader
-          description="Manage company identity, owner preferences, billing, notifications, and account safety."
-          eyebrow="FleetReady workspace"
-          title="Settings"
-        />
-        <EmptyState
-          description="Configure Supabase environment variables and apply the migrations to manage owner settings."
-          icon={<Settings aria-hidden="true" className="h-5 w-5" />}
-          title="Settings are not connected"
-        />
-      </>
-    );
+    return <LocalDemoSettingsPage />;
   }
 
   const [
@@ -90,13 +75,93 @@ export default async function SettingsPage() {
   const ownerProfile = (profile as OwnerSettingsRecord | null) ?? null;
 
   return (
+    <SettingsContent
+      analytics={analytics}
+      companyName={context.companyName}
+      companyProfile={companyProfile}
+      ownerProfile={ownerProfile}
+      preference={preference}
+      preferredTimezone={context.preferredTimezone}
+      subscriptionSnapshot={subscriptionSnapshot}
+    />
+  );
+}
+
+function LocalDemoSettingsPage() {
+  const dataset = getLocalDemoDataset();
+  const preference = dataset.notificationPreference as NotificationPreference;
+  const analytics = buildNotificationAnalytics(dataset.notifications);
+  const companyProfile = dataset.company as CompanySettingsRecord;
+  const ownerProfile: OwnerSettingsRecord = {
+    full_name: dataset.profile.full_name,
+    email: dataset.profile.email,
+    onboarding_status: dataset.profile.onboarding_status,
+  };
+  const subscriptionSnapshot: SubscriptionSnapshot = {
+    record: {
+      id: "local-demo-subscription",
+      company_id: localDemoIdentity.companyId,
+      stripe_customer_id: dataset.subscriptionRecord.stripe_customer_id,
+      stripe_subscription_id: dataset.subscriptionRecord.stripe_subscription_id,
+      stripe_price_id: dataset.subscriptionRecord.stripe_price_id,
+      plan_key: "growing_fleet",
+      status: "active",
+      current_period_start: dataset.subscriptionRecord.current_period_start,
+      current_period_end: dataset.subscriptionRecord.current_period_end,
+      trial_end: dataset.subscriptionRecord.trial_end,
+      cancel_at_period_end: dataset.subscriptionRecord.cancel_at_period_end,
+      asset_limit: dataset.subscriptionRecord.asset_limit,
+      last_payment_status: dataset.subscriptionRecord.last_payment_status,
+      restricted_at: dataset.subscriptionRecord.restricted_at,
+      updated_from_stripe_at: dataset.subscriptionRecord.updated_from_stripe_at,
+      created_at: dataset.subscriptionRecord.current_period_start ?? "",
+      updated_at: dataset.subscriptionRecord.updated_from_stripe_at ?? "",
+    },
+    status: "active",
+    activeAssetCount: dataset.assets.filter(
+      (asset) => asset.status === "active" && !asset.archived_at,
+    ).length,
+    assetLimit: dataset.subscriptionRecord.asset_limit,
+  };
+
+  return (
+    <SettingsContent
+      analytics={analytics}
+      companyName={localDemoIdentity.companyName}
+      companyProfile={companyProfile}
+      ownerProfile={ownerProfile}
+      preference={preference}
+      preferredTimezone={localDemoIdentity.timezone}
+      subscriptionSnapshot={subscriptionSnapshot}
+    />
+  );
+}
+
+function SettingsContent({
+  analytics,
+  companyName,
+  companyProfile,
+  ownerProfile,
+  preference,
+  preferredTimezone,
+  subscriptionSnapshot,
+}: {
+  analytics: NotificationAnalytics;
+  companyName: string;
+  companyProfile: CompanySettingsRecord | null;
+  ownerProfile: OwnerSettingsRecord | null;
+  preference: NotificationPreference;
+  preferredTimezone: string;
+  subscriptionSnapshot: SubscriptionSnapshot;
+}) {
+  return (
     <>
       <Breadcrumbs
         items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Settings" }]}
       />
       <PageHeader
         description="Manage company identity, owner preferences, billing, notifications, and account safety."
-        eyebrow={context.companyName}
+        eyebrow={companyName}
         title="Settings"
       />
       <div className="grid gap-8">
@@ -108,7 +173,7 @@ export default async function SettingsPage() {
           >
             <SettingsDescriptionList
               rows={[
-                ["Company", companyProfile?.company_name ?? context.companyName],
+                ["Company", companyProfile?.company_name ?? companyName],
                 ["Owner", companyProfile?.owner_name ?? "Not recorded"],
                 ["Email", companyProfile?.email ?? "Not recorded"],
                 ["Phone", companyProfile?.phone ?? "Not recorded"],
@@ -139,10 +204,7 @@ export default async function SettingsPage() {
           >
             <SettingsDescriptionList
               rows={[
-                [
-                  "Timezone",
-                  companyProfile?.preferred_timezone ?? context.preferredTimezone,
-                ],
+                ["Timezone", companyProfile?.preferred_timezone ?? preferredTimezone],
                 [
                   "Measurement",
                   formatMeasurementSettings(

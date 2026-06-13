@@ -5,10 +5,16 @@ import { redirect } from "next/navigation";
 
 import type { NotificationPreference } from "@/features/notifications/types";
 import { AppError } from "@/lib/errors";
+import { isSupabasePublicConfigReady } from "@/lib/env/public";
 import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
 import { recordAuditEvent } from "@/server/audit/log";
 
 export async function markNotificationReadAction(notificationId: string) {
+  if (!isSupabasePublicConfigReady) {
+    revalidatePath("/dashboard");
+    return;
+  }
+
   const context = await requireOwnerDatabaseContext();
   const { error } = await context.supabase
     .from("notifications")
@@ -24,6 +30,11 @@ export async function markNotificationReadAction(notificationId: string) {
 }
 
 export async function markAllNotificationsReadAction() {
+  if (!isSupabasePublicConfigReady) {
+    revalidatePath("/dashboard");
+    return;
+  }
+
   const context = await requireOwnerDatabaseContext();
   const { error } = await context.supabase
     .from("notifications")

@@ -18,6 +18,7 @@ import {
   getOwnerDatabaseContext,
   type SupabaseServerClient,
 } from "@/features/fleet/server/owner";
+import { getLocalDemoDataset, localDemoIdentity } from "@/features/demo/local-data";
 
 export type DocumentSearchParams = Record<string, string | string[] | undefined>;
 
@@ -81,20 +82,7 @@ export async function getDocumentLibrary(
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return {
-      isConfigured: false,
-      companyName: "FleetReady workspace",
-      timezone: "UTC",
-      documents: [],
-      allDocuments: [],
-      expiringDocuments: [],
-      archivedDocuments: [],
-      assets: [],
-      filters,
-      pageSize: DOCUMENT_PAGE_SIZE,
-      totalCount: 0,
-      counts: emptyCounts,
-    };
+    return getLocalDemoDocumentLibrary(filters);
   }
 
   const [assets, maintenanceRecords, complianceRecords, documents] = await Promise.all([
@@ -156,12 +144,14 @@ export async function getDocumentFormOptions(): Promise<DocumentFormOptions> {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
+    const documents = getLocalDemoDataset().documents as unknown as FleetDocument[];
+
     return {
-      isConfigured: false,
-      assets: [],
-      maintenanceRecords: [],
-      complianceRecords: [],
-      documentTypes: [...DOCUMENT_TYPES],
+      isConfigured: true,
+      assets: getLocalDemoDocumentAssets(),
+      maintenanceRecords: getLocalDemoMaintenanceRecordOptions(),
+      complianceRecords: getLocalDemoComplianceRecordOptions(),
+      documentTypes: buildDocumentTypeOptions(documents),
     };
   }
 
@@ -185,7 +175,7 @@ export async function getDocumentDetail(documentId: string) {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return null;
+    return getLocalDemoDocumentDetail(documentId);
   }
 
   const [assets, maintenanceRecords, complianceRecords, { data: document, error }] =
@@ -239,12 +229,7 @@ export async function getAssetDocumentSnapshot(assetId: string) {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return {
-      recentDocuments: [],
-      expiringDocuments: [],
-      expiredDocuments: [],
-      categoryCounts: [],
-    };
+    return getLocalDemoAssetDocumentSnapshot(assetId);
   }
 
   const [assets, maintenanceRecords, complianceRecords, documents] = await Promise.all([
@@ -284,6 +269,159 @@ export async function getAssetDocumentSnapshot(assetId: string) {
       count,
     })),
   };
+}
+
+async function getLocalDemoDocumentLibrary(
+  filters: DocumentFilters,
+): Promise<DocumentLibraryResult> {
+  const assets = getLocalDemoDocumentAssets();
+  const maintenanceRecords = getLocalDemoMaintenanceRecordOptions();
+  const complianceRecords = getLocalDemoComplianceRecordOptions();
+  const decoratedDocuments = await decorateDocuments({
+    supabase: null,
+    companyId: localDemoIdentity.companyId,
+    timezone: localDemoIdentity.timezone,
+    documents: getLocalDemoDataset().documents as unknown as FleetDocument[],
+    assets,
+    maintenanceRecords,
+    complianceRecords,
+  });
+  const counts = decoratedDocuments.reduce(
+    (current, document) => ({
+      ...current,
+      [document.status]: current[document.status] + 1,
+    }),
+    { ...emptyCounts },
+  );
+  const filteredDocuments = filterDocuments(decoratedDocuments, filters).sort((a, b) =>
+    sortDocuments(a, b, filters.sort),
+  );
+  const from = (filters.page - 1) * DOCUMENT_PAGE_SIZE;
+
+  return {
+    isConfigured: true,
+    companyName: localDemoIdentity.companyName,
+    timezone: localDemoIdentity.timezone,
+    documents: filteredDocuments.slice(from, from + DOCUMENT_PAGE_SIZE),
+    allDocuments: decoratedDocuments,
+    expiringDocuments: decoratedDocuments
+      .filter(
+        (document) =>
+          document.status === "Expiring soon" || document.status === "Expired",
+      )
+      .sort((a, b) =>
+        (a.expiration_date ?? "9999-12-31").localeCompare(
+          b.expiration_date ?? "9999-12-31",
+        ),
+      )
+      .slice(0, 6),
+    archivedDocuments: decoratedDocuments
+      .filter((document) => document.status === "Archived")
+      .slice(0, 6),
+    assets,
+    filters,
+    pageSize: DOCUMENT_PAGE_SIZE,
+    totalCount: filteredDocuments.length,
+    counts,
+  };
+}
+
+async function getLocalDemoDocumentDetail(documentId: string) {
+  const document = (getLocalDemoDataset().documents as unknown as FleetDocument[]).find(
+    (candidate) => candidate.id === documentId,
+  );
+
+  if (!document) {
+    return null;
+  }
+
+  const [decoratedDocument] = await decorateDocuments({
+    supabase: null,
+    companyId: localDemoIdentity.companyId,
+    timezone: localDemoIdentity.timezone,
+    documents: [document],
+    assets: getLocalDemoDocumentAssets(),
+    maintenanceRecords: getLocalDemoMaintenanceRecordOptions(),
+    complianceRecords: getLocalDemoComplianceRecordOptions(),
+  });
+
+  if (!decoratedDocument) {
+    return null;
+  }
+
+  const versions = (
+    getLocalDemoDataset().documentVersions as unknown as FleetDocumentVersion[]
+  )
+    .filter((version) => "document_id" in version && version.document_id === documentId)
+    .map((version) => ({ ...version, signedUrl: null }))
+    .slice(0, 12);
+
+  return {
+    ...decoratedDocument,
+    versions,
+  };
+}
+
+async function getLocalDemoAssetDocumentSnapshot(assetId: string) {
+  const decoratedDocuments = await decorateDocuments({
+    supabase: null,
+    companyId: localDemoIdentity.companyId,
+    timezone: localDemoIdentity.timezone,
+    documents: (getLocalDemoDataset().documents as unknown as FleetDocument[]).filter(
+      (document) => document.asset_id === assetId,
+    ),
+    assets: getLocalDemoDocumentAssets(),
+    maintenanceRecords: getLocalDemoMaintenanceRecordOptions(),
+    complianceRecords: getLocalDemoComplianceRecordOptions(),
+  });
+  const activeDocuments = decoratedDocuments.filter(
+    (document) => document.status !== "Archived",
+  );
+  const counts = new Map<string, number>();
+
+  activeDocuments.forEach((document) => {
+    counts.set(document.document_type, (counts.get(document.document_type) ?? 0) + 1);
+  });
+
+  return {
+    recentDocuments: activeDocuments.slice(0, 5),
+    expiringDocuments: activeDocuments
+      .filter((document) => document.status === "Expiring soon")
+      .slice(0, 5),
+    expiredDocuments: activeDocuments
+      .filter((document) => document.status === "Expired")
+      .slice(0, 5),
+    categoryCounts: Array.from(counts.entries()).map(([category, count]) => ({
+      category,
+      count,
+    })),
+  };
+}
+
+function getLocalDemoDocumentAssets(): DocumentAssetOption[] {
+  return (
+    getLocalDemoDataset().assets as unknown as Array<
+      DocumentAssetOption & { archived_at?: string | null }
+    >
+  )
+    .filter((asset) => !asset.archived_at)
+    .sort((left, right) => left.unit_number.localeCompare(right.unit_number));
+}
+
+function getLocalDemoMaintenanceRecordOptions(): DocumentRelationshipOption[] {
+  return getLocalDemoDataset().maintenanceRecords.map((record) => ({
+    id: record.id,
+    asset_id: record.asset_id,
+    label: `${record.maintenance_type} - ${record.completion_date}`,
+  }));
+}
+
+function getLocalDemoComplianceRecordOptions(): DocumentRelationshipOption[] {
+  return getLocalDemoDataset().complianceRecords.map((record) => ({
+    id: record.id,
+    asset_id: record.asset_id,
+    label: `${record.compliance_type} - expires ${record.expiration_date}`,
+  }));
 }
 
 async function getDocumentAssets(
@@ -411,7 +549,7 @@ async function decorateDocuments({
   maintenanceRecords,
   complianceRecords,
 }: {
-  supabase: SupabaseServerClient;
+  supabase: SupabaseServerClient | null;
   companyId: string;
   timezone: string;
   documents: FleetDocument[];
@@ -435,11 +573,9 @@ async function decorateDocuments({
         reminderDays: 30,
         timezone,
       });
-      const signedUrl = await createAuthorizedSignedDocumentUrl(
-        supabase,
-        companyId,
-        document,
-      );
+      const signedUrl = supabase
+        ? await createAuthorizedSignedDocumentUrl(supabase, companyId, document)
+        : null;
 
       return {
         ...document,

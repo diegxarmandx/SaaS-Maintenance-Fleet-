@@ -1,4 +1,5 @@
 import { calculateComplianceStatus } from "@/features/compliance/status";
+import { getLocalDemoDataset, localDemoIdentity } from "@/features/demo/local-data";
 import { calculateDocumentStatus } from "@/features/documents/status";
 import { calculateMaintenanceStatus } from "@/features/maintenance/schedule";
 import {
@@ -13,6 +14,7 @@ import type {
   ReminderProcessingResult,
 } from "@/features/notifications/types";
 import { AppError } from "@/lib/errors";
+import { isSupabasePublicConfigReady } from "@/lib/env/public";
 import { serverEnv } from "@/lib/env/server";
 import { createTransactionalEmailProvider } from "@/lib/email/provider";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -164,6 +166,13 @@ export async function getUnreadNotificationCount(companyId: string) {
 }
 
 export async function getOwnerNotifications(companyId: string) {
+  if (!isSupabasePublicConfigReady && companyId === localDemoIdentity.companyId) {
+    return (getLocalDemoDataset().notifications as unknown as OwnerNotification[])
+      .filter((notification) => !notification.resolved_at)
+      .sort((left, right) => right.created_at.localeCompare(left.created_at))
+      .slice(0, 20);
+  }
+
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("notifications")

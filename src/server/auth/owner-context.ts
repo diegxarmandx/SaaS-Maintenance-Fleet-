@@ -1,5 +1,6 @@
 import { isSupabasePublicConfigReady } from "@/lib/env/public";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { localDemoIdentity } from "@/features/demo/local-data";
 
 export type OwnerWorkspaceContext = {
   isConfigured: boolean;
@@ -17,9 +18,17 @@ const fallbackOwnerContext: OwnerWorkspaceContext = {
   companyName: "FleetReady workspace",
 };
 
+const localDemoOwnerContext: OwnerWorkspaceContext = {
+  isConfigured: true,
+  ownerName: localDemoIdentity.ownerName,
+  ownerEmail: localDemoIdentity.ownerEmail,
+  companyId: localDemoIdentity.companyId,
+  companyName: localDemoIdentity.companyName,
+};
+
 export async function getOwnerWorkspaceContext(): Promise<OwnerWorkspaceContext> {
   if (!isSupabasePublicConfigReady) {
-    return fallbackOwnerContext;
+    return localDemoOwnerContext;
   }
 
   try {

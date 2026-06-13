@@ -13,6 +13,7 @@ import {
   getOwnerDatabaseContext,
   type SupabaseServerClient,
 } from "@/features/fleet/server/owner";
+import { getLocalDemoDataset, localDemoIdentity } from "@/features/demo/local-data";
 
 type AssetRow = {
   id: string;
@@ -82,30 +83,11 @@ type MeterReadingRow = {
   reading_date: string;
 };
 
-const emptySummary = {
-  totalActiveAssets: 0,
-  maintenanceDueSoon: 0,
-  overdueMaintenance: 0,
-  documentsExpiringSoon: 0,
-  expiredDocuments: 0,
-  missingComplianceItems: 0,
-};
-
 export async function getDashboardData(): Promise<DashboardData> {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return {
-      isConfigured: false,
-      companyName: "FleetReady workspace",
-      summary: emptySummary,
-      attentionItems: [],
-      recentMaintenance: [],
-      recentDocuments: [],
-      recentCompliance: [],
-      recentMeterReadings: [],
-      fleetStatus: [],
-    };
+    return getLocalDemoDashboardData();
   }
 
   const [
@@ -150,6 +132,104 @@ export async function getDashboardData(): Promise<DashboardData> {
   return {
     isConfigured: true,
     companyName: context.companyName,
+    summary: {
+      totalActiveAssets: assets.filter((asset) => asset.status === "active").length,
+      maintenanceDueSoon: maintenanceItems.filter((item) => item.status === "Due soon")
+        .length,
+      overdueMaintenance: maintenanceItems.filter((item) => item.status === "Overdue")
+        .length,
+      documentsExpiringSoon: documentItems.filter(
+        (item) => item.status === "Expiring soon",
+      ).length,
+      expiredDocuments: documentItems.filter((item) => item.status === "Expired").length,
+      missingComplianceItems: complianceItems.filter((item) => item.status === "Missing")
+        .length,
+    },
+    attentionItems,
+    recentMaintenance: maintenanceRecords.slice(0, 5).map((record) => {
+      const asset = assetsById.get(record.asset_id);
+
+      return {
+        id: record.id,
+        label: record.maintenance_type,
+        detail: `${assetLabel(asset)} - ${formatCurrency(record.total_cost)}`,
+        occurredAt: record.completion_date,
+        href: `/maintenance/history/${record.id}`,
+      };
+    }),
+    recentDocuments: documents.slice(0, 5).map((document) => {
+      const asset = document.asset_id ? assetsById.get(document.asset_id) : null;
+
+      return {
+        id: document.id,
+        label: document.document_name,
+        detail: `${document.document_type} - ${assetLabel(asset)}`,
+        occurredAt: document.created_at,
+        href: `/documents/${document.id}`,
+      };
+    }),
+    recentCompliance: complianceRecords.slice(0, 5).map((record) => {
+      const asset = assetsById.get(record.asset_id);
+
+      return {
+        id: record.id,
+        label: record.compliance_type,
+        detail: `${assetLabel(asset)} - expires ${formatShortDate(record.expiration_date)}`,
+        occurredAt: record.updated_at,
+        href: `/compliance/${record.id}`,
+      };
+    }),
+    recentMeterReadings: meterReadings.slice(0, 5).map((reading) => {
+      const asset = assetsById.get(reading.asset_id);
+
+      return {
+        id: reading.id,
+        label: reading.reading_type === "mileage" ? "Mileage reading" : "Hour reading",
+        detail: `${assetLabel(asset)} - ${Number(reading.reading_value).toLocaleString()}`,
+        occurredAt: reading.reading_date,
+        href: `/fleet/${reading.asset_id}`,
+      };
+    }),
+    fleetStatus,
+  };
+}
+
+function getLocalDemoDashboardData(): DashboardData {
+  const dataset = getLocalDemoDataset();
+  const assets = dataset.assets as unknown as AssetRow[];
+  const maintenanceRules = dataset.maintenanceRules as unknown as MaintenanceRuleRow[];
+  const maintenanceRecords =
+    dataset.maintenanceRecords as unknown as MaintenanceRecordRow[];
+  const complianceRequirements =
+    dataset.complianceRequirements as unknown as ComplianceRequirementRow[];
+  const complianceRecords = dataset.complianceRecords as unknown as ComplianceRecordRow[];
+  const documents = dataset.documents as unknown as DocumentRow[];
+  const meterReadings = dataset.meterReadings as unknown as MeterReadingRow[];
+  const assetsById = new Map(assets.map((asset) => [asset.id, asset]));
+  const maintenanceItems = buildMaintenanceAttentionItems(
+    maintenanceRules,
+    assetsById,
+    localDemoIdentity.timezone,
+  );
+  const complianceItems = buildComplianceAttentionItems({
+    requirements: complianceRequirements,
+    records: complianceRecords,
+    assetsById,
+    timezone: localDemoIdentity.timezone,
+  });
+  const documentItems = buildDocumentAttentionItems(
+    documents,
+    assetsById,
+    localDemoIdentity.timezone,
+  );
+  const attentionItems = [...maintenanceItems, ...complianceItems, ...documentItems]
+    .sort(sortAttentionItems)
+    .slice(0, 12);
+  const fleetStatus = buildFleetStatus(assets, attentionItems);
+
+  return {
+    isConfigured: true,
+    companyName: localDemoIdentity.companyName,
     summary: {
       totalActiveAssets: assets.filter((asset) => asset.status === "active").length,
       maintenanceDueSoon: maintenanceItems.filter((item) => item.status === "Due soon")

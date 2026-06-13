@@ -21,6 +21,7 @@ import {
   getOwnerDatabaseContext,
   type SupabaseServerClient,
 } from "@/features/fleet/server/owner";
+import { getLocalDemoDataset, localDemoIdentity } from "@/features/demo/local-data";
 
 export type ComplianceSearchParams = Record<string, string | string[] | undefined>;
 
@@ -83,19 +84,7 @@ export async function getComplianceOverview(
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return {
-      isConfigured: false,
-      companyName: "FleetReady workspace",
-      timezone: "UTC",
-      items: [],
-      allItems: [],
-      assets: [],
-      complianceTypes: [...DEFAULT_COMPLIANCE_TYPES],
-      counts: emptyCounts,
-      filters,
-      pageSize: COMPLIANCE_PAGE_SIZE,
-      totalCount: 0,
-    };
+    return getLocalDemoComplianceOverview(filters);
   }
 
   const [assets, requirements, records] = await Promise.all([
@@ -146,11 +135,16 @@ export async function getComplianceFormOptions(): Promise<ComplianceFormOptions>
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
+    const requirements = getLocalDemoDataset()
+      .complianceRequirements as unknown as ComplianceRequirement[];
+    const records = getLocalDemoDataset()
+      .complianceRecords as unknown as ComplianceRecord[];
+
     return {
-      isConfigured: false,
-      assets: [],
-      requirements: [],
-      complianceTypes: [...DEFAULT_COMPLIANCE_TYPES],
+      isConfigured: true,
+      assets: getLocalDemoComplianceAssets(),
+      requirements,
+      complianceTypes: buildComplianceTypeOptions(requirements, records),
     };
   }
 
@@ -172,7 +166,7 @@ export async function getComplianceRecordDetail(recordId: string) {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return null;
+    return getLocalDemoComplianceRecordDetail(recordId);
   }
 
   const [assets, requirements, { data: record, error }] = await Promise.all([
@@ -212,13 +206,7 @@ export async function getAssetComplianceSnapshot(assetId: string) {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return {
-      status: "Current" as ComplianceStatus,
-      items: [],
-      expiredItems: [],
-      expiringItems: [],
-      missingItems: [],
-    };
+    return getLocalDemoAssetComplianceSnapshot(assetId);
   }
 
   const [assets, requirements, records] = await Promise.all([
@@ -251,6 +239,137 @@ export async function getAssetComplianceSnapshot(assetId: string) {
     expiringItems,
     missingItems,
   };
+}
+
+function getLocalDemoComplianceOverview(
+  filters: ComplianceFilters,
+): ComplianceOverviewResult {
+  const assets = getLocalDemoComplianceAssets();
+  const requirements = getLocalDemoDataset()
+    .complianceRequirements as unknown as ComplianceRequirement[];
+  const records = getLocalDemoDataset()
+    .complianceRecords as unknown as ComplianceRecord[];
+  const documents = getLocalDemoComplianceDocuments(records.map((record) => record.id));
+  const allItems = decorateComplianceItems({
+    assets,
+    requirements,
+    records,
+    documents,
+    timezone: localDemoIdentity.timezone,
+  });
+  const counts = allItems.reduce(
+    (current, item) => ({
+      ...current,
+      [item.status]: current[item.status] + 1,
+    }),
+    { ...emptyCounts },
+  );
+  const filteredItems = filterComplianceItems(allItems, filters).sort((a, b) =>
+    sortComplianceItems(a, b, filters.sort),
+  );
+  const from = (filters.page - 1) * COMPLIANCE_PAGE_SIZE;
+
+  return {
+    isConfigured: true,
+    companyName: localDemoIdentity.companyName,
+    timezone: localDemoIdentity.timezone,
+    items: filteredItems.slice(from, from + COMPLIANCE_PAGE_SIZE),
+    allItems,
+    assets,
+    complianceTypes: buildComplianceTypeOptions(requirements, records),
+    counts,
+    filters,
+    pageSize: COMPLIANCE_PAGE_SIZE,
+    totalCount: filteredItems.length,
+  };
+}
+
+function getLocalDemoComplianceRecordDetail(recordId: string) {
+  const assets = getLocalDemoComplianceAssets();
+  const requirements = getLocalDemoDataset()
+    .complianceRequirements as unknown as ComplianceRequirement[];
+  const record = (
+    getLocalDemoDataset().complianceRecords as unknown as ComplianceRecord[]
+  ).find((candidate) => candidate.id === recordId);
+
+  if (!record) {
+    return null;
+  }
+
+  const [item] = decorateComplianceItems({
+    assets,
+    requirements,
+    records: [record],
+    documents: getLocalDemoComplianceDocuments([recordId]),
+    timezone: localDemoIdentity.timezone,
+  });
+
+  return item ?? null;
+}
+
+function getLocalDemoAssetComplianceSnapshot(assetId: string) {
+  const assets = getLocalDemoComplianceAssets();
+  const requirements = (
+    getLocalDemoDataset().complianceRequirements as unknown as ComplianceRequirement[]
+  ).filter((requirement) => requirement.asset_id === assetId);
+  const records = (
+    getLocalDemoDataset().complianceRecords as unknown as ComplianceRecord[]
+  ).filter((record) => record.asset_id === assetId);
+  const items = decorateComplianceItems({
+    assets,
+    requirements,
+    records,
+    documents: getLocalDemoComplianceDocuments(records.map((record) => record.id)),
+    timezone: localDemoIdentity.timezone,
+  });
+  const activeItems = items.filter((item) => item.status !== "Archived");
+  const expiredItems = activeItems.filter((item) => item.status === "Expired");
+  const expiringItems = activeItems.filter((item) => item.status === "Expiring soon");
+  const missingItems = activeItems.filter((item) => item.status === "Missing");
+  const mostUrgent = [...activeItems].sort(compareComplianceUrgency)[0];
+
+  return {
+    status: mostUrgent?.status ?? ("Current" as ComplianceStatus),
+    items: activeItems,
+    expiredItems,
+    expiringItems,
+    missingItems,
+  };
+}
+
+function getLocalDemoComplianceAssets(): ComplianceAssetOption[] {
+  return (
+    getLocalDemoDataset().assets as unknown as Array<
+      ComplianceAssetOption & { archived_at?: string | null }
+    >
+  )
+    .filter((asset) => !asset.archived_at)
+    .sort((left, right) => left.unit_number.localeCompare(right.unit_number));
+}
+
+function getLocalDemoComplianceDocuments(recordIds: string[]) {
+  const documentsByRecord = new Map<string, ComplianceDocument>();
+
+  for (const document of getLocalDemoDataset().documents) {
+    if (
+      document.compliance_record_id &&
+      recordIds.includes(document.compliance_record_id) &&
+      !document.archived_at
+    ) {
+      documentsByRecord.set(document.compliance_record_id, {
+        id: document.id,
+        document_name: document.document_name,
+        document_type: document.document_type,
+        storage_bucket: document.storage_bucket,
+        storage_path: document.storage_path,
+        mime_type: document.mime_type,
+        file_size: Number(document.file_size ?? 0),
+        signedUrl: null,
+      });
+    }
+  }
+
+  return documentsByRecord;
 }
 
 async function getComplianceAssets(

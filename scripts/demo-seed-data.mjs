@@ -986,8 +986,11 @@ function buildMaintenanceRecords(dates, assetByUnit, rules) {
       parts_cost: parts,
       labor_cost: labor,
       other_cost: other,
+      total_cost: Number(parts) + Number(labor) + Number(other),
       notes: `${notes} DEMO RECORD - NOT REAL.`,
       archived_at: null,
+      created_at: dates.iso(offset),
+      updated_at: dates.iso(offset),
     };
   });
 }

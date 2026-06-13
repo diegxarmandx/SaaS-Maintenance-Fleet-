@@ -117,6 +117,7 @@ Last updated: 2026-06-13
 ## Completed in Development Demo Data Step
 
 - Added a comprehensive development-only demo seed data module with stable fictional identifiers and relative dates.
+- Added automatic read-only local demo data for populated owner screens when Supabase is not configured.
 - Added full, reset, minimal, and empty seed commands.
 - Added production safeguards requiring development intent and reset confirmation.
 - Added one fictional owner company, 15 varied assets, meter readings, maintenance rules, completed maintenance records, compliance requirements and records, document metadata, document versions, notifications, audit events, report preferences, notification preferences, and internal subscription state.

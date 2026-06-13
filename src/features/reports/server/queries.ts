@@ -12,6 +12,7 @@ import {
   getOwnerDatabaseContext,
   type SupabaseServerClient,
 } from "@/features/fleet/server/owner";
+import { getLocalDemoDataset, localDemoIdentity } from "@/features/demo/local-data";
 
 export type ReportSearchParams = Record<string, string | string[] | undefined>;
 
@@ -81,7 +82,7 @@ export async function getReportData(
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return emptyReportData(parseReportFilters(searchParams));
+    return getLocalDemoReportData(searchParams);
   }
 
   const preference = await getReportPreference(context.supabase, context.companyId);
@@ -228,29 +229,223 @@ export async function getReportData(
   };
 }
 
-function emptyReportData(filters: ReportFilters): ReportData {
-  return {
-    isConfigured: false,
-    companyName: "FleetReady workspace",
+function getLocalDemoReportData(searchParams: ReportSearchParams): ReportData {
+  const preference =
+    (getLocalDemoDataset().reportPreference as ReportPreference | null) ??
+    defaultReportPreference(localDemoIdentity.companyId);
+  const preferredSearchParams = buildPreferredReportSearchParams({
+    searchParams,
+    preference,
+    timezone: localDemoIdentity.timezone,
+  });
+  const filters = parseReportFilters(preferredSearchParams);
+  const assets = (
+    getLocalDemoDataset().assets as unknown as Array<
+      ReportAsset & { archived_at?: string | null }
+    >
+  )
+    .filter((asset) => !asset.archived_at)
+    .sort((left, right) => left.unit_number.localeCompare(right.unit_number));
+  const rules = getLocalDemoDataset().maintenanceRules as unknown as Array<{
+    id: string;
+    asset_id: string;
+    name: string;
+    next_due_date: string | null;
+    next_due_mileage: number | null;
+    next_due_hours: number | null;
+    reminder_days: number;
+    reminder_mileage: number | null;
+    reminder_hours: number | null;
+    is_active: boolean;
+  }>;
+  const maintenanceRecords = filterReportDateRows(
+    getLocalDemoDataset().maintenanceRecords as unknown as Array<{
+      id: string;
+      asset_id: string;
+      maintenance_type: string;
+      completion_date: string;
+      total_cost: number;
+    }>,
     filters,
-    preference: defaultReportPreference(""),
-    assets: [],
-    upcomingMaintenance: [],
-    overdueMaintenance: [],
-    completedMaintenance: [],
-    maintenanceCostsByAsset: [],
-    maintenanceCostsByCategory: [],
-    complianceStatus: [],
-    expiringCompliance: [],
-    expiredCompliance: [],
-    missingRequirements: [],
-    documents: [],
-    expiringDocuments: [],
-    expiredDocuments: [],
-    documentsByAsset: [],
-    documentsByCategory: [],
-    assetHistory: [],
+    "completion_date",
+  );
+  const requirements = getLocalDemoDataset().complianceRequirements as unknown as Array<{
+    id: string;
+    asset_id: string;
+    compliance_type: string;
+    reminder_days: number;
+    archived_at: string | null;
+  }>;
+  const complianceRecords = filterReportDateRows(
+    getLocalDemoDataset().complianceRecords as unknown as Array<{
+      id: string;
+      asset_id: string;
+      requirement_id: string | null;
+      compliance_type: string;
+      expiration_date: string;
+      reminder_days: number;
+      archived_at: string | null;
+    }>,
+    filters,
+    "expiration_date",
+  );
+  const documents = filterReportDateRows(
+    getLocalDemoDataset().documents as unknown as Array<{
+      id: string;
+      asset_id: string | null;
+      document_name: string;
+      document_type: string;
+      expiration_date: string | null;
+      archived_at: string | null;
+    }>,
+    filters,
+    "expiration_date",
+  );
+  const readings = filterReportDateRows(
+    getLocalDemoDataset().meterReadings as unknown as Array<{
+      id: string;
+      asset_id: string;
+      reading_type: "mileage" | "engine_hours";
+      reading_value: number;
+      reading_date: string;
+    }>,
+    filters,
+    "reading_date",
+  );
+  const assetsById = new Map(assets.map((asset) => [asset.id, asset]));
+  const maintenanceRows = rules.flatMap((rule) => {
+    const asset = assetsById.get(rule.asset_id);
+
+    if (!asset || (filters.assetId && asset.id !== filters.assetId)) return [];
+
+    const status = calculateMaintenanceStatus({
+      isActive: rule.is_active,
+      currentMileage: Number(asset.current_mileage),
+      currentEngineHours: Number(asset.current_engine_hours),
+      nextDueDate: rule.next_due_date,
+      nextDueMileage:
+        rule.next_due_mileage === null ? null : Number(rule.next_due_mileage),
+      nextDueHours: rule.next_due_hours === null ? null : Number(rule.next_due_hours),
+      reminderDays: rule.reminder_days,
+      reminderMileage:
+        rule.reminder_mileage === null ? null : Number(rule.reminder_mileage),
+      reminderHours: rule.reminder_hours === null ? null : Number(rule.reminder_hours),
+      timezone: localDemoIdentity.timezone,
+    });
+
+    if (status.status === "Current") return [];
+
+    return [
+      {
+        id: rule.id,
+        assetId: asset.id,
+        asset: assetLabel(asset),
+        category: "Maintenance",
+        label: rule.name,
+        status: status.status,
+        date: rule.next_due_date,
+        amount: null,
+        href: `/maintenance/complete?ruleId=${rule.id}&assetId=${asset.id}`,
+      },
+    ];
+  });
+  const completedMaintenance = maintenanceRecords.map((record) => {
+    const asset = assetsById.get(record.asset_id);
+
+    return {
+      id: record.id,
+      assetId: record.asset_id,
+      asset: assetLabel(asset),
+      category: record.maintenance_type,
+      label: record.maintenance_type,
+      status: "Completed",
+      date: record.completion_date,
+      amount: Number(record.total_cost ?? 0),
+      href: `/maintenance/history/${record.id}`,
+    };
+  });
+  const complianceRows = buildComplianceRows({
+    requirements,
+    records: complianceRecords,
+    assetsById,
+    timezone: localDemoIdentity.timezone,
+  }).filter((row) => !filters.assetId || row.assetId === filters.assetId);
+  const documentRows = documents.map((document) => {
+    const asset = document.asset_id ? assetsById.get(document.asset_id) : null;
+    const status = calculateDocumentStatus({
+      expirationDate: document.expiration_date,
+      archivedAt: document.archived_at,
+      reminderDays: 30,
+      timezone: localDemoIdentity.timezone,
+    });
+
+    return {
+      id: document.id,
+      assetId: document.asset_id,
+      asset: assetLabel(asset),
+      category: document.document_type,
+      label: document.document_name,
+      status: status.status,
+      date: document.expiration_date,
+      amount: null,
+      href: `/documents/${document.id}`,
+    };
+  });
+  const assetHistory = [
+    ...readings.map((reading) => ({
+      id: reading.id,
+      assetId: reading.asset_id,
+      asset: assetLabel(assetsById.get(reading.asset_id)),
+      category: "Meter reading",
+      label: reading.reading_type === "mileage" ? "Mileage" : "Engine hours",
+      status: "Recorded",
+      date: reading.reading_date,
+      amount: Number(reading.reading_value),
+      href: `/fleet/${reading.asset_id}`,
+    })),
+    ...completedMaintenance,
+    ...complianceRows,
+    ...documentRows,
+  ].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
+
+  return {
+    isConfigured: true,
+    companyName: localDemoIdentity.companyName,
+    filters,
+    preference,
+    assets,
+    upcomingMaintenance: maintenanceRows.filter((row) => row.status === "Due soon"),
+    overdueMaintenance: maintenanceRows.filter((row) => row.status === "Overdue"),
+    completedMaintenance,
+    maintenanceCostsByAsset: summarizeBy(completedMaintenance, "asset"),
+    maintenanceCostsByCategory: summarizeBy(completedMaintenance, "category"),
+    complianceStatus: complianceRows,
+    expiringCompliance: complianceRows.filter((row) => row.status === "Expiring soon"),
+    expiredCompliance: complianceRows.filter((row) => row.status === "Expired"),
+    missingRequirements: complianceRows.filter((row) => row.status === "Missing"),
+    documents: documentRows,
+    expiringDocuments: documentRows.filter((row) => row.status === "Expiring soon"),
+    expiredDocuments: documentRows.filter((row) => row.status === "Expired"),
+    documentsByAsset: countBy(documentRows, "asset"),
+    documentsByCategory: countBy(documentRows, "category"),
+    assetHistory,
   };
+}
+
+function filterReportDateRows<T extends { asset_id?: string | null }>(
+  rows: T[],
+  filters: ReportFilters,
+  dateKey: keyof T,
+) {
+  return rows.filter((row) => {
+    const value = row[dateKey];
+    const date = typeof value === "string" ? value : "";
+    const matchesAsset = !filters.assetId || row.asset_id === filters.assetId;
+    const matchesFrom = !filters.from || date >= filters.from;
+    const matchesTo = !filters.to || date <= filters.to;
+
+    return matchesAsset && matchesFrom && matchesTo;
+  });
 }
 
 async function getReportPreference(supabase: SupabaseServerClient, companyId: string) {
