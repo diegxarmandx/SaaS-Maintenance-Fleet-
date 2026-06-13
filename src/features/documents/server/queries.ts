@@ -628,7 +628,7 @@ function sortDocuments(
   sort: DocumentFilters["sort"],
 ) {
   if (sort === "created_asc") {
-    return left.created_at.localeCompare(right.created_at);
+    return (left.created_at ?? "").localeCompare(right.created_at ?? "");
   }
 
   if (sort === "expiration_asc") {
@@ -641,7 +641,7 @@ function sortDocuments(
     return left.document_name.localeCompare(right.document_name);
   }
 
-  return right.created_at.localeCompare(left.created_at);
+  return (right.created_at ?? "").localeCompare(left.created_at ?? "");
 }
 
 function buildDocumentTypeOptions(documents: FleetDocument[]) {

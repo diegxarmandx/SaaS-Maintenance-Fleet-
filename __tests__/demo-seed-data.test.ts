@@ -214,11 +214,14 @@ describe("development demo seed data", () => {
 describe("automatic local demo data", () => {
   it("populates read-only app screens when Supabase is not configured", async () => {
     const { getDashboardData } = await import("../src/features/dashboard/server/queries");
+    const { getDocumentLibrary } =
+      await import("../src/features/documents/server/queries");
     const { listFleetAssets } = await import("../src/features/fleet/server/queries");
     const { getReportData } = await import("../src/features/reports/server/queries");
 
-    const [dashboard, fleet, reports] = await Promise.all([
+    const [dashboard, documents, fleet, reports] = await Promise.all([
       getDashboardData(),
+      getDocumentLibrary({}),
       listFleetAssets({}),
       getReportData({}),
     ]);
@@ -226,6 +229,8 @@ describe("automatic local demo data", () => {
     expect(dashboard.isConfigured).toBe(true);
     expect(dashboard.summary.totalActiveAssets).toBeGreaterThan(0);
     expect(dashboard.attentionItems.length).toBeGreaterThan(0);
+    expect(documents.isConfigured).toBe(true);
+    expect(documents.documents.length).toBeGreaterThan(0);
     expect(fleet.isConfigured).toBe(true);
     expect(fleet.assets.length).toBeGreaterThan(0);
     expect(reports.isConfigured).toBe(true);

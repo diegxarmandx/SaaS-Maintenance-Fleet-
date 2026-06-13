@@ -1391,6 +1391,9 @@ function buildDocuments(dates, assetByUnit, maintenanceRecords, complianceRecord
 
   return docs.map((document) => ({
     ...document,
+    created_at: `${document.issue_date ?? dates.today}T12:00:00.000Z`,
+    updated_at:
+      document.archived_at ?? `${document.issue_date ?? dates.today}T12:00:00.000Z`,
     notes: `${document.notes ?? ""} DEMO DOCUMENT - NOT VALID.`,
     file_size: demoPdfBytes(document.document_name).length,
   }));
