@@ -2,6 +2,7 @@ import {
   DOCUMENT_ALLOWED_TYPES,
   DOCUMENT_UPLOAD_MAX_SIZE_LABEL,
 } from "@/features/documents/constants";
+import type { SafeActionErrorCode } from "@/lib/action-errors";
 
 export type SupportedDocumentMimeType = (typeof DOCUMENT_ALLOWED_TYPES)[number];
 export type SupportedUploadMimeType = SupportedDocumentMimeType | "image/webp";
@@ -22,6 +23,7 @@ export type DocumentFileValidationResult =
     }
   | {
       ok: false;
+      code: Extract<SafeActionErrorCode, "VALIDATION_ERROR" | "FILE_TOO_LARGE" | "INVALID_FILE">;
       error: string;
     };
 
@@ -42,23 +44,29 @@ export async function validateUploadFile(
   options: UploadFileValidationOptions,
 ): Promise<DocumentFileValidationResult> {
   if (file.size <= 0) {
-    return { ok: false, error: "Choose a non-empty file." };
+    return { ok: false, code: "INVALID_FILE", error: "Choose a non-empty file." };
   }
 
   if (file.size > options.maxSizeBytes) {
     return {
       ok: false,
+      code: "FILE_TOO_LARGE",
       error: `Files must be ${options.maxSizeLabel} or smaller.`,
     };
   }
 
   if (!isAllowedDeclaredType(file.type, options.allowedTypes)) {
-    return { ok: false, error: `Upload a ${options.allowedTypeLabel}.` };
+    return {
+      ok: false,
+      code: "INVALID_FILE",
+      error: `Upload a ${options.allowedTypeLabel}.`,
+    };
   }
 
   if (!hasAllowedExtensionForMimeType(file.name, file.type)) {
     return {
       ok: false,
+      code: "INVALID_FILE",
       error: `The file extension must match the selected ${options.allowedTypeLabel}.`,
     };
   }
@@ -68,6 +76,7 @@ export async function validateUploadFile(
   if (!detectedType) {
     return {
       ok: false,
+      code: "INVALID_FILE",
       error: `The file contents do not match a supported ${options.allowedTypeLabel}.`,
     };
   }
@@ -75,6 +84,7 @@ export async function validateUploadFile(
   if (detectedType !== file.type) {
     return {
       ok: false,
+      code: "INVALID_FILE",
       error: "The declared file type does not match the detected file contents.",
     };
   }

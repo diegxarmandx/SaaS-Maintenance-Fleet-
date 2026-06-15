@@ -4,11 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import type { NotificationPreference } from "@/features/notifications/types";
-import { AppError } from "@/lib/errors";
 import { isSupabasePublicConfigReady } from "@/lib/env/public";
 import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
 import { recordAuditEvent } from "@/server/audit/log";
 import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
+import { toSafeActionException } from "@/server/actions/safe-error";
 
 export async function markNotificationReadAction(notificationId: string) {
   if (!isSupabasePublicConfigReady) {
@@ -26,7 +26,7 @@ export async function markNotificationReadAction(notificationId: string) {
     .eq("company_id", context.companyId);
 
   if (error) {
-    throw new AppError("DATA_ACCESS_ERROR", error.message);
+    throw toSafeActionException(error, { action: "notifications.markRead" });
   }
 
   revalidatePath("/dashboard");
@@ -49,7 +49,7 @@ export async function markAllNotificationsReadAction() {
     .is("read_at", null);
 
   if (error) {
-    throw new AppError("DATA_ACCESS_ERROR", error.message);
+    throw toSafeActionException(error, { action: "notifications.markAllRead" });
   }
 
   revalidatePath("/dashboard");
@@ -82,7 +82,9 @@ export async function updateNotificationPreferencesAction(formData: FormData) {
   );
 
   if (error) {
-    throw new AppError("DATA_ACCESS_ERROR", error.message);
+    throw toSafeActionException(error, {
+      action: "notifications.updatePreferences",
+    });
   }
 
   await recordAuditEvent(context, {

@@ -17,7 +17,6 @@ import {
 } from "@/features/auth/messages";
 import { getPostLoginRedirect } from "@/features/auth/redirects";
 import { serverEnv } from "@/lib/env/server";
-import { getErrorMessage } from "@/lib/errors";
 import {
   checkAuthRateLimit,
   rateLimitedMessage,
@@ -77,8 +76,8 @@ export async function signInAction(
       hasCompany: Boolean(profile?.company_id),
       redirectTo,
     });
-  } catch (error) {
-    return { status: "error", message: getErrorMessage(error, genericSignInErrorMessage) };
+  } catch {
+    return { status: "error", message: genericSignInErrorMessage };
   }
 
   redirect(destination);
@@ -107,8 +106,8 @@ export async function signUpAction(values: SignupFormValues): Promise<AuthAction
     if (error) {
       return { status: "error", message: genericSignUpErrorMessage };
     }
-  } catch (error) {
-    return { status: "error", message: getErrorMessage(error, genericSignUpErrorMessage) };
+  } catch {
+    return { status: "error", message: genericSignUpErrorMessage };
   }
 
   redirect("/onboarding");

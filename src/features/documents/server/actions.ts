@@ -17,11 +17,17 @@ import {
 import { validateDocumentFile } from "@/features/documents/file-validation";
 import { recordDocumentVersion } from "@/features/documents/server/versions";
 import { assertFleetStorageQuotaAvailable } from "@/features/documents/server/storage-quota";
-import { AppError, getErrorMessage } from "@/lib/errors";
+import type { SafeActionErrorPayload } from "@/lib/action-errors";
 import { serverEnv } from "@/lib/env/server";
 import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
 import { recordAuditEvent } from "@/server/audit/log";
 import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
+import {
+  expectedActionError,
+  formActionFailure,
+  toSafeActionError,
+  toSafeActionException,
+} from "@/server/actions/safe-error";
 
 export async function uploadFleetDocumentAction(
   _previousState: DocumentFormState,
@@ -33,6 +39,7 @@ export async function uploadFleetDocumentAction(
   if (!parsed.success) {
     return {
       status: "error",
+      code: "VALIDATION_ERROR",
       message: "Review the highlighted document fields.",
       fields,
       errors: getFieldErrors(parsed.error.flatten().fieldErrors),
@@ -52,7 +59,8 @@ export async function uploadFleetDocumentAction(
     if (relationshipResult.error) {
       return {
         status: "error",
-        message: relationshipResult.error,
+        code: relationshipResult.error.code,
+        message: relationshipResult.error.message,
         fields,
         errors: {},
       };
@@ -68,15 +76,17 @@ export async function uploadFleetDocumentAction(
     if (upload.error) {
       return {
         status: "error",
-        message: upload.error,
+        code: upload.error.code,
+        message: upload.error.message,
         fields,
-        errors: { file: upload.error },
+        errors: { file: upload.error.message },
       };
     }
 
     if (!upload.file) {
       return {
         status: "error",
+        code: "INVALID_FILE",
         message: "Choose a PDF, JPG, or PNG document to upload.",
         fields,
         errors: { file: "Choose a PDF, JPG, or PNG document to upload." },
@@ -99,7 +109,12 @@ export async function uploadFleetDocumentAction(
         .from(uploaded.storageBucket)
         .remove([uploaded.storagePath]);
 
-      return { status: "error", message: error.message, fields, errors: {} };
+      return formActionFailure(
+        error,
+        { action: "documents.upload.insert" },
+        fields,
+        {},
+      );
     }
 
     try {
@@ -127,7 +142,12 @@ export async function uploadFleetDocumentAction(
         .from(uploaded.storageBucket)
         .remove([uploaded.storagePath]);
 
-      return { status: "error", message: getErrorMessage(error), fields, errors: {} };
+      return formActionFailure(
+        error,
+        { action: "documents.upload.versionOrAudit" },
+        fields,
+        {},
+      );
     }
   } catch (error) {
     if (uploaded) {
@@ -137,7 +157,7 @@ export async function uploadFleetDocumentAction(
         .remove([uploaded.storagePath]);
     }
 
-    return { status: "error", message: getErrorMessage(error), fields, errors: {} };
+    return formActionFailure(error, { action: "documents.upload" }, fields, {});
   }
 
   revalidatePath("/documents");
@@ -155,6 +175,7 @@ export async function updateFleetDocumentAction(
   if (!parsed.success) {
     return {
       status: "error",
+      code: "VALIDATION_ERROR",
       message: "Review the highlighted document fields.",
       fields,
       errors: getFieldErrors(parsed.error.flatten().fieldErrors),
@@ -179,22 +200,36 @@ export async function updateFleetDocumentAction(
       .maybeSingle();
 
     if (lookupError) {
-      return { status: "error", message: lookupError.message, fields, errors: {} };
+      return formActionFailure(
+        lookupError,
+        { action: "documents.update.lookup" },
+        fields,
+        {},
+      );
     }
 
     if (!existingDocument) {
-      return {
-        status: "error",
-        message: "Document was not found for this owner company.",
+      return formActionFailure(
+        expectedActionError(
+          "NOT_FOUND",
+          "Document was not found for this owner company.",
+        ),
+        { action: "documents.update.notFound" },
         fields,
-        errors: {},
-      };
+        {},
+      );
     }
 
     const relationshipResult = await resolveRelationships(context, parsed.data);
 
     if (relationshipResult.error) {
-      return { status: "error", message: relationshipResult.error, fields, errors: {} };
+      return {
+        status: "error",
+        code: relationshipResult.error.code,
+        message: relationshipResult.error.message,
+        fields,
+        errors: {},
+      };
     }
 
     const upload = await uploadDocumentFile(
@@ -207,9 +242,10 @@ export async function updateFleetDocumentAction(
     if (upload.error) {
       return {
         status: "error",
-        message: upload.error,
+        code: upload.error.code,
+        message: upload.error.message,
         fields,
-        errors: { file: upload.error },
+        errors: { file: upload.error.message },
       };
     }
 
@@ -259,7 +295,12 @@ export async function updateFleetDocumentAction(
           .remove([uploaded.storagePath]);
       }
 
-      return { status: "error", message: error.message, fields, errors: {} };
+      return formActionFailure(
+        error,
+        { action: "documents.update.update" },
+        fields,
+        {},
+      );
     }
 
     if (uploaded && version) {
@@ -278,7 +319,7 @@ export async function updateFleetDocumentAction(
         .remove([uploaded.storagePath]);
     }
 
-    return { status: "error", message: getErrorMessage(error), fields, errors: {} };
+    return formActionFailure(error, { action: "documents.update" }, fields, {});
   }
 
   revalidatePath("/documents");
@@ -297,7 +338,7 @@ export async function archiveFleetDocumentAction(documentId: string) {
     .eq("company_id", context.companyId);
 
   if (error) {
-    throw new AppError("DATA_ACCESS_ERROR", error.message);
+    throw toSafeActionException(error, { action: "documents.archive" });
   }
 
   await recordAuditEvent(context, {
@@ -327,7 +368,7 @@ type UploadedDocumentFile = {
 
 type UploadResult = {
   file: UploadedDocumentFile | null;
-  error: string | null;
+  error: SafeActionErrorPayload | null;
 };
 
 async function uploadDocumentFile(
@@ -348,7 +389,10 @@ async function uploadDocumentFile(
   );
 
   if (!validation.ok) {
-    return { file: null, error: validation.error };
+    return {
+      file: null,
+      error: { code: validation.code, message: validation.error },
+    };
   }
 
   const category = resolveDocumentCategory(input);
@@ -369,7 +413,10 @@ async function uploadDocumentFile(
     });
 
   if (error) {
-    return { file: null, error: error.message };
+    return {
+      file: null,
+      error: toSafeActionError(error, { action: "documents.uploadFile" }),
+    };
   }
 
   return {
@@ -406,7 +453,7 @@ function getStorageBucketForCategory(
 async function resolveRelationships(
   context: Awaited<ReturnType<typeof requireOwnerDatabaseContext>>,
   input: DocumentFormInput,
-): Promise<{ input: DocumentFormInput; error: string | null }> {
+): Promise<{ input: DocumentFormInput; error: SafeActionErrorPayload | null }> {
   let resolvedAssetId = input.assetId;
 
   if (input.maintenanceRecordId) {
@@ -418,11 +465,22 @@ async function resolveRelationships(
       .maybeSingle();
 
     if (error) {
-      return { input, error: error.message };
+      return {
+        input,
+        error: toSafeActionError(error, {
+          action: "documents.resolveMaintenanceRecord",
+        }),
+      };
     }
 
     if (!data) {
-      return { input, error: "Choose a maintenance record from this company." };
+      return {
+        input,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Choose a maintenance record from this company.",
+        },
+      };
     }
 
     resolvedAssetId = data.asset_id;
@@ -437,11 +495,22 @@ async function resolveRelationships(
       .maybeSingle();
 
     if (error) {
-      return { input, error: error.message };
+      return {
+        input,
+        error: toSafeActionError(error, {
+          action: "documents.resolveComplianceRecord",
+        }),
+      };
     }
 
     if (!data) {
-      return { input, error: "Choose a compliance record from this company." };
+      return {
+        input,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Choose a compliance record from this company.",
+        },
+      };
     }
 
     resolvedAssetId = data.asset_id;
@@ -456,11 +525,20 @@ async function resolveRelationships(
       .maybeSingle();
 
     if (error) {
-      return { input, error: error.message };
+      return {
+        input,
+        error: toSafeActionError(error, { action: "documents.resolveAsset" }),
+      };
     }
 
     if (!data) {
-      return { input, error: "Choose an asset from this company." };
+      return {
+        input,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Choose an asset from this company.",
+        },
+      };
     }
   }
 

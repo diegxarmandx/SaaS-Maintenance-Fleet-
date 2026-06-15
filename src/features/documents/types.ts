@@ -1,4 +1,5 @@
 import type { DocumentStatus } from "@/features/documents/status";
+import type { SafeActionErrorCode } from "@/lib/action-errors";
 
 export type DocumentAssetOption = {
   id: string;
@@ -80,6 +81,7 @@ export type DocumentFormFields = {
 
 export type DocumentFormState = {
   status: "idle" | "success" | "error";
+  code?: SafeActionErrorCode;
   message: string;
   fields: DocumentFormFields;
   errors: Partial<Record<keyof DocumentFormFields | "file", string>>;

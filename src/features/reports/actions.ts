@@ -4,10 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { parseReportPreferenceForm } from "@/features/reports/preferences";
-import { AppError } from "@/lib/errors";
 import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
 import { recordAuditEvent } from "@/server/audit/log";
 import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
+import {
+  expectedActionError,
+  toSafeActionException,
+} from "@/server/actions/safe-error";
 
 export async function updateReportPreferencesAction(formData: FormData) {
   const context = await requireOwnerDatabaseContext();
@@ -25,11 +28,16 @@ export async function updateReportPreferencesAction(formData: FormData) {
       .maybeSingle();
 
     if (error) {
-      throw new AppError("DATA_ACCESS_ERROR", error.message);
+      throw toSafeActionException(error, {
+        action: "reports.updatePreferences.lookupAsset",
+      });
     }
 
     if (!data) {
-      throw new AppError("VALIDATION_ERROR", "Choose an active asset from this company.");
+      throw expectedActionError(
+        "VALIDATION_ERROR",
+        "Choose an active asset from this company.",
+      );
     }
   }
 
@@ -44,7 +52,9 @@ export async function updateReportPreferencesAction(formData: FormData) {
   );
 
   if (error) {
-    throw new AppError("DATA_ACCESS_ERROR", error.message);
+    throw toSafeActionException(error, {
+      action: "reports.updatePreferences.upsert",
+    });
   }
 
   await recordAuditEvent(context, {

@@ -6,12 +6,17 @@ import {
   companyOnboardingSchema,
   type CompanyOnboardingValues,
 } from "@/features/onboarding/validation/onboarding";
-import { getErrorMessage } from "@/lib/errors";
+import type { SafeActionErrorCode } from "@/lib/action-errors";
 import { enforceOwnerUserRateLimit } from "@/lib/rate-limit/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  expectedActionError,
+  toSafeActionError,
+} from "@/server/actions/safe-error";
 
 export type OnboardingActionResult = {
   status: "error";
+  code?: SafeActionErrorCode;
   message: string;
 };
 
@@ -21,7 +26,11 @@ export async function completeOnboardingAction(
   const parsed = companyOnboardingSchema.safeParse(values);
 
   if (!parsed.success) {
-    return { status: "error", message: "Complete the company onboarding fields." };
+    return {
+      status: "error",
+      code: "VALIDATION_ERROR",
+      message: "Complete the company onboarding fields.",
+    };
   }
 
   try {
@@ -32,7 +41,16 @@ export async function completeOnboardingAction(
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      return { status: "error", message: "Sign in again to finish onboarding." };
+      const safeError = toSafeActionError(
+        expectedActionError(
+          "AUTHENTICATION_ERROR",
+          "Sign in again to finish onboarding.",
+          { cause: userError },
+        ),
+        { action: "onboarding.currentUser" },
+      );
+
+      return { status: "error", ...safeError };
     }
 
     await enforceOwnerUserRateLimit("mutation", user.id);
@@ -51,10 +69,16 @@ export async function completeOnboardingAction(
     });
 
     if (error) {
-      return { status: "error", message: error.message };
+      const safeError = toSafeActionError(error, {
+        action: "onboarding.completeCompany",
+      });
+
+      return { status: "error", ...safeError };
     }
   } catch (error) {
-    return { status: "error", message: getErrorMessage(error) };
+    const safeError = toSafeActionError(error, { action: "onboarding.complete" });
+
+    return { status: "error", ...safeError };
   }
 
   redirect("/dashboard");

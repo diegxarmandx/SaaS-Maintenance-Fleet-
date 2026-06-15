@@ -1,4 +1,5 @@
 import type { MaintenanceStatus } from "@/features/maintenance/schedule";
+import type { SafeActionErrorCode } from "@/lib/action-errors";
 
 export type MaintenanceTemplate = {
   id: string;
@@ -116,6 +117,7 @@ export type MaintenanceRuleFormFields = {
 
 export type MaintenanceRuleFormState = {
   status: "idle" | "error";
+  code?: SafeActionErrorCode;
   message: string;
   fields: MaintenanceRuleFormFields;
   errors: Partial<Record<keyof MaintenanceRuleFormFields, string>>;
@@ -137,6 +139,7 @@ export type CompletedMaintenanceFormFields = {
 
 export type CompletedMaintenanceFormState = {
   status: "idle" | "error";
+  code?: SafeActionErrorCode;
   message: string;
   fields: CompletedMaintenanceFormFields;
   errors: Partial<Record<keyof CompletedMaintenanceFormFields | "attachment", string>>;

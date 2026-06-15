@@ -22,10 +22,15 @@ import {
   completedMaintenanceFormSchema,
   maintenanceRuleFormSchema,
 } from "@/features/maintenance/validation";
-import { AppError, getErrorMessage } from "@/lib/errors";
+import type { SafeActionErrorPayload } from "@/lib/action-errors";
 import { serverEnv } from "@/lib/env/server";
 import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
 import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
+import {
+  formActionFailure,
+  toSafeActionError,
+  toSafeActionException,
+} from "@/server/actions/safe-error";
 
 export async function createMaintenanceRuleAction(
   _previousState: MaintenanceRuleFormState,
@@ -37,6 +42,7 @@ export async function createMaintenanceRuleAction(
   if (!parsed.success) {
     return {
       status: "error",
+      code: "VALIDATION_ERROR",
       message: "Review the highlighted maintenance rule fields.",
       fields,
       errors: getFieldErrors(parsed.error.flatten().fieldErrors),
@@ -51,10 +57,15 @@ export async function createMaintenanceRuleAction(
     const { error } = await context.supabase.from("maintenance_rules").insert(payload);
 
     if (error) {
-      return { status: "error", message: error.message, fields, errors: {} };
+      return formActionFailure(
+        error,
+        { action: "maintenance.createRule.insert" },
+        fields,
+        {},
+      );
     }
   } catch (error) {
-    return { status: "error", message: getErrorMessage(error), fields, errors: {} };
+    return formActionFailure(error, { action: "maintenance.createRule" }, fields, {});
   }
 
   revalidatePath("/maintenance");
@@ -71,6 +82,7 @@ export async function recordCompletedMaintenanceAction(
   if (!parsed.success) {
     return {
       status: "error",
+      code: "VALIDATION_ERROR",
       message: "Review the highlighted completed maintenance fields.",
       fields,
       errors: getFieldErrors(parsed.error.flatten().fieldErrors),
@@ -93,9 +105,10 @@ export async function recordCompletedMaintenanceAction(
     if (upload.error) {
       return {
         status: "error",
-        message: upload.error,
+        code: upload.error.code,
+        message: upload.error.message,
         fields,
-        errors: { attachment: upload.error },
+        errors: { attachment: upload.error.message },
       };
     }
 
@@ -127,10 +140,20 @@ export async function recordCompletedMaintenanceAction(
           .remove([uploadedPath]);
       }
 
-      return { status: "error", message: error.message, fields, errors: {} };
+      return formActionFailure(
+        error,
+        { action: "maintenance.recordCompleted.rpc" },
+        fields,
+        {},
+      );
     }
   } catch (error) {
-    return { status: "error", message: getErrorMessage(error), fields, errors: {} };
+    return formActionFailure(
+      error,
+      { action: "maintenance.recordCompleted" },
+      fields,
+      {},
+    );
   }
 
   revalidatePath("/maintenance");
@@ -148,6 +171,7 @@ export async function updateMaintenanceRecordAction(
   if (!parsed.success) {
     return {
       status: "error",
+      code: "VALIDATION_ERROR",
       message: "Review the highlighted completed maintenance fields.",
       fields,
       errors: getFieldErrors(parsed.error.flatten().fieldErrors),
@@ -177,10 +201,15 @@ export async function updateMaintenanceRecordAction(
       .eq("company_id", context.companyId);
 
     if (error) {
-      return { status: "error", message: error.message, fields, errors: {} };
+      return formActionFailure(
+        error,
+        { action: "maintenance.updateRecord.update" },
+        fields,
+        {},
+      );
     }
   } catch (error) {
-    return { status: "error", message: getErrorMessage(error), fields, errors: {} };
+    return formActionFailure(error, { action: "maintenance.updateRecord" }, fields, {});
   }
 
   revalidatePath("/maintenance");
@@ -199,7 +228,7 @@ export async function archiveMaintenanceRecordAction(recordId: string) {
     .eq("company_id", context.companyId);
 
   if (error) {
-    throw new AppError("DATA_ACCESS_ERROR", error.message);
+    throw toSafeActionException(error, { action: "maintenance.archiveRecord" });
   }
 
   revalidatePath("/maintenance");
@@ -219,7 +248,7 @@ type UploadResult = {
   name: string | null;
   mimeType: string | null;
   fileSize: number | null;
-  error: string | null;
+  error: SafeActionErrorPayload | null;
 };
 
 async function uploadMaintenanceAttachment(
@@ -252,7 +281,7 @@ async function uploadMaintenanceAttachment(
       name: null,
       mimeType: null,
       fileSize: null,
-      error: validation.error,
+      error: { code: validation.code, message: validation.error },
     };
   }
 
@@ -278,7 +307,9 @@ async function uploadMaintenanceAttachment(
       name: null,
       mimeType: null,
       fileSize: null,
-      error: error.message,
+      error: toSafeActionError(error, {
+        action: "maintenance.uploadAttachment",
+      }),
     };
   }
 

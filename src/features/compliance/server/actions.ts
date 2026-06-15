@@ -19,10 +19,15 @@ import {
 } from "@/features/compliance/validation";
 import { validateDocumentFile } from "@/features/documents/file-validation";
 import { assertFleetStorageQuotaAvailable } from "@/features/documents/server/storage-quota";
-import { AppError, getErrorMessage } from "@/lib/errors";
+import type { SafeActionErrorPayload } from "@/lib/action-errors";
 import { serverEnv } from "@/lib/env/server";
 import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
 import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
+import {
+  formActionFailure,
+  toSafeActionError,
+  toSafeActionException,
+} from "@/server/actions/safe-error";
 
 export async function createComplianceRequirementAction(
   _previousState: ComplianceRequirementFormState,
@@ -34,6 +39,7 @@ export async function createComplianceRequirementAction(
   if (!parsed.success) {
     return {
       status: "error",
+      code: "VALIDATION_ERROR",
       message: "Review the highlighted compliance requirement fields.",
       fields,
       errors: getFieldErrors(parsed.error.flatten().fieldErrors),
@@ -50,10 +56,20 @@ export async function createComplianceRequirementAction(
       .insert(payload);
 
     if (error) {
-      return { status: "error", message: error.message, fields, errors: {} };
+      return formActionFailure(
+        error,
+        { action: "compliance.createRequirement.insert" },
+        fields,
+        {},
+      );
     }
   } catch (error) {
-    return { status: "error", message: getErrorMessage(error), fields, errors: {} };
+    return formActionFailure(
+      error,
+      { action: "compliance.createRequirement" },
+      fields,
+      {},
+    );
   }
 
   revalidatePath("/compliance");
@@ -70,6 +86,7 @@ export async function createComplianceRecordAction(
   if (!parsed.success) {
     return {
       status: "error",
+      code: "VALIDATION_ERROR",
       message: "Review the highlighted compliance fields.",
       fields,
       errors: getFieldErrors(parsed.error.flatten().fieldErrors),
@@ -92,9 +109,10 @@ export async function createComplianceRecordAction(
     if (upload.error) {
       return {
         status: "error",
-        message: upload.error,
+        code: upload.error.code,
+        message: upload.error.message,
         fields,
-        errors: { attachment: upload.error },
+        errors: { attachment: upload.error.message },
       };
     }
 
@@ -130,10 +148,15 @@ export async function createComplianceRecordAction(
           .remove([uploadedPath]);
       }
 
-      return { status: "error", message: error.message, fields, errors: {} };
+      return formActionFailure(
+        error,
+        { action: "compliance.createRecord.rpc" },
+        fields,
+        {},
+      );
     }
   } catch (error) {
-    return { status: "error", message: getErrorMessage(error), fields, errors: {} };
+    return formActionFailure(error, { action: "compliance.createRecord" }, fields, {});
   }
 
   revalidatePath("/compliance");
@@ -152,6 +175,7 @@ export async function updateComplianceRecordAction(
   if (!parsed.success) {
     return {
       status: "error",
+      code: "VALIDATION_ERROR",
       message: "Review the highlighted compliance fields.",
       fields,
       errors: getFieldErrors(parsed.error.flatten().fieldErrors),
@@ -177,9 +201,10 @@ export async function updateComplianceRecordAction(
     if (validationError) {
       return {
         status: "error",
-        message: validationError,
+        code: validationError.code,
+        message: validationError.message,
         fields,
-        errors: { requirementId: validationError },
+        errors: { requirementId: validationError.message },
       };
     }
 
@@ -188,9 +213,10 @@ export async function updateComplianceRecordAction(
     if (upload.error) {
       return {
         status: "error",
-        message: upload.error,
+        code: upload.error.code,
+        message: upload.error.message,
         fields,
-        errors: { attachment: upload.error },
+        errors: { attachment: upload.error.message },
       };
     }
 
@@ -209,7 +235,12 @@ export async function updateComplianceRecordAction(
           .remove([uploadedPath]);
       }
 
-      return { status: "error", message: error.message, fields, errors: {} };
+      return formActionFailure(
+        error,
+        { action: "compliance.updateRecord.update" },
+        fields,
+        {},
+      );
     }
 
     if (upload.path) {
@@ -225,7 +256,12 @@ export async function updateComplianceRecordAction(
           .from(serverEnv.SUPABASE_COMPLIANCE_DOCUMENTS_BUCKET)
           .remove([upload.path]);
 
-        return { status: "error", message: archiveError.message, fields, errors: {} };
+        return formActionFailure(
+          archiveError,
+          { action: "compliance.updateRecord.archiveOldDocument" },
+          fields,
+          {},
+        );
       }
 
       const { error: documentError } = await context.supabase.from("documents").insert({
@@ -250,11 +286,16 @@ export async function updateComplianceRecordAction(
           .from(serverEnv.SUPABASE_COMPLIANCE_DOCUMENTS_BUCKET)
           .remove([upload.path]);
 
-        return { status: "error", message: documentError.message, fields, errors: {} };
+        return formActionFailure(
+          documentError,
+          { action: "compliance.updateRecord.insertDocument" },
+          fields,
+          {},
+        );
       }
     }
   } catch (error) {
-    return { status: "error", message: getErrorMessage(error), fields, errors: {} };
+    return formActionFailure(error, { action: "compliance.updateRecord" }, fields, {});
   }
 
   revalidatePath("/compliance");
@@ -274,7 +315,7 @@ export async function archiveComplianceRecordAction(recordId: string) {
     .eq("company_id", context.companyId);
 
   if (error) {
-    throw new AppError("DATA_ACCESS_ERROR", error.message);
+    throw toSafeActionException(error, { action: "compliance.archiveRecord" });
   }
 
   revalidatePath("/compliance");
@@ -292,7 +333,9 @@ export async function archiveComplianceRequirementAction(requirementId: string) 
     .eq("company_id", context.companyId);
 
   if (error) {
-    throw new AppError("DATA_ACCESS_ERROR", error.message);
+    throw toSafeActionException(error, {
+      action: "compliance.archiveRequirement",
+    });
   }
 
   revalidatePath("/compliance");
@@ -313,7 +356,7 @@ type UploadResult = {
   name: string | null;
   mimeType: string | null;
   fileSize: number | null;
-  error: string | null;
+  error: SafeActionErrorPayload | null;
 };
 
 async function uploadComplianceDocument(
@@ -346,7 +389,7 @@ async function uploadComplianceDocument(
       name: null,
       mimeType: null,
       fileSize: null,
-      error: validation.error,
+      error: { code: validation.code, message: validation.error },
     };
   }
 
@@ -372,7 +415,9 @@ async function uploadComplianceDocument(
       name: null,
       mimeType: null,
       fileSize: null,
-      error: error.message,
+      error: toSafeActionError(error, {
+        action: "compliance.uploadDocument",
+      }),
     };
   }
 
@@ -410,8 +455,15 @@ async function validateRequirementSelection(
     .maybeSingle();
 
   if (error) {
-    return error.message;
+    return toSafeActionError(error, {
+      action: "compliance.validateRequirementSelection",
+    });
   }
 
-  return data ? null : "Choose a requirement assigned to this asset.";
+  return data
+    ? null
+    : ({
+        code: "VALIDATION_ERROR",
+        message: "Choose a requirement assigned to this asset.",
+      } satisfies SafeActionErrorPayload);
 }

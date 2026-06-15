@@ -1,4 +1,5 @@
 import type { ComplianceStatus } from "@/features/compliance/status";
+import type { SafeActionErrorCode } from "@/lib/action-errors";
 
 export type ComplianceAssetOption = {
   id: string;
@@ -99,6 +100,7 @@ export type ComplianceRequirementFormFields = {
 
 export type ComplianceRecordFormState = {
   status: "idle" | "success" | "error";
+  code?: SafeActionErrorCode;
   message: string;
   fields: ComplianceRecordFormFields;
   errors: Partial<Record<keyof ComplianceRecordFormFields | "attachment", string>>;
@@ -106,6 +108,7 @@ export type ComplianceRecordFormState = {
 
 export type ComplianceRequirementFormState = {
   status: "idle" | "success" | "error";
+  code?: SafeActionErrorCode;
   message: string;
   fields: ComplianceRequirementFormFields;
   errors: Partial<Record<keyof ComplianceRequirementFormFields, string>>;

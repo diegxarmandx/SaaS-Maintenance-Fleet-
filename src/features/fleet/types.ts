@@ -1,3 +1,5 @@
+import type { SafeActionErrorCode } from "@/lib/action-errors";
+
 export type AssetStatus = "active" | "inactive" | "archived";
 export type MeterReadingType = "mileage" | "engine_hours";
 export type FleetSort =
@@ -87,6 +89,7 @@ export type AssetFormFields = {
 
 export type AssetFormState = {
   status: "idle" | "error";
+  code?: SafeActionErrorCode;
   message: string;
   fields: AssetFormFields;
   errors: Partial<Record<keyof AssetFormFields | "assetImage", string>>;
@@ -102,6 +105,7 @@ export type MeterReadingFormFields = {
 
 export type MeterReadingFormState = {
   status: "idle" | "success" | "error";
+  code?: SafeActionErrorCode;
   message: string;
   fields: MeterReadingFormFields;
   errors: Partial<Record<keyof MeterReadingFormFields, string>>;

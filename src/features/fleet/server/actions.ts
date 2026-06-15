@@ -27,11 +27,17 @@ import type {
   MeterReadingFormState,
 } from "@/features/fleet/types";
 import { assetFormSchema, meterReadingFormSchema } from "@/features/fleet/validation";
-import { AppError, getErrorMessage } from "@/lib/errors";
 import { serverEnv } from "@/lib/env/server";
+import type { SafeActionErrorPayload } from "@/lib/action-errors";
 import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
 import { requireActiveAssetCapacity } from "@/features/billing/server/subscription";
 import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
+import {
+  expectedActionError,
+  formActionFailure,
+  toSafeActionError,
+  toSafeActionException,
+} from "@/server/actions/safe-error";
 
 export async function createAssetAction(
   _previousState: AssetFormState,
@@ -43,6 +49,7 @@ export async function createAssetAction(
   if (!parsed.success) {
     return {
       status: "error",
+      code: "VALIDATION_ERROR",
       message: "Review the highlighted asset fields.",
       fields,
       errors: getAssetFieldErrors(parsed.error.flatten().fieldErrors),
@@ -69,9 +76,10 @@ export async function createAssetAction(
     if (imageUpload.error) {
       return {
         status: "error",
-        message: imageUpload.error,
+        code: imageUpload.error.code,
+        message: imageUpload.error.message,
         fields,
-        errors: { assetImage: imageUpload.error },
+        errors: { assetImage: imageUpload.error.message },
       };
     }
 
@@ -91,22 +99,12 @@ export async function createAssetAction(
           .remove([imageUpload.path]);
       }
 
-      return {
-        status: "error",
-        message: error.message,
-        fields,
-        errors: {},
-      };
+      return formActionFailure(error, { action: "fleet.createAsset.insert" }, fields, {});
     }
 
     redirectPath = `/fleet/${assetId}`;
   } catch (error) {
-    return {
-      status: "error",
-      message: getErrorMessage(error),
-      fields,
-      errors: {},
-    };
+    return formActionFailure(error, { action: "fleet.createAsset" }, fields, {});
   }
 
   revalidatePath("/fleet");
@@ -124,6 +122,7 @@ export async function updateAssetAction(
   if (!parsed.success) {
     return {
       status: "error",
+      code: "VALIDATION_ERROR",
       message: "Review the highlighted asset fields.",
       fields,
       errors: getAssetFieldErrors(parsed.error.flatten().fieldErrors),
@@ -148,16 +147,21 @@ export async function updateAssetAction(
       .maybeSingle();
 
     if (lookupError) {
-      return { status: "error", message: lookupError.message, fields, errors: {} };
+      return formActionFailure(
+        lookupError,
+        { action: "fleet.updateAsset.lookup" },
+        fields,
+        {},
+      );
     }
 
     if (!existingAsset) {
-      return {
-        status: "error",
-        message: "Asset was not found for this owner company.",
+      return formActionFailure(
+        expectedActionError("NOT_FOUND", "Asset was not found for this owner company."),
+        { action: "fleet.updateAsset.notFound" },
         fields,
-        errors: {},
-      };
+        {},
+      );
     }
 
     const previousAssetState = existingAsset as {
@@ -178,9 +182,10 @@ export async function updateAssetAction(
     if (imageUpload.error) {
       return {
         status: "error",
-        message: imageUpload.error,
+        code: imageUpload.error.code,
+        message: imageUpload.error.message,
         fields,
-        errors: { assetImage: imageUpload.error },
+        errors: { assetImage: imageUpload.error.message },
       };
     }
 
@@ -195,20 +200,10 @@ export async function updateAssetAction(
       .eq("company_id", context.companyId);
 
     if (error) {
-      return {
-        status: "error",
-        message: error.message,
-        fields,
-        errors: {},
-      };
+      return formActionFailure(error, { action: "fleet.updateAsset.update" }, fields, {});
     }
   } catch (error) {
-    return {
-      status: "error",
-      message: getErrorMessage(error),
-      fields,
-      errors: {},
-    };
+    return formActionFailure(error, { action: "fleet.updateAsset" }, fields, {});
   }
 
   revalidatePath("/fleet");
@@ -227,7 +222,7 @@ export async function archiveAssetAction(assetId: string) {
     .eq("company_id", context.companyId);
 
   if (error) {
-    throw new AppError("DATA_ACCESS_ERROR", error.message);
+    throw toSafeActionException(error, { action: "fleet.archiveAsset" });
   }
 
   revalidatePath("/fleet");
@@ -245,6 +240,7 @@ export async function createMeterReadingAction(
   if (!parsed.success) {
     return {
       status: "error",
+      code: "VALIDATION_ERROR",
       message: "Review the highlighted meter reading fields.",
       fields,
       errors: getMeterReadingFieldErrors(parsed.error.flatten().fieldErrors),
@@ -263,16 +259,21 @@ export async function createMeterReadingAction(
       .maybeSingle();
 
     if (lookupError) {
-      return { status: "error", message: lookupError.message, fields, errors: {} };
+      return formActionFailure(
+        lookupError,
+        { action: "fleet.createMeterReading.lookup" },
+        fields,
+        {},
+      );
     }
 
     if (!asset) {
-      return {
-        status: "error",
-        message: "Asset was not found for this owner company.",
+      return formActionFailure(
+        expectedActionError("NOT_FOUND", "Asset was not found for this owner company."),
+        { action: "fleet.createMeterReading.notFound" },
         fields,
-        errors: {},
-      };
+        {},
+      );
     }
 
     const assetMeters = asset as Pick<
@@ -288,6 +289,7 @@ export async function createMeterReadingAction(
     if (!validation.ok) {
       return {
         status: "error",
+        code: "VALIDATION_ERROR",
         message: validation.message,
         fields,
         errors: { readingValue: validation.message },
@@ -304,15 +306,15 @@ export async function createMeterReadingAction(
     });
 
     if (error) {
-      return { status: "error", message: error.message, fields, errors: {} };
+      return formActionFailure(
+        error,
+        { action: "fleet.createMeterReading.rpc" },
+        fields,
+        {},
+      );
     }
   } catch (error) {
-    return {
-      status: "error",
-      message: getErrorMessage(error),
-      fields,
-      errors: {},
-    };
+    return formActionFailure(error, { action: "fleet.createMeterReading" }, fields, {});
   }
 
   revalidatePath(`/fleet/${assetId}`);
@@ -348,7 +350,7 @@ function getMeterReadingFieldErrors(
 
 type UploadResult = {
   path: string | null;
-  error: string | null;
+  error: SafeActionErrorPayload | null;
 };
 
 async function uploadAssetImage(
@@ -370,7 +372,10 @@ async function uploadAssetImage(
   });
 
   if (!validation.ok) {
-    return { path: null, error: validation.error };
+    return {
+      path: null,
+      error: { code: validation.code, message: validation.error },
+    };
   }
 
   await assertFleetStorageQuotaAvailable({
@@ -392,7 +397,7 @@ async function uploadAssetImage(
   if (error) {
     return {
       path: null,
-      error: error.message,
+      error: toSafeActionError(error, { action: "fleet.uploadAssetImage" }),
     };
   }
 

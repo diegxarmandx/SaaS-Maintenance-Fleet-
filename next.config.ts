@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+import { buildSecurityHeaders } from "./config/security-headers";
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
@@ -8,6 +10,14 @@ const nextConfig: NextConfig = {
         hostname: "**.supabase.co",
       },
     ],
+  },
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: buildSecurityHeaders(),
+      },
+    ];
   },
 };
 

@@ -7,8 +7,11 @@ import { getSubscriptionSnapshot } from "@/features/billing/server/subscription"
 import { getAppUrl, getStripeClient } from "@/features/billing/server/stripe";
 import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
 import { createSupabaseServiceClient } from "@/server/db/supabase";
-import { AppError } from "@/lib/errors";
 import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
+import {
+  expectedActionError,
+  toSafeActionException,
+} from "@/server/actions/safe-error";
 
 type CompanyBillingProfile = {
   company_name: string;
@@ -22,14 +25,14 @@ export async function startStripeCheckoutAction(formData: FormData) {
   const planKey = String(formData.get("planKey") ?? "");
 
   if (!isSubscriptionPlanKey(planKey)) {
-    throw new AppError("VALIDATION_ERROR", "Choose a valid subscription plan.");
+    throw expectedActionError("VALIDATION_ERROR", "Choose a valid subscription plan.");
   }
 
   const plan = getSubscriptionPlan(planKey);
 
   if (!plan?.stripePriceId) {
-    throw new AppError(
-      "CONFIGURATION_ERROR",
+    throw expectedActionError(
+      "VALIDATION_ERROR",
       "Stripe price IDs are not configured for this plan.",
     );
   }
@@ -40,34 +43,46 @@ export async function startStripeCheckoutAction(formData: FormData) {
   const stripe = getStripeClient();
   const customerId = await getOrCreateStripeCustomer(context.companyId, context.ownerId);
   const appUrl = getAppUrl();
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    customer: customerId,
-    client_reference_id: context.companyId,
-    line_items: [{ price: plan.stripePriceId, quantity: 1 }],
-    metadata: {
-      companyId: context.companyId,
-      ownerId: context.ownerId,
-      planKey: plan.key,
-      assetLimit: String(plan.assetLimit),
-    },
-    subscription_data: {
+  let sessionUrl: string | null = null;
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      customer: customerId,
+      client_reference_id: context.companyId,
+      line_items: [{ price: plan.stripePriceId, quantity: 1 }],
       metadata: {
         companyId: context.companyId,
         ownerId: context.ownerId,
         planKey: plan.key,
         assetLimit: String(plan.assetLimit),
       },
-    },
-    success_url: `${appUrl}/settings?checkout=success`,
-    cancel_url: `${appUrl}/settings?checkout=canceled`,
-  });
+      subscription_data: {
+        metadata: {
+          companyId: context.companyId,
+          ownerId: context.ownerId,
+          planKey: plan.key,
+          assetLimit: String(plan.assetLimit),
+        },
+      },
+      success_url: `${appUrl}/settings?checkout=success`,
+      cancel_url: `${appUrl}/settings?checkout=canceled`,
+    });
 
-  if (!session.url) {
-    throw new AppError("EXTERNAL_SERVICE_ERROR", "Stripe did not return a checkout URL.");
+    sessionUrl = session.url;
+  } catch (error) {
+    throw toSafeActionException(error, {
+      action: "billing.startCheckout.createSession",
+    });
   }
 
-  redirect(session.url);
+  if (!sessionUrl) {
+    throw toSafeActionException(new Error("Stripe did not return a checkout URL."), {
+      action: "billing.startCheckout.createSession",
+    });
+  }
+
+  redirect(sessionUrl);
 }
 
 export async function openStripeBillingPortalAction() {
@@ -78,19 +93,28 @@ export async function openStripeBillingPortalAction() {
   const customerId = snapshot.record?.stripe_customer_id;
 
   if (!customerId) {
-    throw new AppError(
-      "CONFIGURATION_ERROR",
+    throw expectedActionError(
+      "VALIDATION_ERROR",
       "No Stripe customer exists for this owner workspace yet.",
     );
   }
 
   const stripe = getStripeClient();
-  const portalSession = await stripe.billingPortal.sessions.create({
-    customer: customerId,
-    return_url: `${getAppUrl()}/settings`,
-  });
+  let portalUrl: string;
 
-  redirect(portalSession.url);
+  try {
+    const portalSession = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${getAppUrl()}/settings`,
+    });
+    portalUrl = portalSession.url;
+  } catch (error) {
+    throw toSafeActionException(error, {
+      action: "billing.openPortal.createSession",
+    });
+  }
+
+  redirect(portalUrl);
 }
 
 async function getOrCreateStripeCustomer(companyId: string, ownerId: string) {
@@ -102,11 +126,11 @@ async function getOrCreateStripeCustomer(companyId: string, ownerId: string) {
     .maybeSingle();
 
   if (error) {
-    throw new AppError("DATA_ACCESS_ERROR", error.message);
+    throw toSafeActionException(error, { action: "billing.getOrCreateCustomer.lookup" });
   }
 
   if (!company) {
-    throw new AppError("DATA_ACCESS_ERROR", "Owner company was not found.");
+    throw expectedActionError("NOT_FOUND", "Owner company was not found.");
   }
 
   const billingProfile = company as CompanyBillingProfile;
@@ -119,39 +143,52 @@ async function getOrCreateStripeCustomer(companyId: string, ownerId: string) {
   }
 
   const stripe = getStripeClient();
-  const customer = await stripe.customers.create({
-    email: billingProfile.email,
-    name: billingProfile.company_name,
-    ...(billingProfile.phone ? { phone: billingProfile.phone } : {}),
-    metadata: {
-      companyId,
-      ownerId,
-      ownerName: billingProfile.owner_name,
-    },
-  });
+  let customerId: string;
+
+  try {
+    const customer = await stripe.customers.create({
+      email: billingProfile.email,
+      name: billingProfile.company_name,
+      ...(billingProfile.phone ? { phone: billingProfile.phone } : {}),
+      metadata: {
+        companyId,
+        ownerId,
+        ownerName: billingProfile.owner_name,
+      },
+    });
+    customerId = customer.id;
+  } catch (error) {
+    throw toSafeActionException(error, {
+      action: "billing.getOrCreateCustomer.createStripeCustomer",
+    });
+  }
 
   const serviceClient = createSupabaseServiceClient();
   const [companyUpdate, subscriptionUpsert] = await Promise.all([
     serviceClient
       .from("companies")
-      .update({ stripe_customer_id: customer.id })
+      .update({ stripe_customer_id: customerId })
       .eq("id", companyId),
     serviceClient.from("subscription_records").upsert(
       {
         company_id: companyId,
-        stripe_customer_id: customer.id,
+        stripe_customer_id: customerId,
       },
       { onConflict: "company_id" },
     ),
   ]);
 
   if (companyUpdate.error) {
-    throw new AppError("DATA_ACCESS_ERROR", companyUpdate.error.message);
+    throw toSafeActionException(companyUpdate.error, {
+      action: "billing.getOrCreateCustomer.updateCompany",
+    });
   }
 
   if (subscriptionUpsert.error) {
-    throw new AppError("DATA_ACCESS_ERROR", subscriptionUpsert.error.message);
+    throw toSafeActionException(subscriptionUpsert.error, {
+      action: "billing.getOrCreateCustomer.upsertSubscription",
+    });
   }
 
-  return customer.id;
+  return customerId;
 }
