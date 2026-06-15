@@ -19,6 +19,8 @@ x-cron-secret: <CRON_SECRET>
 
 If `CRON_SECRET` is missing, the endpoint returns `503`. If the header is invalid, it returns `401`.
 
+The endpoint is also rate limited before secret validation. The trigger has an IP-scoped notification limit, and each company processed by the job has a fleet-scoped notification trigger limit. Rate-limited companies are skipped for that run instead of causing the entire job to fail.
+
 ## Local Manual Run
 
 ```bash

@@ -10,8 +10,18 @@ import {
   type PasswordResetRequestValues,
   type SignupFormValues,
 } from "@/features/auth/validation/auth";
+import {
+  genericPasswordResetMessage,
+  genericSignInErrorMessage,
+  genericSignUpErrorMessage,
+} from "@/features/auth/messages";
+import { getPostLoginRedirect } from "@/features/auth/redirects";
 import { serverEnv } from "@/lib/env/server";
 import { getErrorMessage } from "@/lib/errors";
+import {
+  checkAuthRateLimit,
+  rateLimitedMessage,
+} from "@/lib/rate-limit/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type AuthActionResult = {
@@ -19,25 +29,59 @@ export type AuthActionResult = {
   message: string;
 };
 
-export async function signInAction(values: LoginFormValues): Promise<AuthActionResult> {
+export async function signInAction(
+  values: LoginFormValues,
+  redirectTo?: string | null,
+): Promise<AuthActionResult> {
   const parsed = loginFormSchema.safeParse(values);
 
   if (!parsed.success) {
     return { status: "error", message: "Enter a valid email and password." };
   }
 
+  const rateLimit = await checkAuthRateLimit("login", parsed.data.email);
+
+  if (!rateLimit.success) {
+    return { status: "error", message: rateLimitedMessage };
+  }
+
+  let destination = "/dashboard";
+
   try {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.signInWithPassword(parsed.data);
 
     if (error) {
-      return { status: "error", message: error.message };
+      return { status: "error", message: genericSignInErrorMessage };
     }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return {
+        status: "error",
+        message: "Authentication could not be completed. Please try signing in again.",
+      };
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("company_id,onboarding_status")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    destination = getPostLoginRedirect({
+      onboardingStatus: profile?.onboarding_status ?? "incomplete",
+      hasCompany: Boolean(profile?.company_id),
+      redirectTo,
+    });
   } catch (error) {
-    return { status: "error", message: getErrorMessage(error) };
+    return { status: "error", message: getErrorMessage(error, genericSignInErrorMessage) };
   }
 
-  redirect("/dashboard");
+  redirect(destination);
 }
 
 export async function signUpAction(values: SignupFormValues): Promise<AuthActionResult> {
@@ -61,10 +105,10 @@ export async function signUpAction(values: SignupFormValues): Promise<AuthAction
     });
 
     if (error) {
-      return { status: "error", message: error.message };
+      return { status: "error", message: genericSignUpErrorMessage };
     }
   } catch (error) {
-    return { status: "error", message: getErrorMessage(error) };
+    return { status: "error", message: getErrorMessage(error, genericSignUpErrorMessage) };
   }
 
   redirect("/onboarding");
@@ -85,6 +129,12 @@ export async function requestPasswordResetAction(
     return { status: "error", message: "Enter a valid email address." };
   }
 
+  const rateLimit = await checkAuthRateLimit("passwordReset", parsed.data.email);
+
+  if (!rateLimit.success) {
+    return { status: "error", message: rateLimitedMessage };
+  }
+
   try {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
@@ -92,14 +142,11 @@ export async function requestPasswordResetAction(
     });
 
     if (error) {
-      return { status: "error", message: error.message };
+      return { status: "success", message: genericPasswordResetMessage };
     }
 
-    return {
-      status: "success",
-      message: "If the account exists, a password reset link has been sent.",
-    };
-  } catch (error) {
-    return { status: "error", message: getErrorMessage(error) };
+    return { status: "success", message: genericPasswordResetMessage };
+  } catch {
+    return { status: "success", message: genericPasswordResetMessage };
   }
 }

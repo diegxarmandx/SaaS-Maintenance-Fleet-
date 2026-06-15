@@ -8,6 +8,7 @@ import { AppError } from "@/lib/errors";
 import { isSupabasePublicConfigReady } from "@/lib/env/public";
 import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
 import { recordAuditEvent } from "@/server/audit/log";
+import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
 
 export async function markNotificationReadAction(notificationId: string) {
   if (!isSupabasePublicConfigReady) {
@@ -16,6 +17,8 @@ export async function markNotificationReadAction(notificationId: string) {
   }
 
   const context = await requireOwnerDatabaseContext();
+  await enforceOwnerTenantRateLimit("mutation", context);
+
   const { error } = await context.supabase
     .from("notifications")
     .update({ read_at: new Date().toISOString() })
@@ -36,6 +39,8 @@ export async function markAllNotificationsReadAction() {
   }
 
   const context = await requireOwnerDatabaseContext();
+  await enforceOwnerTenantRateLimit("mutation", context);
+
   const { error } = await context.supabase
     .from("notifications")
     .update({ read_at: new Date().toISOString() })
@@ -52,6 +57,8 @@ export async function markAllNotificationsReadAction() {
 
 export async function updateNotificationPreferencesAction(formData: FormData) {
   const context = await requireOwnerDatabaseContext();
+  await enforceOwnerTenantRateLimit("mutation", context);
+
   const quietHoursStart = parseOptionalTime(formData.get("quietHoursStart"));
   const quietHoursEnd = parseOptionalTime(formData.get("quietHoursEnd"));
   const payload: Omit<NotificationPreference, "company_id"> = {

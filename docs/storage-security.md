@@ -13,16 +13,20 @@ All buckets are private. Browser code never receives a service-role key.
 
 ## Upload Rules
 
-Document uploads support PDF, JPEG, and PNG. HEIC is deferred because the current platform does not reliably process or preview it.
+Document uploads support PDF, JPEG, and PNG. Maintenance attachments and asset images also support WebP where the feature-specific UI allows it. HEIC is deferred because the current platform does not reliably process or preview it.
 
 Server actions validate:
 
 - Declared MIME type
+- Filename extension
 - Detected file signature
 - Configured size limit through `DOCUMENT_UPLOAD_MAX_SIZE_BYTES`
 - Owner-company relationship for selected assets, maintenance records, and compliance records
 - Company-scoped storage paths
 - Sanitized filenames
+- Per-owner/fleet upload rate limits before Storage writes
+
+A per-fleet storage quota hook exists at `src/features/documents/server/storage-quota.ts`. It is intentionally a no-op until plan-specific storage allowances are defined, but all upload paths call it before writing to Supabase Storage.
 
 ## Paths
 

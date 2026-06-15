@@ -69,4 +69,5 @@ export type ReminderProcessingResult = {
   emailsSent: number;
   emailsSkipped: number;
   emailsFailed: number;
+  rateLimited?: boolean;
 };

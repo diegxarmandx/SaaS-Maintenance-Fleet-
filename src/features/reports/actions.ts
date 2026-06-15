@@ -7,9 +7,12 @@ import { parseReportPreferenceForm } from "@/features/reports/preferences";
 import { AppError } from "@/lib/errors";
 import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
 import { recordAuditEvent } from "@/server/audit/log";
+import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
 
 export async function updateReportPreferencesAction(formData: FormData) {
   const context = await requireOwnerDatabaseContext();
+  await enforceOwnerTenantRateLimit("mutation", context);
+
   const preference = parseReportPreferenceForm(formData);
 
   if (preference.assetId) {

@@ -55,6 +55,7 @@ Reliable PDF generation, OCR/extracted fields, bulk import, live Supabase CI exe
 - `/reports`
 - `/reports/export`
 - `/settings`
+- `/api/health`
 - `/api/cron/reminders`
 - `/api/stripe/webhook`
 - `/fleet/new`
@@ -205,6 +206,12 @@ Required before enabling reminder email delivery:
 
 Use `EMAIL_PROVIDER=none` locally to keep notification generation active without sending email.
 
+Required for production rate limiting:
+
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
+- `RATE_LIMIT_KEY_SALT`
+
 Required before enabling Stripe test-mode billing:
 
 - `STRIPE_SECRET_KEY`
@@ -219,6 +226,12 @@ Optional for development demo data:
 - `DEMO_SEED_METADATA_ONLY`
 
 The npm seed scripts set `DEMO_SEED_ALLOW=1` for local convenience. Do not set demo seed flags in production environments.
+
+## Rate Limiting
+
+Production abuse protection uses Upstash Redis and `@upstash/ratelimit`. Login, password-reset requests, owner mutations, uploads, dashboard/report operations, reminder triggers, report exports, billing actions, and `/api/health` are protected by centralized sliding-window policies. Route handlers return standard 429 responses with `Retry-After` and rate-limit headers. Server actions return a generic owner-facing throttling message.
+
+When Redis configuration is missing, development and test fail open so the local read-only demo can run without external services. Production fails closed. See `docs/rate-limiting.md` for local setup, exact limits, identifier rules, and current endpoint coverage.
 
 ## Stripe Test Mode
 

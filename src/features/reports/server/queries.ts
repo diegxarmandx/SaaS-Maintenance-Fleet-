@@ -13,6 +13,7 @@ import {
   type SupabaseServerClient,
 } from "@/features/fleet/server/owner";
 import { getLocalDemoDataset, localDemoIdentity } from "@/features/demo/local-data";
+import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
 
 export type ReportSearchParams = Record<string, string | string[] | undefined>;
 
@@ -65,6 +66,10 @@ export type ReportData = {
   assetHistory: ReportRow[];
 };
 
+type ReportDataOptions = {
+  skipRateLimit?: boolean;
+};
+
 const firstParam = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] : value;
 
@@ -78,11 +83,16 @@ export function parseReportFilters(searchParams: ReportSearchParams): ReportFilt
 
 export async function getReportData(
   searchParams: ReportSearchParams,
+  options: ReportDataOptions = {},
 ): Promise<ReportData> {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
     return getLocalDemoReportData(searchParams);
+  }
+
+  if (!options.skipRateLimit) {
+    await enforceOwnerTenantRateLimit("expensiveOperation", context);
   }
 
   const preference = await getReportPreference(context.supabase, context.companyId);

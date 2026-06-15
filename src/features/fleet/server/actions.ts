@@ -16,6 +16,11 @@ import {
   getMeterReadingFieldsFromFormData,
   validateMeterReadingChange,
 } from "@/features/fleet/helpers";
+import {
+  validateUploadFile,
+  type SupportedUploadMimeType,
+} from "@/features/documents/file-validation";
+import { assertFleetStorageQuotaAvailable } from "@/features/documents/server/storage-quota";
 import type {
   AssetFormState,
   FleetAsset,
@@ -26,6 +31,7 @@ import { AppError, getErrorMessage } from "@/lib/errors";
 import { serverEnv } from "@/lib/env/server";
 import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
 import { requireActiveAssetCapacity } from "@/features/billing/server/subscription";
+import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
 
 export async function createAssetAction(
   _previousState: AssetFormState,
@@ -47,6 +53,11 @@ export async function createAssetAction(
 
   try {
     const context = await requireOwnerDatabaseContext();
+    await enforceOwnerTenantRateLimit("mutation", context);
+
+    if (hasFormFile(formData, "assetImage")) {
+      await enforceOwnerTenantRateLimit("documentUpload", context);
+    }
 
     if (parsed.data.status === "active") {
       await requireActiveAssetCapacity(context);
@@ -123,6 +134,12 @@ export async function updateAssetAction(
 
   try {
     const context = await requireOwnerDatabaseContext();
+    await enforceOwnerTenantRateLimit("mutation", context);
+
+    if (hasFormFile(formData, "assetImage")) {
+      await enforceOwnerTenantRateLimit("documentUpload", context);
+    }
+
     const { data: existingAsset, error: lookupError } = await context.supabase
       .from("assets")
       .select("id,asset_image_path,status,archived_at")
@@ -201,6 +218,8 @@ export async function updateAssetAction(
 
 export async function archiveAssetAction(assetId: string) {
   const context = await requireOwnerDatabaseContext();
+  await enforceOwnerTenantRateLimit("mutation", context);
+
   const { error } = await context.supabase
     .from("assets")
     .update(buildArchiveAssetPayload())
@@ -234,6 +253,8 @@ export async function createMeterReadingAction(
 
   try {
     const context = await requireOwnerDatabaseContext();
+    await enforceOwnerTenantRateLimit("mutation", context);
+
     const { data: asset, error: lookupError } = await context.supabase
       .from("assets")
       .select("current_mileage,current_engine_hours")
@@ -341,35 +362,30 @@ async function uploadAssetImage(
     return { path: null, error: null };
   }
 
-  if (
-    !ASSET_IMAGE_ALLOWED_TYPES.includes(
-      candidate.type as (typeof ASSET_IMAGE_ALLOWED_TYPES)[number],
-    )
-  ) {
-    return {
-      path: null,
-      error: "Upload a JPG, PNG, or WebP asset image.",
-    };
+  const validation = await validateUploadFile(candidate, {
+    allowedTypes: ASSET_IMAGE_ALLOWED_TYPES satisfies readonly SupportedUploadMimeType[],
+    maxSizeBytes: ASSET_IMAGE_MAX_SIZE_BYTES,
+    maxSizeLabel: "5 MB",
+    allowedTypeLabel: "JPG, PNG, or WebP asset image",
+  });
+
+  if (!validation.ok) {
+    return { path: null, error: validation.error };
   }
 
-  if (candidate.size > ASSET_IMAGE_MAX_SIZE_BYTES) {
-    return {
-      path: null,
-      error: "Asset images must be 5 MB or smaller.",
-    };
-  }
+  await assertFleetStorageQuotaAvailable({
+    context,
+    incomingBytes: validation.fileSize,
+    storageBucket: serverEnv.SUPABASE_ASSET_IMAGES_BUCKET,
+  });
 
-  const safeName = candidate.name
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  const storagePath = `${context.companyId}/assets/${assetId}/${Date.now()}-${safeName || "asset-image"}`;
+  const storagePath = `${context.companyId}/assets/${assetId}/${crypto.randomUUID()}-${validation.safeName || "asset-image"}`;
 
   const { error } = await context.supabase.storage
     .from(serverEnv.SUPABASE_ASSET_IMAGES_BUCKET)
     .upload(storagePath, candidate, {
       cacheControl: "3600",
-      contentType: candidate.type,
+      contentType: validation.mimeType,
       upsert: false,
     });
 
@@ -381,4 +397,10 @@ async function uploadAssetImage(
   }
 
   return { path: storagePath, error: null };
+}
+
+function hasFormFile(formData: FormData, fieldName: string) {
+  const value = formData.get(fieldName);
+
+  return value instanceof File && value.size > 0;
 }

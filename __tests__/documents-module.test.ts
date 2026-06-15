@@ -37,6 +37,16 @@ describe("document library helpers", () => {
     expect(result.ok).toBe(false);
   });
 
+  it("rejects files whose extension does not match the supported MIME type", async () => {
+    const file = new File([new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d])], "doc.txt", {
+      type: "application/pdf",
+    });
+
+    const result = await validateDocumentFile(file, 1024);
+
+    expect(result.ok).toBe(false);
+  });
+
   it("sanitizes filenames and checks company-scoped storage paths", () => {
     expect(sanitizeFilename("Owner's Registration 2026!.PDF")).toBe(
       "owner-s-registration-2026-.pdf",

@@ -125,9 +125,23 @@ Last updated: 2026-06-13
 - Added tests for demo dataset integrity, idempotent IDs, meter consistency, maintenance/compliance/document status coverage, notification references, subscription fixtures, reset scoping, and production guards.
 - Added `docs/demo-data.md`.
 
+## Completed in Rate Limiting and Abuse Protection Step
+
+- Added Upstash Redis and `@upstash/ratelimit` dependencies for serverless-friendly production rate limiting.
+- Added centralized typed sliding-window policies, hashed key construction, standard 429 responses, and server-action enforcement helpers.
+- Added production fail-closed behavior when Redis or the rate-limit key salt is missing, while preserving local/demo fail-open behavior in development and test.
+- Added limits for login, password reset, authenticated API work, dashboard/report operations, owner mutations, document uploads, reminder triggers, and public health checks.
+- Added `/api/health` with IP-scoped rate limiting.
+- Added rate limits to auth actions, report export, dashboard/report queries, owner mutations, uploads, notification/report settings, onboarding completion, billing actions, and scheduled reminder processing.
+- Tightened upload validation with server-side extension checks, shared signature validation, randomized storage names, and a per-fleet storage quota hook.
+- Added tests for rate-limit allowed/blocked behavior, `Retry-After` headers, tenant separation, hashed auth keys, trusted proxy handling, generic auth messages, and upload extension rejection.
+- Added `docs/rate-limiting.md` and updated README, architecture, storage-security, and scheduled-job documentation.
+
 ## Still Deferred Beyond Current Local Scope
 
 - Live Supabase integration tests in CI.
+- Hard per-fleet storage quota enforcement after plan-specific storage allowances are defined.
+- App-owned email verification resend endpoint protection; no such endpoint exists today.
 - Reliable PDF generation.
 - Document OCR, extracted fields, and bulk import.
 - Production observability dashboards, alerting, and audit review UI.

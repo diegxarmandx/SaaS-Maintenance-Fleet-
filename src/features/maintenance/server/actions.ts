@@ -7,6 +7,8 @@ import {
   MAINTENANCE_ATTACHMENT_ALLOWED_TYPES,
   MAINTENANCE_ATTACHMENT_MAX_SIZE_BYTES,
 } from "@/features/maintenance/constants";
+import { validateUploadFile } from "@/features/documents/file-validation";
+import { assertFleetStorageQuotaAvailable } from "@/features/documents/server/storage-quota";
 import {
   buildMaintenanceRulePayload,
   getCompletedMaintenanceFieldsFromFormData,
@@ -23,6 +25,7 @@ import {
 import { AppError, getErrorMessage } from "@/lib/errors";
 import { serverEnv } from "@/lib/env/server";
 import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
+import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
 
 export async function createMaintenanceRuleAction(
   _previousState: MaintenanceRuleFormState,
@@ -42,6 +45,8 @@ export async function createMaintenanceRuleAction(
 
   try {
     const context = await requireOwnerDatabaseContext();
+    await enforceOwnerTenantRateLimit("mutation", context);
+
     const payload = buildMaintenanceRulePayload(context.companyId, parsed.data);
     const { error } = await context.supabase.from("maintenance_rules").insert(payload);
 
@@ -77,6 +82,12 @@ export async function recordCompletedMaintenanceAction(
 
   try {
     const context = await requireOwnerDatabaseContext();
+    await enforceOwnerTenantRateLimit("mutation", context);
+
+    if (hasFormFile(formData, "attachment")) {
+      await enforceOwnerTenantRateLimit("documentUpload", context);
+    }
+
     const upload = await uploadMaintenanceAttachment(context, recordId, formData);
 
     if (upload.error) {
@@ -145,6 +156,8 @@ export async function updateMaintenanceRecordAction(
 
   try {
     const context = await requireOwnerDatabaseContext();
+    await enforceOwnerTenantRateLimit("mutation", context);
+
     const { error } = await context.supabase
       .from("maintenance_records")
       .update({
@@ -177,6 +190,8 @@ export async function updateMaintenanceRecordAction(
 
 export async function archiveMaintenanceRecordAction(recordId: string) {
   const context = await requireOwnerDatabaseContext();
+  await enforceOwnerTenantRateLimit("mutation", context);
+
   const { error } = await context.supabase
     .from("maintenance_records")
     .update({ archived_at: new Date().toISOString() })
@@ -224,41 +239,36 @@ async function uploadMaintenanceAttachment(
     };
   }
 
-  if (
-    !MAINTENANCE_ATTACHMENT_ALLOWED_TYPES.includes(
-      candidate.type as (typeof MAINTENANCE_ATTACHMENT_ALLOWED_TYPES)[number],
-    )
-  ) {
+  const validation = await validateUploadFile(candidate, {
+    allowedTypes: MAINTENANCE_ATTACHMENT_ALLOWED_TYPES,
+    maxSizeBytes: MAINTENANCE_ATTACHMENT_MAX_SIZE_BYTES,
+    maxSizeLabel: "10 MB",
+    allowedTypeLabel: "PDF, JPG, PNG, or WebP maintenance attachment",
+  });
+
+  if (!validation.ok) {
     return {
       path: null,
       name: null,
       mimeType: null,
       fileSize: null,
-      error: "Upload a PDF, JPG, PNG, or WebP maintenance attachment.",
+      error: validation.error,
     };
   }
 
-  if (candidate.size > MAINTENANCE_ATTACHMENT_MAX_SIZE_BYTES) {
-    return {
-      path: null,
-      name: null,
-      mimeType: null,
-      fileSize: null,
-      error: "Maintenance attachments must be 10 MB or smaller.",
-    };
-  }
+  await assertFleetStorageQuotaAvailable({
+    context,
+    incomingBytes: validation.fileSize,
+    storageBucket: serverEnv.SUPABASE_MAINTENANCE_ATTACHMENTS_BUCKET,
+  });
 
-  const safeName = candidate.name
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  const storagePath = `${context.companyId}/maintenance/${recordId}/${crypto.randomUUID()}-${safeName || "attachment"}`;
+  const storagePath = `${context.companyId}/maintenance/${recordId}/${crypto.randomUUID()}-${validation.safeName || "attachment"}`;
 
   const { error } = await context.supabase.storage
     .from(serverEnv.SUPABASE_MAINTENANCE_ATTACHMENTS_BUCKET)
     .upload(storagePath, candidate, {
       cacheControl: "3600",
-      contentType: candidate.type,
+      contentType: validation.mimeType,
       upsert: false,
     });
 
@@ -275,8 +285,14 @@ async function uploadMaintenanceAttachment(
   return {
     path: storagePath,
     name: candidate.name,
-    mimeType: candidate.type,
-    fileSize: candidate.size,
+    mimeType: validation.mimeType,
+    fileSize: validation.fileSize,
     error: null,
   };
+}
+
+function hasFormFile(formData: FormData, fieldName: string) {
+  const value = formData.get(fieldName);
+
+  return value instanceof File && value.size > 0;
 }

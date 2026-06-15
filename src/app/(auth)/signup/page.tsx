@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
+import { buttonClassName } from "@/components/ui/button";
 import { SignupForm } from "@/features/auth/components/auth-form";
 
 export const metadata: Metadata = {
@@ -10,6 +12,17 @@ export const metadata: Metadata = {
 export default function SignupPage() {
   return (
     <section className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-sm">
+      <Link
+        className={buttonClassName({
+          variant: "ghost",
+          size: "sm",
+          className: "-ml-2 mb-6",
+        })}
+        href="/"
+      >
+        <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+        Back to landing page
+      </Link>
       <div>
         <p className="text-sm font-semibold uppercase tracking-[0.12em] text-primary">
           FleetReady

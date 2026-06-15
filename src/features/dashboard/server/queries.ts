@@ -14,6 +14,7 @@ import {
   type SupabaseServerClient,
 } from "@/features/fleet/server/owner";
 import { getLocalDemoDataset, localDemoIdentity } from "@/features/demo/local-data";
+import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
 
 type AssetRow = {
   id: string;
@@ -89,6 +90,8 @@ export async function getDashboardData(): Promise<DashboardData> {
   if (!context) {
     return getLocalDemoDashboardData();
   }
+
+  await enforceOwnerTenantRateLimit("expensiveOperation", context);
 
   const [
     assets,

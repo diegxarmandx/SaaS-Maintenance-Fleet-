@@ -7,6 +7,7 @@ import {
   type CompanyOnboardingValues,
 } from "@/features/onboarding/validation/onboarding";
 import { getErrorMessage } from "@/lib/errors";
+import { enforceOwnerUserRateLimit } from "@/lib/rate-limit/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type OnboardingActionResult = {
@@ -25,6 +26,17 @@ export async function completeOnboardingAction(
 
   try {
     const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return { status: "error", message: "Sign in again to finish onboarding." };
+    }
+
+    await enforceOwnerUserRateLimit("mutation", user.id);
+
     const { error } = await supabase.rpc("complete_company_onboarding", {
       p_company_name: parsed.data.companyName,
       p_owner_name: parsed.data.ownerName,

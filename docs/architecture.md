@@ -9,6 +9,7 @@
 - Zod validation
 - React Hook Form for forms
 - Supabase Auth, PostgreSQL, Row Level Security, and Storage
+- Upstash Redis and `@upstash/ratelimit` for production rate limiting
 - Deployment-ready project layout, with no deployment performed in this step
 - Stripe SDK for test-mode Checkout, Billing Portal, and verified webhook processing
 - Transactional email provider abstraction for reminders, with local disabled mode
@@ -34,6 +35,7 @@
 - `src/lib/env`: Environment schemas and parsed config
 - `src/lib/supabase`: Browser and server Supabase client factories
 - `src/lib/email`: Transactional email provider contract
+- `src/lib/rate-limit`: Centralized Redis-backed sliding-window rate-limit policies, key construction, standard 429 responses, and server-action helpers
 - `src/server/db`: Server-side privileged Supabase access boundary
 - `src/server/tenant`: Tenant ownership helpers
 - `src/validation`: Domain validation schemas
@@ -53,11 +55,21 @@
 
 The app also supports login, logout, password-reset request, and password-reset completion.
 
+Login and password-reset request actions are rate limited before Supabase Auth calls. Owner-facing auth failure messages remain generic and do not reveal whether an email exists. Password reset completion is handled through the authenticated Supabase reset session in the client form.
+
 ## Tenant Security
 
 Frontend checks are not trusted for tenant isolation. Tenant enforcement is implemented in PostgreSQL with RLS and helper functions. Every tenant-owned table is company-scoped, and Storage paths must begin with the company UUID.
 
 The service-role key is used only by server-side helpers and the development seed script. It is never exposed to browser components.
+
+## Abuse Protection
+
+Rate limiting is centralized in `src/lib/rate-limit` and uses Upstash Redis in production. Policies use sliding windows and hashed key segments. Normalized emails are only used for auth-related limits and are hashed before key construction. Authenticated owner limits include the owner ID and, where available, the fleet company ID.
+
+Protected surfaces include auth actions, `/api/health`, `/api/cron/reminders`, `/reports/export`, dashboard/report query entry points, owner mutations, uploads, onboarding completion, notification/report settings, and billing entry actions. Missing Redis configuration fails closed in production and fails open in development/test to keep the local demo usable.
+
+See `docs/rate-limiting.md` for exact limits and deployment configuration.
 
 ## UI Approach
 

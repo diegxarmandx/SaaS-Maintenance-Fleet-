@@ -8,6 +8,7 @@ import { getAppUrl, getStripeClient } from "@/features/billing/server/stripe";
 import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
 import { createSupabaseServiceClient } from "@/server/db/supabase";
 import { AppError } from "@/lib/errors";
+import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
 
 type CompanyBillingProfile = {
   company_name: string;
@@ -34,6 +35,8 @@ export async function startStripeCheckoutAction(formData: FormData) {
   }
 
   const context = await requireOwnerDatabaseContext();
+  await enforceOwnerTenantRateLimit("authenticatedApi", context);
+
   const stripe = getStripeClient();
   const customerId = await getOrCreateStripeCustomer(context.companyId, context.ownerId);
   const appUrl = getAppUrl();
@@ -69,6 +72,8 @@ export async function startStripeCheckoutAction(formData: FormData) {
 
 export async function openStripeBillingPortalAction() {
   const context = await requireOwnerDatabaseContext();
+  await enforceOwnerTenantRateLimit("authenticatedApi", context);
+
   const snapshot = await getSubscriptionSnapshot(context);
   const customerId = snapshot.record?.stripe_customer_id;
 

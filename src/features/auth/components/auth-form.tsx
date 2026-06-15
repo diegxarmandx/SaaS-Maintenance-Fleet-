@@ -23,7 +23,7 @@ import {
 } from "@/features/auth/validation/auth";
 import { getErrorMessage } from "@/lib/errors";
 
-export function LoginForm() {
+export function LoginForm({ redirectTo }: { redirectTo?: string | null | undefined }) {
   const [result, setResult] = useState<AuthActionResult | null>(null);
   const {
     register,
@@ -38,7 +38,7 @@ export function LoginForm() {
   });
 
   const onSubmit: SubmitHandler<LoginFormValues> = async (values) => {
-    setResult(await signInAction(values));
+    setResult(await signInAction(values, redirectTo));
   };
 
   return (

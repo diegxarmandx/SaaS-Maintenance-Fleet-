@@ -16,10 +16,12 @@ import {
 } from "@/features/documents/validation";
 import { validateDocumentFile } from "@/features/documents/file-validation";
 import { recordDocumentVersion } from "@/features/documents/server/versions";
+import { assertFleetStorageQuotaAvailable } from "@/features/documents/server/storage-quota";
 import { AppError, getErrorMessage } from "@/lib/errors";
 import { serverEnv } from "@/lib/env/server";
 import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
 import { recordAuditEvent } from "@/server/audit/log";
+import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
 
 export async function uploadFleetDocumentAction(
   _previousState: DocumentFormState,
@@ -42,6 +44,9 @@ export async function uploadFleetDocumentAction(
 
   try {
     const context = await requireOwnerDatabaseContext();
+    await enforceOwnerTenantRateLimit("mutation", context);
+    await enforceOwnerTenantRateLimit("documentUpload", context);
+
     const relationshipResult = await resolveRelationships(context, parsed.data);
 
     if (relationshipResult.error) {
@@ -160,6 +165,12 @@ export async function updateFleetDocumentAction(
 
   try {
     const context = await requireOwnerDatabaseContext();
+    await enforceOwnerTenantRateLimit("mutation", context);
+
+    if (hasFormFile(formData, "file")) {
+      await enforceOwnerTenantRateLimit("documentUpload", context);
+    }
+
     const { data: existingDocument, error: lookupError } = await context.supabase
       .from("documents")
       .select("id")
@@ -277,6 +288,8 @@ export async function updateFleetDocumentAction(
 
 export async function archiveFleetDocumentAction(documentId: string) {
   const context = await requireOwnerDatabaseContext();
+  await enforceOwnerTenantRateLimit("mutation", context);
+
   const { error } = await context.supabase
     .from("documents")
     .update({ archived_at: new Date().toISOString() })
@@ -340,6 +353,12 @@ async function uploadDocumentFile(
 
   const category = resolveDocumentCategory(input);
   const storageBucket = getStorageBucketForCategory(category);
+  await assertFleetStorageQuotaAvailable({
+    context,
+    incomingBytes: validation.fileSize,
+    storageBucket,
+  });
+
   const storagePath = `${context.companyId}/${category}/${documentId}/${crypto.randomUUID()}-${validation.safeName}`;
   const { error } = await context.supabase.storage
     .from(storageBucket)
@@ -362,6 +381,12 @@ async function uploadDocumentFile(
     },
     error: null,
   };
+}
+
+function hasFormFile(formData: FormData, fieldName: string) {
+  const value = formData.get(fieldName);
+
+  return value instanceof File && value.size > 0;
 }
 
 function getStorageBucketForCategory(

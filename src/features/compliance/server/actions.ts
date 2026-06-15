@@ -18,9 +18,11 @@ import {
   complianceRequirementFormSchema,
 } from "@/features/compliance/validation";
 import { validateDocumentFile } from "@/features/documents/file-validation";
+import { assertFleetStorageQuotaAvailable } from "@/features/documents/server/storage-quota";
 import { AppError, getErrorMessage } from "@/lib/errors";
 import { serverEnv } from "@/lib/env/server";
 import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
+import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
 
 export async function createComplianceRequirementAction(
   _previousState: ComplianceRequirementFormState,
@@ -40,6 +42,8 @@ export async function createComplianceRequirementAction(
 
   try {
     const context = await requireOwnerDatabaseContext();
+    await enforceOwnerTenantRateLimit("mutation", context);
+
     const payload = buildComplianceRequirementPayload(context.companyId, parsed.data);
     const { error } = await context.supabase
       .from("compliance_requirements")
@@ -77,6 +81,12 @@ export async function createComplianceRecordAction(
 
   try {
     const context = await requireOwnerDatabaseContext();
+    await enforceOwnerTenantRateLimit("mutation", context);
+
+    if (hasFormFile(formData, "attachment")) {
+      await enforceOwnerTenantRateLimit("documentUpload", context);
+    }
+
     const upload = await uploadComplianceDocument(context, recordId, formData);
 
     if (upload.error) {
@@ -152,6 +162,12 @@ export async function updateComplianceRecordAction(
 
   try {
     const context = await requireOwnerDatabaseContext();
+    await enforceOwnerTenantRateLimit("mutation", context);
+
+    if (hasFormFile(formData, "attachment")) {
+      await enforceOwnerTenantRateLimit("documentUpload", context);
+    }
+
     const validationError = await validateRequirementSelection(
       context,
       parsed.data.assetId,
@@ -249,6 +265,8 @@ export async function updateComplianceRecordAction(
 
 export async function archiveComplianceRecordAction(recordId: string) {
   const context = await requireOwnerDatabaseContext();
+  await enforceOwnerTenantRateLimit("mutation", context);
+
   const { error } = await context.supabase
     .from("compliance_records")
     .update({ archived_at: new Date().toISOString() })
@@ -265,6 +283,8 @@ export async function archiveComplianceRecordAction(recordId: string) {
 
 export async function archiveComplianceRequirementAction(requirementId: string) {
   const context = await requireOwnerDatabaseContext();
+  await enforceOwnerTenantRateLimit("mutation", context);
+
   const { error } = await context.supabase
     .from("compliance_requirements")
     .update({ archived_at: new Date().toISOString(), is_active: false })
@@ -330,6 +350,12 @@ async function uploadComplianceDocument(
     };
   }
 
+  await assertFleetStorageQuotaAvailable({
+    context,
+    incomingBytes: validation.fileSize,
+    storageBucket: serverEnv.SUPABASE_COMPLIANCE_DOCUMENTS_BUCKET,
+  });
+
   const storagePath = `${context.companyId}/compliance/${recordId}/${crypto.randomUUID()}-${validation.safeName}`;
   const { error } = await context.supabase.storage
     .from(serverEnv.SUPABASE_COMPLIANCE_DOCUMENTS_BUCKET)
@@ -358,6 +384,12 @@ async function uploadComplianceDocument(
     fileSize: validation.fileSize,
     error: null,
   };
+}
+
+function hasFormFile(formData: FormData, fieldName: string) {
+  const value = formData.get(fieldName);
+
+  return value instanceof File && value.size > 0;
 }
 
 async function validateRequirementSelection(

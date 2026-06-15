@@ -6,6 +6,11 @@ import {
   type ReportRow,
   type ReportSearchParams,
 } from "@/features/reports/server/queries";
+import { getOwnerDatabaseContext } from "@/features/fleet/server/owner";
+import {
+  checkOwnerTenantRateLimit,
+  rateLimitResponse,
+} from "@/lib/rate-limit/server";
 
 type ExportType = "maintenance" | "compliance" | "documents" | "history";
 
@@ -19,9 +24,25 @@ const reportColumns: CsvColumn<ReportRow>[] = [
 ];
 
 export async function GET(request: NextRequest) {
+  const context = await getOwnerDatabaseContext();
+
+  if (context) {
+    const apiLimit = await checkOwnerTenantRateLimit("authenticatedApi", context);
+
+    if (!apiLimit.success) {
+      return rateLimitResponse(apiLimit);
+    }
+
+    const reportLimit = await checkOwnerTenantRateLimit("expensiveOperation", context);
+
+    if (!reportLimit.success) {
+      return rateLimitResponse(reportLimit);
+    }
+  }
+
   const type = parseExportType(request.nextUrl.searchParams.get("type"));
   const filters = Object.fromEntries(request.nextUrl.searchParams) as ReportSearchParams;
-  const reports = await getReportData(filters);
+  const reports = await getReportData(filters, { skipRateLimit: Boolean(context) });
   const rows = getRowsForExport(type, reports);
   const csv = buildCsv({
     companyName: reports.companyName,

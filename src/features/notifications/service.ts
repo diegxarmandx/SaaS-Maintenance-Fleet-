@@ -17,6 +17,7 @@ import { AppError } from "@/lib/errors";
 import { isSupabasePublicConfigReady } from "@/lib/env/public";
 import { serverEnv } from "@/lib/env/server";
 import { createTransactionalEmailProvider } from "@/lib/email/provider";
+import { checkFleetRateLimit } from "@/lib/rate-limit/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/server/db/supabase";
 
@@ -131,6 +132,23 @@ export async function processReminderNotificationsForCompany(
   companyId: string,
   supabase: ServiceClient = createSupabaseServiceClient(),
 ): Promise<ReminderProcessingResult> {
+  const rateLimit = await checkFleetRateLimit("notificationTrigger", companyId);
+
+  if (!rateLimit.success) {
+    return {
+      companyId,
+      generated: 0,
+      inserted: 0,
+      updated: 0,
+      resolved: 0,
+      emailsAttempted: 0,
+      emailsSent: 0,
+      emailsSkipped: 0,
+      emailsFailed: 0,
+      rateLimited: true,
+    };
+  }
+
   const source = await getReminderSourceData(supabase, companyId);
   const candidates = buildReminderNotificationCandidates(source);
   const syncResult = await syncNotificationCandidates(supabase, companyId, candidates);

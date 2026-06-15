@@ -15,11 +15,11 @@ export default function OnboardingPage() {
             FleetReady
           </p>
           <h1 className="mt-3 text-3xl font-semibold text-foreground">
-            Create the owner workspace
+            Create your owner workspace
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
-            Company onboarding creates the tenant boundary used by PostgreSQL row-level
-            security and Supabase Storage policies.
+            Set up your company profile, measurement preferences, and contact details so
+            your dashboard can organize fleet maintenance around your business.
           </p>
         </div>
         <OnboardingForm />

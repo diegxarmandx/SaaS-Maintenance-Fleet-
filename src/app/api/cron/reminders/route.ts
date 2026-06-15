@@ -4,10 +4,22 @@ import type { NextRequest } from "next/server";
 import { isAuthorizedCronRequest } from "@/features/notifications/cron-auth";
 import { processAllReminderNotifications } from "@/features/notifications/service";
 import { serverEnv } from "@/lib/env/server";
+import { getClientIpFromHeaders } from "@/lib/rate-limit/identity";
+import {
+  checkIpRateLimit,
+  rateLimitResponse,
+} from "@/lib/rate-limit/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const ipAddress = getClientIpFromHeaders(request.headers);
+  const rateLimit = await checkIpRateLimit("notificationTrigger", ipAddress);
+
+  if (!rateLimit.success) {
+    return rateLimitResponse(rateLimit);
+  }
+
   if (!serverEnv.CRON_SECRET) {
     return NextResponse.json(
       { error: "Scheduled reminders are not configured." },
