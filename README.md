@@ -32,6 +32,8 @@ The repository now includes the local product foundation plus subscription-billi
 - Cohesive light-mode SaaS visual system with packaged IBM Plex Sans typography, shared status badges, responsive shell/search, and mobile report cards
 - Stripe Checkout server action for subscriptions, Stripe Billing Portal entry point, verified webhook route, idempotent Stripe event persistence, and subscription-state synchronization
 - Server-side and database-level active-asset limit enforcement based on active, non-archived assets
+- Public privacy, terms, and support pages with configurable support contact
+- Owner data export and account/company deletion-request controls in Settings
 - GitHub Actions CI quality gate for install, lint, type checking, tests, and build
 - Private asset image upload preparation with MIME and size validation
 - Zod validation, React Hook Form forms, and unit/static tests
@@ -46,6 +48,9 @@ Reliable PDF generation, OCR/extracted fields, bulk import, live Supabase CI exe
 - `/signup`
 - `/forgot-password`
 - `/reset-password`
+- `/privacy`
+- `/terms`
+- `/support`
 - `/onboarding`
 - `/dashboard`
 - `/fleet`
@@ -55,6 +60,7 @@ Reliable PDF generation, OCR/extracted fields, bulk import, live Supabase CI exe
 - `/reports`
 - `/reports/export`
 - `/settings`
+- `/settings/export`
 - `/api/health`
 - `/api/cron/reminders`
 - `/api/stripe/webhook`
@@ -204,6 +210,10 @@ Required before enabling reminder email delivery:
 - `EMAIL_FROM`
 - `RESEND_API_KEY`
 
+Required before production support intake:
+
+- `SUPPORT_EMAIL`
+
 Use `EMAIL_PROVIDER=none` locally to keep notification generation active without sending email.
 
 Required for production rate limiting:
@@ -232,6 +242,14 @@ The npm seed scripts set `DEMO_SEED_ALLOW=1` for local convenience. Do not set d
 Production abuse protection uses Upstash Redis and `@upstash/ratelimit`. Login, password-reset requests, owner mutations, uploads, dashboard/report operations, reminder triggers, report exports, billing actions, and `/api/health` are protected by centralized sliding-window policies. Route handlers return standard 429 responses with `Retry-After` and rate-limit headers. Server actions return a generic owner-facing throttling message.
 
 When Redis configuration is missing, development and test fail open so the local read-only demo can run without external services. Production fails closed. See `docs/rate-limiting.md` for local setup, exact limits, identifier rules, and current endpoint coverage.
+
+## Legal and Account Controls
+
+Legal/support routes are available at `/privacy`, `/terms`, and `/support`. The support page uses `SUPPORT_EMAIL`; when it is missing, the page shows a safe configuration warning instead of a fake contact.
+
+Owners can download a JSON company data export from Settings. The export is company-scoped, versioned, includes document/file metadata, and excludes uploaded file contents, signed URLs, provider secrets, webhook payloads, and other companies' data.
+
+Settings also includes an account/company deletion request flow. The owner must type the company name exactly. The current implementation records a confirmed request and status; it does not automatically erase data. See `docs/legal-account-controls.md` for retention, processing, and attorney-review notes.
 
 ## Stripe Test Mode
 

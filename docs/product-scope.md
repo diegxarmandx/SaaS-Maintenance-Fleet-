@@ -25,6 +25,7 @@ FleetReady manages only these areas:
 - Expiration alerts
 - Owner-facing reports
 - Subscription billing based on active-asset limits
+- Owner account controls for support, legal links, data export, and deletion requests
 
 ## Excluded Capabilities
 
@@ -61,6 +62,7 @@ FleetReady must not expand into these areas:
 - Keep reports owner-facing and limited to included data domains.
 - Keep subscription limits tied to active, non-archived assets rather than managers, drivers, mechanics, employees, or user seats.
 - Do not hide, delete, or mutate an owner's fleet records because of a billing-state change.
+- Treat data export and deletion requests as account controls, not as a new operational fleet workflow.
 
 ## Billing Guardrails
 

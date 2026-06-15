@@ -13,6 +13,9 @@ This checklist describes readiness for a future deployment review. Deployment an
 - Active-asset limits are enforced in server actions and a PostgreSQL trigger.
 - Owner-only product scope is documented.
 - Light-mode design system is documented in `docs/design-system.md`.
+- Privacy, terms, and support routes exist for review.
+- Settings includes owner data export and account/company deletion request controls.
+- Account deletion request migration is versioned and uses RLS.
 
 ## Required Before Deployment
 
@@ -26,6 +29,9 @@ This checklist describes readiness for a future deployment review. Deployment an
 - Review backup and restore procedures for Supabase PostgreSQL and Storage.
 - Complete browser QA across mobile, tablet, desktop, and wide desktop.
 - Confirm no secrets are committed and no service-role or Stripe secret key reaches the browser bundle.
+- Configure and verify `SUPPORT_EMAIL`.
+- Have privacy notice and terms reviewed by qualified counsel.
+- Define the account deletion processing runbook, retention schedule, backup handling, and Storage object deletion process.
 
 ## Not Performed
 
@@ -52,3 +58,5 @@ This checklist describes readiness for a future deployment review. Deployment an
 - Asset limit reached: `/fleet/new` shows the plan-limit state and direct writes are blocked by the database trigger.
 - Cron secret missing: `/api/cron/reminders` returns `503`.
 - Email provider disabled: reminders and notifications are generated, but email delivery is skipped with `EMAIL_PROVIDER=none`.
+- Support email missing: `/support` shows a safe configuration warning and does not expose a fake contact.
+- Deletion request recorded: Settings shows the request status, but no data is deleted until the operations workflow processes it.

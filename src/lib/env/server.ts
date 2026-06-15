@@ -16,6 +16,7 @@ const parsedServerEnv = serverEnvSchema.safeParse({
   CRON_SECRET: process.env.CRON_SECRET,
   EMAIL_PROVIDER: process.env.EMAIL_PROVIDER,
   EMAIL_FROM: process.env.EMAIL_FROM,
+  SUPPORT_EMAIL: process.env.SUPPORT_EMAIL,
   RESEND_API_KEY: process.env.RESEND_API_KEY,
   UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
   UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,

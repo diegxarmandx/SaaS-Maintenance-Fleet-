@@ -61,6 +61,17 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           Create an account
         </Link>
       </p>
+      <nav aria-label="Account support links" className="mt-6 flex flex-wrap gap-4 text-xs">
+        <Link className="font-medium text-muted hover:text-primary" href="/support">
+          Support
+        </Link>
+        <Link className="font-medium text-muted hover:text-primary" href="/privacy">
+          Privacy
+        </Link>
+        <Link className="font-medium text-muted hover:text-primary" href="/terms">
+          Terms
+        </Link>
+      </nav>
     </section>
   );
 }

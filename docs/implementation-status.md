@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-06-13
+Last updated: 2026-06-15
 
 ## Completed in Step 1
 
@@ -137,6 +137,21 @@ Last updated: 2026-06-13
 - Added tests for rate-limit allowed/blocked behavior, `Retry-After` headers, tenant separation, hashed auth keys, trusted proxy handling, generic auth messages, and upload extension rejection.
 - Added `docs/rate-limiting.md` and updated README, architecture, storage-security, and scheduled-job documentation.
 
+## Completed in P1 Legal and Account Controls Step
+
+- Added public `/privacy`, `/terms`, and `/support` routes.
+- Added configurable `SUPPORT_EMAIL` handling with safe missing-configuration behavior.
+- Added legal/support links to the landing footer, auth pages, owner profile/help menus, and Settings.
+- Added signup notice linking Terms and Privacy without introducing consent storage.
+- Added Account and Data settings section with data export, support/legal links, deletion request status, and deliberate deletion request form.
+- Added versioned owner JSON data export at `/settings/export`, scoped to the authenticated owner company.
+- Added export manifest that documents uploaded files are metadata-only and excludes secrets, webhook payloads, signed URLs, internal diagnostics, and other-company records.
+- Added account/company deletion request service boundary with exact company-name confirmation, duplicate active-request protection, safe server-action errors, and local demo behavior.
+- Added `account_deletion_requests` migration with RLS, owner insert/select policies, status enum, active-request uniqueness, and internal failure reason field.
+- Added audit events for export requested/completed and deletion requested/confirmed.
+- Added tests for export filtering, deletion helpers, legal/support route coverage, missing support config, auth/landing links, and the account deletion migration.
+- Added `docs/legal-account-controls.md`.
+
 ## Still Deferred Beyond Current Local Scope
 
 - Live Supabase integration tests in CI.
@@ -145,6 +160,9 @@ Last updated: 2026-06-13
 - Reliable PDF generation.
 - Document OCR, extracted fields, and bulk import.
 - Production observability dashboards, alerting, and audit review UI.
+- Automated processing of confirmed account deletion requests.
+- Final legal counsel review of privacy and terms content.
+- Verified production support mailbox and escalation process.
 - Stripe product/price creation or reuse verification after Stripe connector re-authentication.
 - End-to-end Stripe Checkout/Portal testing against a configured Stripe test account.
 - Production deployment, domain configuration, scheduler configuration, and Vercel setup.

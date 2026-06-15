@@ -14,6 +14,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { SubscriptionSettings } from "@/features/billing/components/subscription-settings";
 import { getSubscriptionSnapshot } from "@/features/billing/server/subscription";
 import type { SubscriptionSnapshot } from "@/features/billing/types";
+import { AccountDataSettings } from "@/features/account-data/components/account-data-settings";
+import type { AccountDeletionRequestSummary } from "@/features/account-data/deletion";
+import { getAccountDeletionRequestSummary } from "@/features/account-data/server/deletion";
 import { getLocalDemoDataset, localDemoIdentity } from "@/features/demo/local-data";
 import {
   NotificationAnalyticsCards,
@@ -42,6 +45,7 @@ export default async function SettingsPage() {
     { data: company },
     { data: profile },
     subscriptionSnapshot,
+    deletionRequest,
   ] = await Promise.all([
     context.supabase
       .from("notification_preferences")
@@ -67,6 +71,7 @@ export default async function SettingsPage() {
       .eq("id", context.ownerId)
       .maybeSingle(),
     getSubscriptionSnapshot(context),
+    getAccountDeletionRequestSummary(context),
   ]);
   const preference =
     (data as NotificationPreference | null) ?? defaultPreference(context.companyId);
@@ -83,6 +88,7 @@ export default async function SettingsPage() {
       preference={preference}
       preferredTimezone={context.preferredTimezone}
       subscriptionSnapshot={subscriptionSnapshot}
+      deletionRequest={deletionRequest}
     />
   );
 }
@@ -133,6 +139,7 @@ function LocalDemoSettingsPage() {
       preference={preference}
       preferredTimezone={localDemoIdentity.timezone}
       subscriptionSnapshot={subscriptionSnapshot}
+      deletionRequest={null}
     />
   );
 }
@@ -145,6 +152,7 @@ function SettingsContent({
   preference,
   preferredTimezone,
   subscriptionSnapshot,
+  deletionRequest,
 }: {
   analytics: NotificationAnalytics;
   companyName: string;
@@ -153,6 +161,7 @@ function SettingsContent({
   preference: NotificationPreference;
   preferredTimezone: string;
   subscriptionSnapshot: SubscriptionSnapshot;
+  deletionRequest: AccountDeletionRequestSummary | null;
 }) {
   return (
     <>
@@ -237,6 +246,11 @@ function SettingsContent({
         </section>
 
         <SubscriptionSettings snapshot={subscriptionSnapshot} />
+
+        <AccountDataSettings
+          companyName={companyName}
+          deletionRequest={deletionRequest}
+        />
 
         <section className="grid gap-4" aria-labelledby="notifications-title">
           <div>

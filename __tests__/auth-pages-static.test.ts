@@ -18,4 +18,13 @@ describe("auth page navigation", () => {
     expect(signupPageSource).toContain('href="/"');
     expect(signupPageSource).toContain("Back to landing page");
   });
+
+  it("shows legal and support links on authentication pages", () => {
+    [loginPageSource, signupPageSource].forEach((source) => {
+      expect(source).toContain('href="/support"');
+      expect(source).toContain('href="/privacy"');
+      expect(source).toContain('href="/terms"');
+    });
+    expect(signupPageSource).toContain("By creating an account");
+  });
 });

@@ -1,6 +1,6 @@
 import type { PropsWithChildren } from "react";
 import Link from "next/link";
-import { LogOut, Search, UserCircle } from "lucide-react";
+import { FileText, LifeBuoy, LogOut, Search, UserCircle } from "lucide-react";
 
 import { OwnerNavigation } from "@/components/app-shell/owner-navigation";
 import { Button } from "@/components/ui/button";
@@ -64,6 +64,29 @@ export async function AppShell({ children }: PropsWithChildren) {
                   ) : null}
                 </span>
               </summary>
+              <div className="mt-3 grid gap-1 border-t border-border pt-3">
+                <Link
+                  className="rounded-md px-2 py-2 text-muted hover:bg-surface hover:text-primary"
+                  href="/support"
+                >
+                  <LifeBuoy aria-hidden="true" className="mr-2 inline h-4 w-4" />
+                  Support
+                </Link>
+                <Link
+                  className="rounded-md px-2 py-2 text-muted hover:bg-surface hover:text-primary"
+                  href="/privacy"
+                >
+                  <FileText aria-hidden="true" className="mr-2 inline h-4 w-4" />
+                  Privacy
+                </Link>
+                <Link
+                  className="rounded-md px-2 py-2 text-muted hover:bg-surface hover:text-primary"
+                  href="/terms"
+                >
+                  <FileText aria-hidden="true" className="mr-2 inline h-4 w-4" />
+                  Terms
+                </Link>
+              </div>
               <form action={signOutAction} className="mt-3">
                 <Button className="w-full" size="sm" type="submit" variant="secondary">
                   <LogOut aria-hidden="true" className="h-4 w-4" />
@@ -125,6 +148,29 @@ export async function AppShell({ children }: PropsWithChildren) {
                         {ownerContext.ownerEmail}
                       </p>
                     ) : null}
+                    <div className="mt-3 grid gap-1 border-t border-border pt-3">
+                      <Link
+                        className="rounded-md px-2 py-2 text-muted hover:bg-surface-muted hover:text-primary"
+                        href="/support"
+                      >
+                        <LifeBuoy aria-hidden="true" className="mr-2 inline h-4 w-4" />
+                        Support
+                      </Link>
+                      <Link
+                        className="rounded-md px-2 py-2 text-muted hover:bg-surface-muted hover:text-primary"
+                        href="/privacy"
+                      >
+                        <FileText aria-hidden="true" className="mr-2 inline h-4 w-4" />
+                        Privacy
+                      </Link>
+                      <Link
+                        className="rounded-md px-2 py-2 text-muted hover:bg-surface-muted hover:text-primary"
+                        href="/terms"
+                      >
+                        <FileText aria-hidden="true" className="mr-2 inline h-4 w-4" />
+                        Terms
+                      </Link>
+                    </div>
                     <form action={signOutAction} className="mt-3">
                       <Button
                         className="w-full"

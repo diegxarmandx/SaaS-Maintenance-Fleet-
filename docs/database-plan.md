@@ -50,6 +50,12 @@ The subscription billing and active-asset limit migration is:
 
 It extends subscription statuses, adds plan and Stripe sync columns to `subscription_records`, creates the idempotent `stripe_events` table, updates onboarding to create a Starter trial record, and adds the database trigger that prevents creating or reactivating active assets above the current plan limit or while subscription access is restricted.
 
+The legal/account-controls migration is:
+
+- `supabase/migrations/20260615120000_account_legal_controls.sql`
+
+It adds the `account_deletion_status` enum and `account_deletion_requests` table for owner-requested account/company deletion. The table records owner ID, company ID, request/confirmation/processing/completion/failure/cancellation timestamps, status, a confirmation hash, and an internal failure reason field.
+
 ## Tables
 
 - `profiles`
@@ -69,6 +75,7 @@ It extends subscription statuses, adds plan and Stripe sync columns to `subscrip
 - `audit_events`
 - `subscription_records`
 - `stripe_events`
+- `account_deletion_requests`
 
 ## Security Functions
 
@@ -115,6 +122,9 @@ It extends subscription statuses, adds plan and Stripe sync columns to `subscrip
 - Stripe event IDs are unique and processed idempotently.
 - New or reactivated active assets are blocked when the current subscription is not `trial`, `trialing`, or `active`.
 - New or reactivated active assets are blocked when active, non-archived asset count is already at the current plan limit.
+- Account deletion requests use documented statuses: `requested`, `confirmed`, `processing`, `completed`, `failed`, and `canceled`.
+- Only one active deletion request (`requested`, `confirmed`, or `processing`) is allowed per company.
+- Confirmation text is stored as a SHA-256 hash, not raw typed confirmation text.
 
 ## Indexes
 
@@ -133,6 +143,7 @@ Indexes cover:
 - audit event timelines by company and entity
 - subscription status, plan key, and current period end
 - Stripe customer, subscription, and event identifiers
+- Account deletion request company, owner, status, and active-request uniqueness
 
 ## Row-Level Security
 
@@ -155,10 +166,13 @@ RLS is enabled and forced for every tenant-owned table:
 - `audit_events`
 - `subscription_records`
 - `stripe_events`
+- `account_deletion_requests`
 
 Authenticated owners can access tenant rows only where their completed profile belongs to the row's company. System maintenance templates use `company_id is null` and are readable, but only company-owned templates can be mutated by owners.
 
 `stripe_events` is deliberately different: it has RLS enabled and forced but no owner access policy. It is written by server-side service-role webhook processing only and stores a minimized event payload for idempotency and troubleshooting.
+
+`account_deletion_requests` is owner-selectable and owner-insertable for the authenticated owner company. Authenticated owners do not receive update or delete policies; status processing is reserved for an operations/service-role boundary.
 
 ## Storage
 
@@ -246,3 +260,4 @@ Verified Stripe webhooks are authoritative for subscription state. Checkout succ
 - Document OCR, extracted fields, and bulk import.
 - Live Supabase integration-test execution in CI.
 - Additional billing analytics beyond the operational Stripe sync fields.
+- Account deletion processing worker/runbook that transitions confirmed requests through processing to completed, failed, or canceled.

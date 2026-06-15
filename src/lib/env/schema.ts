@@ -47,6 +47,7 @@ export const serverEnvSchema = publicEnvSchema.extend({
   CRON_SECRET: optionalString,
   EMAIL_PROVIDER: z.enum(["none", "resend"]).default("none"),
   EMAIL_FROM: z.preprocess(emptyStringToUndefined, z.string().trim().email().optional()),
+  SUPPORT_EMAIL: z.preprocess(emptyStringToUndefined, z.string().trim().email().optional()),
   RESEND_API_KEY: optionalString,
   UPSTASH_REDIS_REST_URL: optionalUrl,
   UPSTASH_REDIS_REST_TOKEN: optionalString,

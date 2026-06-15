@@ -31,6 +31,8 @@
 - `src/features/notifications`: In-app notification, reminder generation, email template, cron auth, and preference logic
 - `src/features/reports`: Reporting boundary with server queries, saved defaults, chart summaries, CSV export helpers, and report UI
 - `src/features/settings`: Settings boundary with notification preferences and notification analytics; subscription billing UI is supplied by `src/features/billing`
+- `src/features/legal`: Public privacy, terms, support content, and support contact handling
+- `src/features/account-data`: Owner data export, account/company deletion request helpers, and Settings UI
 - `src/server/audit`: Non-blocking audit event recording for important owner actions
 - `src/lib/env`: Environment schemas and parsed config
 - `src/lib/supabase`: Browser and server Supabase client factories
@@ -62,6 +64,22 @@ Login and password-reset request actions are rate limited before Supabase Auth c
 Frontend checks are not trusted for tenant isolation. Tenant enforcement is implemented in PostgreSQL with RLS and helper functions. Every tenant-owned table is company-scoped, and Storage paths must begin with the company UUID.
 
 The service-role key is used only by server-side helpers and the development seed script. It is never exposed to browser components.
+
+Owner data export and account deletion request actions also use the server-side owner context. The browser never supplies a company ID for those actions. Exports are whitelisted by field and company-scoped before serialization. Account deletion requests are recorded in a tenant table with RLS enabled and forced.
+
+## Legal, Support, and Account Data Controls
+
+Public `/privacy`, `/terms`, and `/support` routes provide launch-readiness legal/support surfaces. The legal copy is a draft and requires attorney review before production launch.
+
+Settings includes an Account and Data section:
+
+- `/settings/export` returns a versioned JSON export for the authenticated owner company.
+- Uploaded file contents are not embedded in the export; document and file metadata are included.
+- Export audit events are recorded for requested/completed states without logging exported content.
+- Deletion requests require typing the company name and are recorded as `confirmed`.
+- Deletion processing is intentionally deferred to an operations boundary; the app does not claim data is deleted until processing marks the request completed.
+
+See `docs/legal-account-controls.md` for retention, retries, support configuration, and launch review notes.
 
 ## Abuse Protection
 
@@ -124,6 +142,7 @@ Steps 6 and 7 implement the owner command center without introducing any additio
 - Notifications are company-scoped database rows. Reminder processing creates or updates active notifications by stable `notification_key`, resolves stale notifications, and prevents duplicate active reminders through a partial unique index.
 - The notification menu supports unread counts, individual mark-read actions, and mark-all-read actions.
 - `/settings` exposes sectioned company, owner, measurement, security, subscription, billing, notification analytics, and notification preference surfaces.
+- `/settings` also exposes legal/support links, owner data export, deletion request status, and the deliberate deletion request confirmation form.
 - `/api/cron/reminders` is a secure server-only endpoint prepared for a future scheduler. It requires `CRON_SECRET`, uses the service-role client only on the server, and logs counts without PII or secrets.
 - Reminder email templates cover maintenance due/overdue, compliance expiring/expired/missing, document expiring/expired, and weekly summary. Local development can keep `EMAIL_PROVIDER=none`.
 - `/reports` provides owner-filtered maintenance, compliance, document, and asset-history reports with saved defaults, compact chart summaries, CSV exports, and print-friendly views.
@@ -228,6 +247,9 @@ Unit tests cover:
 - Subscription access-state calculations
 - Static migration checks for Stripe event persistence, subscription state columns, and active-asset limit triggers
 - Static webhook checks for Stripe signature verification, idempotent event handling, and covered billing events
+- Owner data export filtering, manifest, and safe filename behavior
+- Account deletion confirmation and status transition helpers
+- Static checks for legal/support routes, settings/menu links, and the account deletion migration
 
 GitHub Actions runs install, lint, type checking, tests, and production build. Live Supabase integration tests are deferred until a project URL and service credentials are configured in CI.
 
@@ -238,3 +260,4 @@ GitHub Actions runs install, lint, type checking, tests, and production build. L
 - Live Supabase integration-test execution
 - Stripe product/price creation or reuse confirmation after the Stripe connector is re-authenticated
 - Production deployment, domain configuration, scheduler configuration, and observability service wiring
+- Automated account deletion processing worker or operations tooling

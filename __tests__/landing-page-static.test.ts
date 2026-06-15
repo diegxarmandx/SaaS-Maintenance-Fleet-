@@ -10,6 +10,7 @@ describe("public landing page", () => {
   it("routes landing authentication calls to the existing auth pages", () => {
     expect(landingPageSource).toContain('href="/login"');
     expect(landingPageSource).toContain('href="/signup"');
+    expect(landingPageSource).toContain("legalLinks.map");
     expect(landingPageSource).not.toContain('href="/dashboard"');
   });
 

@@ -16,6 +16,7 @@ import {
 
 import { buttonClassName } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { legalLinks } from "@/features/legal/content";
 
 export const metadata: Metadata = {
   title: "Fleet Maintenance Software for Small Fleet Owners",
@@ -299,6 +300,11 @@ export default function Home() {
             <Link className="hover:text-primary" href="/signup">
               Sign Up
             </Link>
+            {legalLinks.map((link) => (
+              <Link className="hover:text-primary" href={link.href} key={link.href}>
+                {link.label}
+              </Link>
+            ))}
           </nav>
         </div>
       </footer>

@@ -35,6 +35,23 @@ export default function SignupPage() {
         </p>
       </div>
       <SignupForm />
+      <p className="mt-4 text-xs leading-5 text-muted">
+        By creating an account, you agree to the{" "}
+        <Link
+          className="font-medium text-primary underline-offset-4 hover:underline"
+          href="/terms"
+        >
+          Terms
+        </Link>{" "}
+        and acknowledge the{" "}
+        <Link
+          className="font-medium text-primary underline-offset-4 hover:underline"
+          href="/privacy"
+        >
+          Privacy Notice
+        </Link>
+        .
+      </p>
       <p className="mt-6 text-sm text-muted">
         Already registered?{" "}
         <Link
@@ -44,6 +61,17 @@ export default function SignupPage() {
           Sign in
         </Link>
       </p>
+      <nav aria-label="Account support links" className="mt-6 flex flex-wrap gap-4 text-xs">
+        <Link className="font-medium text-muted hover:text-primary" href="/support">
+          Support
+        </Link>
+        <Link className="font-medium text-muted hover:text-primary" href="/privacy">
+          Privacy
+        </Link>
+        <Link className="font-medium text-muted hover:text-primary" href="/terms">
+          Terms
+        </Link>
+      </nav>
     </section>
   );
 }
