@@ -16,6 +16,7 @@ import { getSubscriptionCapabilities } from "@/features/billing/access";
 import { getSubscriptionSnapshot } from "@/features/billing/server/subscription";
 import type { SubscriptionStatus } from "@/features/billing/access";
 import { getLocalDemoDataset, localDemoIdentity } from "@/features/demo/local-data";
+import { shouldUseLocalDemoData } from "@/features/demo/mode";
 
 export type FleetSubscriptionSummary = {
   status: SubscriptionStatus;
@@ -83,7 +84,9 @@ export async function listFleetAssets(
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return getLocalDemoFleetList(filters);
+    return shouldUseLocalDemoData
+      ? getLocalDemoFleetList(filters)
+      : getDisconnectedFleetList(filters);
   }
 
   const { column, ascending } = sortMap[filters.sort];
@@ -148,7 +151,7 @@ export async function getCurrentFleetSubscriptionSummary() {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return getLocalDemoFleetSubscriptionSummary();
+    return shouldUseLocalDemoData ? getLocalDemoFleetSubscriptionSummary() : null;
   }
 
   return getFleetSubscriptionSummary(context);
@@ -158,7 +161,7 @@ export async function getFleetAsset(assetId: string): Promise<AssetProfile | nul
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return getLocalDemoFleetAsset(assetId);
+    return shouldUseLocalDemoData ? getLocalDemoFleetAsset(assetId) : null;
   }
 
   const { data: asset, error } = await context.supabase
@@ -239,6 +242,18 @@ export async function getFleetAsset(assetId: string): Promise<AssetProfile | nul
     complianceRecordCount: complianceRecordCount ?? 0,
     documentCount: documentCount ?? 0,
     expenseTotal,
+  };
+}
+
+function getDisconnectedFleetList(filters: FleetListFilters): FleetListResult {
+  return {
+    assets: [],
+    totalCount: 0,
+    pageSize: FLEET_PAGE_SIZE,
+    filters,
+    companyName: "FleetReady workspace",
+    isConfigured: false,
+    subscription: null,
   };
 }
 

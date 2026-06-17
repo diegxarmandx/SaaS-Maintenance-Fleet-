@@ -19,6 +19,7 @@ import {
   type SupabaseServerClient,
 } from "@/features/fleet/server/owner";
 import { getLocalDemoDataset, localDemoIdentity } from "@/features/demo/local-data";
+import { shouldUseLocalDemoData } from "@/features/demo/mode";
 
 export type DocumentSearchParams = Record<string, string | string[] | undefined>;
 
@@ -82,7 +83,9 @@ export async function getDocumentLibrary(
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return getLocalDemoDocumentLibrary(filters);
+    return shouldUseLocalDemoData
+      ? getLocalDemoDocumentLibrary(filters)
+      : getDisconnectedDocumentLibrary(filters);
   }
 
   const [assets, maintenanceRecords, complianceRecords, documents] = await Promise.all([
@@ -144,6 +147,10 @@ export async function getDocumentFormOptions(): Promise<DocumentFormOptions> {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
+    if (!shouldUseLocalDemoData) {
+      return getDisconnectedDocumentFormOptions();
+    }
+
     const documents = getLocalDemoDataset().documents as unknown as FleetDocument[];
 
     return {
@@ -175,7 +182,7 @@ export async function getDocumentDetail(documentId: string) {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return getLocalDemoDocumentDetail(documentId);
+    return shouldUseLocalDemoData ? getLocalDemoDocumentDetail(documentId) : null;
   }
 
   const [assets, maintenanceRecords, complianceRecords, { data: document, error }] =
@@ -229,7 +236,9 @@ export async function getAssetDocumentSnapshot(assetId: string) {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return getLocalDemoAssetDocumentSnapshot(assetId);
+    return shouldUseLocalDemoData
+      ? getLocalDemoAssetDocumentSnapshot(assetId)
+      : getDisconnectedAssetDocumentSnapshot();
   }
 
   const [assets, maintenanceRecords, complianceRecords, documents] = await Promise.all([
@@ -268,6 +277,42 @@ export async function getAssetDocumentSnapshot(assetId: string) {
       category,
       count,
     })),
+  };
+}
+
+function getDisconnectedDocumentLibrary(filters: DocumentFilters): DocumentLibraryResult {
+  return {
+    isConfigured: false,
+    companyName: "FleetReady workspace",
+    timezone: "UTC",
+    documents: [],
+    allDocuments: [],
+    expiringDocuments: [],
+    archivedDocuments: [],
+    assets: [],
+    filters,
+    pageSize: DOCUMENT_PAGE_SIZE,
+    totalCount: 0,
+    counts: { ...emptyCounts },
+  };
+}
+
+function getDisconnectedDocumentFormOptions(): DocumentFormOptions {
+  return {
+    isConfigured: false,
+    assets: [],
+    maintenanceRecords: [],
+    complianceRecords: [],
+    documentTypes: [...DOCUMENT_TYPES],
+  };
+}
+
+function getDisconnectedAssetDocumentSnapshot() {
+  return {
+    recentDocuments: [],
+    expiringDocuments: [],
+    expiredDocuments: [],
+    categoryCounts: [],
   };
 }
 

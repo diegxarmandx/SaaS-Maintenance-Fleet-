@@ -12,6 +12,11 @@ const optionalUrl = z.preprocess(
   z.string().trim().url().optional(),
 );
 
+const optionalBooleanFlag = z.preprocess(
+  emptyStringToUndefined,
+  z.enum(["0", "1", "false", "true"]).optional(),
+);
+
 export const publicEnvSchema = z.object({
   NEXT_PUBLIC_APP_URL: optionalUrl,
   NEXT_PUBLIC_SUPABASE_URL: optionalUrl,
@@ -20,6 +25,8 @@ export const publicEnvSchema = z.object({
 
 export const serverEnvSchema = publicEnvSchema.extend({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  ENABLE_LOCAL_DEMO: optionalBooleanFlag,
+  FLEETREADY_PLAYWRIGHT: optionalBooleanFlag,
   SUPABASE_SERVICE_ROLE_KEY: optionalString,
   SUPABASE_STORAGE_BUCKET: z
     .preprocess(emptyStringToUndefined, z.string().trim().min(1).optional())

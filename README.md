@@ -99,16 +99,41 @@ Validate the project:
 npm run lint
 npm run typecheck
 npm run test
+npm run test:e2e
 npm run build
 ```
 
-When Supabase environment variables are absent, the owner app renders a read-only fictional demo workspace automatically. This lets you inspect populated local screens with only:
+When Supabase environment variables are absent, owner pages render empty not-connected states by default. To intentionally inspect the read-only fictional demo workspace, enable the local-only demo flag:
+
+```bash
+ENABLE_LOCAL_DEMO=1 npm run dev
+```
+
+The explicit local demo covers the dashboard, fleet, asset profiles, maintenance, compliance, documents, reports, and settings. Saving records, uploads, signed document downloads, authentication, billing actions, and tenant-security verification still require a configured Supabase project.
+
+For real Supabase work, keep `ENABLE_LOCAL_DEMO=0` or omit it:
 
 ```bash
 npm run dev
 ```
 
-The automatic local demo covers the dashboard, fleet, asset profiles, maintenance, compliance, documents, reports, and settings. Saving records, uploads, signed document downloads, authentication, billing actions, and tenant-security verification still require a configured Supabase project.
+## Browser Smoke Tests
+
+Install Playwright's Chromium browser:
+
+```bash
+npx playwright install chromium
+```
+
+Run local browser, mobile, and accessibility smoke tests:
+
+```bash
+npm run test:e2e
+npm run test:e2e:headed
+npm run test:e2e:ui
+```
+
+The smoke suite starts Next.js on `127.0.0.1:3217`, clears live Supabase/Stripe environment variables for that server process, and explicitly enables local demo mode for test-only owner routes. It does not require live Stripe or Supabase services. Failure artifacts are written to `playwright-report/` and `test-results/`. See `docs/playwright-smoke-tests.md`.
 
 ## Reminders and Reports
 
@@ -232,6 +257,7 @@ Required before enabling Stripe test-mode billing:
 
 Optional for development demo data:
 
+- `ENABLE_LOCAL_DEMO`
 - `DEMO_OWNER_PASSWORD`
 - `DEMO_SEED_METADATA_ONLY`
 

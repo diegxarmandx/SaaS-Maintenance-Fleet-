@@ -16,6 +16,7 @@ This checklist describes readiness for a future deployment review. Deployment an
 - Privacy, terms, and support routes exist for review.
 - Settings includes owner data export and account/company deletion request controls.
 - Account deletion request migration is versioned and uses RLS.
+- Playwright browser, mobile, security-header, and accessibility smoke tests run locally and in CI using local demo mode.
 
 ## Required Before Deployment
 
@@ -28,6 +29,7 @@ This checklist describes readiness for a future deployment review. Deployment an
 - Choose and configure monitoring for app errors, webhook failures, scheduled-job failures, database errors, auth failures, upload failures, and email failures.
 - Review backup and restore procedures for Supabase PostgreSQL and Storage.
 - Complete browser QA across mobile, tablet, desktop, and wide desktop.
+- Add live-infrastructure end-to-end tests for Supabase Auth, Storage signed URLs, Stripe Checkout/Portal, webhooks, and email once test services are configured.
 - Confirm no secrets are committed and no service-role or Stripe secret key reaches the browser bundle.
 - Configure and verify `SUPPORT_EMAIL`.
 - Have privacy notice and terms reviewed by qualified counsel.

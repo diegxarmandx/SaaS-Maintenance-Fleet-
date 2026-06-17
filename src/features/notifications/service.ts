@@ -1,5 +1,6 @@
 import { calculateComplianceStatus } from "@/features/compliance/status";
 import { getLocalDemoDataset, localDemoIdentity } from "@/features/demo/local-data";
+import { shouldUseLocalDemoData } from "@/features/demo/mode";
 import { calculateDocumentStatus } from "@/features/documents/status";
 import { calculateMaintenanceStatus } from "@/features/maintenance/schedule";
 import {
@@ -184,11 +185,15 @@ export async function getUnreadNotificationCount(companyId: string) {
 }
 
 export async function getOwnerNotifications(companyId: string) {
-  if (!isSupabasePublicConfigReady && companyId === localDemoIdentity.companyId) {
+  if (shouldUseLocalDemoData && companyId === localDemoIdentity.companyId) {
     return (getLocalDemoDataset().notifications as unknown as OwnerNotification[])
       .filter((notification) => !notification.resolved_at)
       .sort((left, right) => right.created_at.localeCompare(left.created_at))
       .slice(0, 20);
+  }
+
+  if (!isSupabasePublicConfigReady) {
+    return [];
   }
 
   const supabase = await createSupabaseServerClient();

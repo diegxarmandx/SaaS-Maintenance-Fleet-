@@ -14,6 +14,7 @@ import {
 } from "@/features/account-data/deletion";
 import { getOwnerDatabaseContext } from "@/features/fleet/server/owner";
 import { localDemoIdentity } from "@/features/demo/local-data";
+import { shouldUseLocalDemoData } from "@/features/demo/mode";
 import type { SafeActionErrorCode } from "@/lib/action-errors";
 import {
   checkAuthRateLimit,
@@ -37,12 +38,6 @@ export type AccountDeletionActionState = {
     confirmation?: string | undefined;
     currentPassword?: string | undefined;
   };
-};
-
-export const initialAccountDeletionActionState: AccountDeletionActionState = {
-  status: "idle",
-  message: "",
-  errors: {},
 };
 
 export async function requestAccountDeletionAction(
@@ -71,7 +66,15 @@ export async function requestAccountDeletionAction(
     const context = await getOwnerDatabaseContext();
 
     if (!context) {
-      return handleLocalDemoDeletionRequest(parsed.data.confirmation);
+      return shouldUseLocalDemoData
+        ? handleLocalDemoDeletionRequest(parsed.data.confirmation)
+        : {
+            status: "error",
+            code: "INTERNAL_ERROR",
+            message:
+              "Supabase is not connected yet. Account deletion requests require a live owner account.",
+            errors: {},
+          };
     }
 
     await enforceOwnerTenantRateLimit("mutation", context);

@@ -10,6 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
     "db:seed": "DEMO_SEED_ALLOW=1 node scripts/seed-dev.mjs",
     "seed:demo": "DEMO_SEED_ALLOW=1 node scripts/seed-demo.mjs full",
     "seed:demo:reset": "DEMO_SEED_ALLOW=1 DEMO_SEED_RESET=confirm node scripts/seed-demo.mjs reset full",
@@ -37,6 +40,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -44,6 +49,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "prettier": "^3.8.4",
+    "supabase": "^2.106.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.8"

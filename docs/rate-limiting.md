@@ -14,13 +14,13 @@ RATE_LIMIT_KEY_SALT=
 
 `RATE_LIMIT_KEY_SALT` is used before hashing sensitive key material such as normalized emails, owner IDs, company IDs, and IP addresses. Do not reuse an application secret that may be exposed to the browser.
 
-When Redis or the key salt is missing in production, the rate-limit utility fails closed and returns a generic 429. In development and test, missing Redis fails open so the automatic local demo remains usable without external services.
+When Redis or the key salt is missing in production, the rate-limit utility fails closed and returns a generic 429. In development and test, missing Redis fails open so explicitly enabled local demo mode remains usable without external services.
 
 ## Local Redis Setup
 
 For local development, either:
 
-- Leave the Upstash values blank to use the read-only local demo without production enforcement.
+- Leave the Upstash values blank and set `ENABLE_LOCAL_DEMO=1` to use the read-only local demo without production enforcement.
 - Create an Upstash Redis database and copy the REST URL/token into `.env.local`.
 - Run a Redis-compatible local service only if it exposes an Upstash-compatible REST interface.
 

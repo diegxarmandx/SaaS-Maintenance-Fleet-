@@ -81,7 +81,7 @@ export function MaintenanceOverviewPage({
           <section className="rounded-lg border border-border bg-surface p-4">
             <form
               action="/maintenance"
-              className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_170px_160px_auto]"
+              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[minmax(0,1fr)_180px_180px_170px_160px_auto]"
             >
               <label className="grid gap-2 text-sm font-medium text-foreground">
                 Search
@@ -158,7 +158,7 @@ export function MaintenanceOverviewPage({
             />
           ) : (
             <>
-              <div className="hidden md:block">
+              <div className="hidden min-w-0 md:block">
                 <DataTable
                   caption="Active maintenance rules"
                   columns={ruleColumns}
@@ -206,7 +206,7 @@ export function MaintenanceOverviewPage({
               />
             ) : (
               <>
-                <div className="hidden md:block">
+                <div className="hidden min-w-0 md:block">
                   <DataTable
                     caption="Completed maintenance history"
                     columns={historyColumns}
@@ -482,7 +482,7 @@ function HistoryFilters({ history }: { history: MaintenanceHistoryResult }) {
     <section className="rounded-lg border border-border bg-surface p-4">
       <form
         action="/maintenance#history"
-        className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_160px_150px_150px_130px_130px_auto]"
+        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[minmax(0,1fr)_180px_160px_150px_150px_130px_130px_auto]"
       >
         <label className="grid gap-2 text-sm font-medium text-foreground">
           Search

@@ -8,6 +8,7 @@ import {
   buildLiveOwnerDataExport,
   buildLocalDemoOwnerDataExport,
 } from "@/features/account-data/server/export";
+import { shouldUseLocalDemoData } from "@/features/demo/mode";
 import { getOwnerDatabaseContext } from "@/features/fleet/server/owner";
 import { toSafeActionError } from "@/server/actions/safe-error";
 
@@ -30,6 +31,16 @@ export async function GET() {
 
   try {
     const generatedAt = new Date();
+    if (!context && !shouldUseLocalDemoData) {
+      return NextResponse.json(
+        {
+          code: "CONFIGURATION_ERROR",
+          message: "Supabase is not connected yet. Owner data export is unavailable.",
+        },
+        { status: 503 },
+      );
+    }
+
     const exportData = context
       ? await buildLiveOwnerDataExport(context, generatedAt)
       : buildLocalDemoOwnerDataExport(generatedAt);

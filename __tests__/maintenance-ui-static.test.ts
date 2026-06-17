@@ -15,7 +15,7 @@ const assetProfileSource = readFileSync(
 
 describe("maintenance responsive UI structure", () => {
   it("uses desktop tables and mobile cards for rules and history", () => {
-    expect(overviewSource).toContain("hidden md:block");
+    expect(overviewSource).toContain("hidden min-w-0 md:block");
     expect(overviewSource).toContain("md:hidden");
     expect(overviewSource).toContain("MobileCardList");
     expect(overviewSource).toContain("DataTable");

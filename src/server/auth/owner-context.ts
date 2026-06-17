@@ -1,6 +1,7 @@
 import { isSupabasePublicConfigReady } from "@/lib/env/public";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { localDemoIdentity } from "@/features/demo/local-data";
+import { shouldUseLocalDemoData } from "@/features/demo/mode";
 
 export type OwnerWorkspaceContext = {
   isConfigured: boolean;
@@ -28,7 +29,7 @@ const localDemoOwnerContext: OwnerWorkspaceContext = {
 
 export async function getOwnerWorkspaceContext(): Promise<OwnerWorkspaceContext> {
   if (!isSupabasePublicConfigReady) {
-    return localDemoOwnerContext;
+    return shouldUseLocalDemoData ? localDemoOwnerContext : fallbackOwnerContext;
   }
 
   try {

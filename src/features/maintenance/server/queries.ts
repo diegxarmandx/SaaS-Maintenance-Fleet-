@@ -26,6 +26,7 @@ import {
   type SupabaseServerClient,
 } from "@/features/fleet/server/owner";
 import { getLocalDemoDataset, localDemoIdentity } from "@/features/demo/local-data";
+import { shouldUseLocalDemoData } from "@/features/demo/mode";
 
 export type MaintenanceSearchParams = Record<string, string | string[] | undefined>;
 
@@ -111,7 +112,9 @@ export async function getMaintenanceOverview(
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return getLocalDemoMaintenanceOverview(filters);
+    return shouldUseLocalDemoData
+      ? getLocalDemoMaintenanceOverview(filters)
+      : getDisconnectedMaintenanceOverview(filters);
   }
 
   const [assets, templates, rules] = await Promise.all([
@@ -157,6 +160,10 @@ export async function getMaintenanceFormOptions(): Promise<MaintenanceFormOption
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
+    if (!shouldUseLocalDemoData) {
+      return getDisconnectedMaintenanceFormOptions();
+    }
+
     const assets = getLocalDemoMaintenanceAssets();
     const templates = getLocalDemoDataset()
       .maintenanceTemplates as unknown as MaintenanceTemplate[];
@@ -190,7 +197,9 @@ export async function getMaintenanceHistory(
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return getLocalDemoMaintenanceHistory(filters);
+    return shouldUseLocalDemoData
+      ? getLocalDemoMaintenanceHistory(filters)
+      : getDisconnectedMaintenanceHistory(filters);
   }
 
   const [assets, records] = await Promise.all([
@@ -221,7 +230,7 @@ export async function getMaintenanceRecordDetail(recordId: string) {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return getLocalDemoMaintenanceRecordDetail(recordId);
+    return shouldUseLocalDemoData ? getLocalDemoMaintenanceRecordDetail(recordId) : null;
   }
 
   const [assets, { data: record, error }] = await Promise.all([
@@ -255,7 +264,9 @@ export async function getAssetMaintenanceSnapshot(assetId: string) {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return getLocalDemoAssetMaintenanceSnapshot(assetId);
+    return shouldUseLocalDemoData
+      ? getLocalDemoAssetMaintenanceSnapshot(assetId)
+      : getDisconnectedAssetMaintenanceSnapshot();
   }
 
   const [assets, allRules, allRecords] = await Promise.all([
@@ -284,6 +295,59 @@ export async function getAssetMaintenanceSnapshot(assetId: string) {
         : rules.some((rule) => rule.status === "Due soon")
           ? ("Due soon" as const)
           : ("Current" as const),
+  };
+}
+
+function getDisconnectedMaintenanceOverview(
+  filters: MaintenanceRuleFilters,
+): MaintenanceOverviewResult {
+  return {
+    isConfigured: false,
+    companyName: "FleetReady workspace",
+    timezone: "UTC",
+    rules: [],
+    allRules: [],
+    assets: [],
+    templates: [],
+    counts: { Current: 0, "Due soon": 0, Overdue: 0 },
+    filters,
+    pageSize: MAINTENANCE_PAGE_SIZE,
+    totalCount: 0,
+  };
+}
+
+function getDisconnectedMaintenanceFormOptions(): MaintenanceFormOptions {
+  return {
+    isConfigured: false,
+    assets: [],
+    templates: [],
+    rules: [],
+  };
+}
+
+function getDisconnectedMaintenanceHistory(
+  filters: MaintenanceHistoryFilters,
+): MaintenanceHistoryResult {
+  return {
+    isConfigured: false,
+    records: [],
+    allRecords: [],
+    assets: [],
+    filters,
+    pageSize: MAINTENANCE_HISTORY_PAGE_SIZE,
+    totalCount: 0,
+    costSummary: summarizeMaintenanceCosts([]),
+  };
+}
+
+function getDisconnectedAssetMaintenanceSnapshot() {
+  return {
+    rules: [],
+    nextDueItems: [],
+    overdueItems: [],
+    recentRecords: [],
+    costSummary: summarizeMaintenanceCosts([]),
+    status: "Current" as const,
   };
 }
 

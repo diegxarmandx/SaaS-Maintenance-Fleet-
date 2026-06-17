@@ -2,6 +2,7 @@ import type { PropsWithChildren } from "react";
 import Link from "next/link";
 import { FileText, LifeBuoy, LogOut, Search, UserCircle } from "lucide-react";
 
+import { MobileOwnerNavigation } from "@/components/app-shell/mobile-owner-navigation";
 import { OwnerNavigation } from "@/components/app-shell/owner-navigation";
 import { Button } from "@/components/ui/button";
 import { signOutAction } from "@/features/auth/actions";
@@ -202,10 +203,7 @@ export async function AppShell({ children }: PropsWithChildren) {
                 />
               </label>
             </form>
-            <OwnerNavigation
-              className="mt-3 flex overflow-x-auto pb-1 lg:hidden"
-              compact
-            />
+            <MobileOwnerNavigation className="mt-3 lg:hidden" />
           </header>
           <main id="main-content" className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
             {children}

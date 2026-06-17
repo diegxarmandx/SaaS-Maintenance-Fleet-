@@ -117,7 +117,7 @@ Last updated: 2026-06-15
 ## Completed in Development Demo Data Step
 
 - Added a comprehensive development-only demo seed data module with stable fictional identifiers and relative dates.
-- Added automatic read-only local demo data for populated owner screens when Supabase is not configured.
+- Added explicit opt-in read-only local demo data for populated owner screens when Supabase is not configured.
 - Added full, reset, minimal, and empty seed commands.
 - Added production safeguards requiring development intent and reset confirmation.
 - Added one fictional owner company, 15 varied assets, meter readings, maintenance rules, completed maintenance records, compliance requirements and records, document metadata, document versions, notifications, audit events, report preferences, notification preferences, and internal subscription state.
@@ -151,6 +151,16 @@ Last updated: 2026-06-15
 - Added audit events for export requested/completed and deletion requested/confirmed.
 - Added tests for export filtering, deletion helpers, legal/support route coverage, missing support config, auth/landing links, and the account deletion migration.
 - Added `docs/legal-account-controls.md`.
+
+## Completed in Browser, Mobile, and Accessibility Smoke Testing Step
+
+- Added Playwright and `@axe-core/playwright` development dependencies.
+- Added `playwright.config.ts` with deterministic port `3217`, Chromium desktop and mobile Chromium projects, CI retries, and failure-only artifacts.
+- Added desktop smoke tests for public legal/auth routes, owner-demo routes, settings account/data controls, not-found behavior, security headers, and raw error monitoring.
+- Added mobile smoke tests for landing, legal pages, dashboard, settings, account controls, owner navigation open/close, and horizontal-overflow checks.
+- Added accessibility smoke tests that fail on serious and critical axe violations and attach moderate findings for review.
+- Updated GitHub Actions to install Chromium and run `npm run test:e2e` without Stripe or Supabase secrets.
+- Added `docs/playwright-smoke-tests.md`.
 
 ## Still Deferred Beyond Current Local Scope
 

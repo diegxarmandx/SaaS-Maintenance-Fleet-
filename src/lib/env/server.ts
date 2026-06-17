@@ -3,6 +3,8 @@ import { serverEnvSchema } from "@/lib/env/schema";
 
 const parsedServerEnv = serverEnvSchema.safeParse({
   NODE_ENV: process.env.NODE_ENV,
+  ENABLE_LOCAL_DEMO: process.env.ENABLE_LOCAL_DEMO,
+  FLEETREADY_PLAYWRIGHT: process.env.FLEETREADY_PLAYWRIGHT,
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,

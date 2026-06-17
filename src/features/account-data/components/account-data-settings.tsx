@@ -15,10 +15,8 @@ import {
 import { ErrorMessage } from "@/components/ui/error-message";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-  initialAccountDeletionActionState,
-  requestAccountDeletionAction,
-} from "@/features/account-data/actions";
+import { requestAccountDeletionAction } from "@/features/account-data/actions";
+import type { AccountDeletionActionState } from "@/features/account-data/actions";
 import {
   getDeletionConfirmationPhrase,
   type AccountDeletionRequestSummary,
@@ -27,6 +25,12 @@ import {
 type AccountDataSettingsProps = {
   companyName: string;
   deletionRequest: AccountDeletionRequestSummary | null;
+};
+
+const initialAccountDeletionActionState: AccountDeletionActionState = {
+  status: "idle",
+  message: "",
+  errors: {},
 };
 
 export function AccountDataSettings({

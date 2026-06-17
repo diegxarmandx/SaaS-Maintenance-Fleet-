@@ -4,7 +4,7 @@ FleetReady includes development-only demo data for reviewing the existing owner-
 
 ## Purpose
 
-When Supabase is not configured, read-only application pages automatically use the same fictional dataset so dashboard cards, fleet lists, asset profiles, meter history, maintenance, compliance, documents, reports, settings, subscription display, search, filters, sorting, pagination, and asset-limit behavior can be reviewed immediately with `npm run dev`.
+When Supabase is not configured, read-only application pages show empty not-connected states by default. Set `ENABLE_LOCAL_DEMO=1` to intentionally use the same fictional dataset so dashboard cards, fleet lists, asset profiles, meter history, maintenance, compliance, documents, reports, settings, subscription display, search, filters, sorting, pagination, and asset-limit behavior can be reviewed locally.
 
 The seed script remains available for loading the same fictional owner company into a local Supabase project when persistence, authentication, uploads, RLS, and server actions need to be tested.
 
@@ -21,7 +21,7 @@ All values are fictional. Demo VIN-like values, license plates, policy numbers, 
 
 ## Demo Login
 
-No login is required for the automatic local read-only demo when Supabase environment variables are absent.
+No login is required for the explicit local read-only demo when `ENABLE_LOCAL_DEMO=1` and Supabase environment variables are absent.
 
 Run the seed against a local Supabase project after migrations are applied when you want database-backed demo data:
 
@@ -60,9 +60,13 @@ npm run db:seed
 - `seed:empty`: creates an onboarded owner company with no operational records for empty-state review.
 - `db:seed`: compatibility alias for `seed:demo`.
 
-## Automatic Local Demo Mode
+## Explicit Local Demo Mode
 
-If `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are not configured, the owner app renders read-only dummy data directly from the committed demo dataset.
+If `ENABLE_LOCAL_DEMO=1` and `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are not configured, the owner app renders read-only dummy data directly from the committed demo dataset. Without the flag, the same pages stay empty and show not-connected states.
+
+```bash
+ENABLE_LOCAL_DEMO=1 npm run dev
+```
 
 Covered local read-only views:
 

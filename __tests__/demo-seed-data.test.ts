@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { calculateComplianceStatus } from "../src/features/compliance/status";
 import { calculateDocumentStatus } from "../src/features/documents/status";
@@ -18,6 +18,11 @@ const {
 
 const baseDate = new Date("2026-06-13T12:00:00.000Z");
 const demo = buildDemoDataset({ scenario: "full", baseDate });
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.resetModules();
+});
 
 describe("development demo seed data", () => {
   it("builds a fictional owner company with broad connected coverage", () => {
@@ -212,7 +217,42 @@ describe("development demo seed data", () => {
 });
 
 describe("automatic local demo data", () => {
-  it("populates read-only app screens when Supabase is not configured", async () => {
+  it("stays hidden by default when Supabase is not configured", async () => {
+    vi.stubEnv("ENABLE_LOCAL_DEMO", "0");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+    vi.resetModules();
+
+    const { getDashboardData } = await import("../src/features/dashboard/server/queries");
+    const { getDocumentLibrary } =
+      await import("../src/features/documents/server/queries");
+    const { listFleetAssets } = await import("../src/features/fleet/server/queries");
+    const { getReportData } = await import("../src/features/reports/server/queries");
+
+    const [dashboard, documents, fleet, reports] = await Promise.all([
+      getDashboardData(),
+      getDocumentLibrary({}),
+      listFleetAssets({}),
+      getReportData({}),
+    ]);
+
+    expect(dashboard.isConfigured).toBe(false);
+    expect(dashboard.summary.totalActiveAssets).toBe(0);
+    expect(dashboard.attentionItems).toEqual([]);
+    expect(documents.isConfigured).toBe(false);
+    expect(documents.documents).toEqual([]);
+    expect(fleet.isConfigured).toBe(false);
+    expect(fleet.assets).toEqual([]);
+    expect(reports.isConfigured).toBe(false);
+    expect(reports.assetHistory).toEqual([]);
+  });
+
+  it("populates read-only app screens only when local demo mode is enabled", async () => {
+    vi.stubEnv("ENABLE_LOCAL_DEMO", "1");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+    vi.resetModules();
+
     const { getDashboardData } = await import("../src/features/dashboard/server/queries");
     const { getDocumentLibrary } =
       await import("../src/features/documents/server/queries");

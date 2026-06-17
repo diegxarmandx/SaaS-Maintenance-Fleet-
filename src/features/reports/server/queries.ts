@@ -13,6 +13,7 @@ import {
   type SupabaseServerClient,
 } from "@/features/fleet/server/owner";
 import { getLocalDemoDataset, localDemoIdentity } from "@/features/demo/local-data";
+import { shouldUseLocalDemoData } from "@/features/demo/mode";
 import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
 
 export type ReportSearchParams = Record<string, string | string[] | undefined>;
@@ -88,7 +89,9 @@ export async function getReportData(
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return getLocalDemoReportData(searchParams);
+    return shouldUseLocalDemoData
+      ? getLocalDemoReportData(searchParams)
+      : getDisconnectedReportData(searchParams);
   }
 
   if (!options.skipRateLimit) {
@@ -236,6 +239,40 @@ export async function getReportData(
     documentsByAsset: countBy(documentRows, "asset"),
     documentsByCategory: countBy(documentRows, "category"),
     assetHistory,
+  };
+}
+
+function getDisconnectedReportData(searchParams: ReportSearchParams): ReportData {
+  const preference = defaultReportPreference("00000000-0000-4000-8000-000000000000");
+  const filters = parseReportFilters(
+    buildPreferredReportSearchParams({
+      searchParams,
+      preference,
+      timezone: "UTC",
+    }),
+  );
+
+  return {
+    isConfigured: false,
+    companyName: "FleetReady workspace",
+    filters,
+    preference,
+    assets: [],
+    upcomingMaintenance: [],
+    overdueMaintenance: [],
+    completedMaintenance: [],
+    maintenanceCostsByAsset: [],
+    maintenanceCostsByCategory: [],
+    complianceStatus: [],
+    expiringCompliance: [],
+    expiredCompliance: [],
+    missingRequirements: [],
+    documents: [],
+    expiringDocuments: [],
+    expiredDocuments: [],
+    documentsByAsset: [],
+    documentsByCategory: [],
+    assetHistory: [],
   };
 }
 

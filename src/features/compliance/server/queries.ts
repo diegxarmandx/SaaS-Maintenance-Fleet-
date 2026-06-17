@@ -22,6 +22,7 @@ import {
   type SupabaseServerClient,
 } from "@/features/fleet/server/owner";
 import { getLocalDemoDataset, localDemoIdentity } from "@/features/demo/local-data";
+import { shouldUseLocalDemoData } from "@/features/demo/mode";
 
 export type ComplianceSearchParams = Record<string, string | string[] | undefined>;
 
@@ -84,7 +85,9 @@ export async function getComplianceOverview(
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return getLocalDemoComplianceOverview(filters);
+    return shouldUseLocalDemoData
+      ? getLocalDemoComplianceOverview(filters)
+      : getDisconnectedComplianceOverview(filters);
   }
 
   const [assets, requirements, records] = await Promise.all([
@@ -135,6 +138,10 @@ export async function getComplianceFormOptions(): Promise<ComplianceFormOptions>
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
+    if (!shouldUseLocalDemoData) {
+      return getDisconnectedComplianceFormOptions();
+    }
+
     const requirements = getLocalDemoDataset()
       .complianceRequirements as unknown as ComplianceRequirement[];
     const records = getLocalDemoDataset()
@@ -166,7 +173,7 @@ export async function getComplianceRecordDetail(recordId: string) {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return getLocalDemoComplianceRecordDetail(recordId);
+    return shouldUseLocalDemoData ? getLocalDemoComplianceRecordDetail(recordId) : null;
   }
 
   const [assets, requirements, { data: record, error }] = await Promise.all([
@@ -206,7 +213,9 @@ export async function getAssetComplianceSnapshot(assetId: string) {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return getLocalDemoAssetComplianceSnapshot(assetId);
+    return shouldUseLocalDemoData
+      ? getLocalDemoAssetComplianceSnapshot(assetId)
+      : getDisconnectedAssetComplianceSnapshot();
   }
 
   const [assets, requirements, records] = await Promise.all([
@@ -238,6 +247,43 @@ export async function getAssetComplianceSnapshot(assetId: string) {
     expiredItems,
     expiringItems,
     missingItems,
+  };
+}
+
+function getDisconnectedComplianceOverview(
+  filters: ComplianceFilters,
+): ComplianceOverviewResult {
+  return {
+    isConfigured: false,
+    companyName: "FleetReady workspace",
+    timezone: "UTC",
+    items: [],
+    allItems: [],
+    assets: [],
+    complianceTypes: [...DEFAULT_COMPLIANCE_TYPES],
+    counts: { ...emptyCounts },
+    filters,
+    pageSize: COMPLIANCE_PAGE_SIZE,
+    totalCount: 0,
+  };
+}
+
+function getDisconnectedComplianceFormOptions(): ComplianceFormOptions {
+  return {
+    isConfigured: false,
+    assets: [],
+    requirements: [],
+    complianceTypes: [...DEFAULT_COMPLIANCE_TYPES],
+  };
+}
+
+function getDisconnectedAssetComplianceSnapshot() {
+  return {
+    status: "Current" as ComplianceStatus,
+    items: [],
+    expiredItems: [],
+    expiringItems: [],
+    missingItems: [],
   };
 }
 

@@ -14,6 +14,7 @@ import {
   type SupabaseServerClient,
 } from "@/features/fleet/server/owner";
 import { getLocalDemoDataset, localDemoIdentity } from "@/features/demo/local-data";
+import { shouldUseLocalDemoData } from "@/features/demo/mode";
 import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
 
 type AssetRow = {
@@ -88,7 +89,9 @@ export async function getDashboardData(): Promise<DashboardData> {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return getLocalDemoDashboardData();
+    return shouldUseLocalDemoData
+      ? getLocalDemoDashboardData()
+      : getDisconnectedDashboardData();
   }
 
   await enforceOwnerTenantRateLimit("expensiveOperation", context);
@@ -194,6 +197,27 @@ export async function getDashboardData(): Promise<DashboardData> {
       };
     }),
     fleetStatus,
+  };
+}
+
+function getDisconnectedDashboardData(): DashboardData {
+  return {
+    isConfigured: false,
+    companyName: "FleetReady workspace",
+    summary: {
+      totalActiveAssets: 0,
+      maintenanceDueSoon: 0,
+      overdueMaintenance: 0,
+      documentsExpiringSoon: 0,
+      expiredDocuments: 0,
+      missingComplianceItems: 0,
+    },
+    attentionItems: [],
+    recentMaintenance: [],
+    recentDocuments: [],
+    recentCompliance: [],
+    recentMeterReadings: [],
+    fleetStatus: [],
   };
 }
 

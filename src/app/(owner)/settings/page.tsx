@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { SubscriptionSettings } from "@/features/billing/components/subscription-settings";
 import { getSubscriptionSnapshot } from "@/features/billing/server/subscription";
@@ -18,6 +19,7 @@ import { AccountDataSettings } from "@/features/account-data/components/account-
 import type { AccountDeletionRequestSummary } from "@/features/account-data/deletion";
 import { getAccountDeletionRequestSummary } from "@/features/account-data/server/deletion";
 import { getLocalDemoDataset, localDemoIdentity } from "@/features/demo/local-data";
+import { shouldUseLocalDemoData } from "@/features/demo/mode";
 import {
   NotificationAnalyticsCards,
   type NotificationAnalytics,
@@ -36,7 +38,7 @@ export default async function SettingsPage() {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return <LocalDemoSettingsPage />;
+    return shouldUseLocalDemoData ? <LocalDemoSettingsPage /> : <DisconnectedSettingsPage />;
   }
 
   const [
@@ -90,6 +92,25 @@ export default async function SettingsPage() {
       subscriptionSnapshot={subscriptionSnapshot}
       deletionRequest={deletionRequest}
     />
+  );
+}
+
+function DisconnectedSettingsPage() {
+  return (
+    <>
+      <Breadcrumbs
+        items={[{ label: "Dashboard", href: "/dashboard" }, { label: "Settings" }]}
+      />
+      <PageHeader
+        description="Manage company identity, owner preferences, billing, notifications, and account safety."
+        eyebrow="FleetReady workspace"
+        title="Settings"
+      />
+      <EmptyState
+        description="Configure Supabase environment variables and apply the migrations to use live settings."
+        title="Settings data is not connected"
+      />
+    </>
   );
 }
 
