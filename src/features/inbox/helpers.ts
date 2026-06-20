@@ -48,13 +48,19 @@ export function normalizeMaintenanceExtraction(
 
 export function extractionToReviewFields(
   extraction: MaintenanceExtraction | Record<string, never>,
+  originalFileName = "Uploaded paperwork",
 ): InboxReviewFields {
   if (!("maintenanceType" in extraction)) {
     return emptyInboxReviewFields();
   }
 
   return {
-    assetId: extraction.asset.assetId ?? "",
+    category: extraction.documentCategory?.value ?? "maintenance",
+    documentName: originalFileName,
+    documentType:
+      extraction.documentType?.value ??
+      extraction.detectedDocumentType ??
+      "Maintenance receipt",
     maintenanceRuleId: "",
     maintenanceType: extraction.maintenanceType.value ?? "",
     completionDate:
@@ -66,6 +72,12 @@ export function extractionToReviewFields(
     laborCost: numberFieldToString(extraction.laborCost.value ?? 0),
     otherCost: numberFieldToString(extraction.otherCost.value ?? 0),
     taxCost: numberFieldToString(extraction.taxCost.value ?? 0),
+    issuingOrganization: extraction.serviceProvider.value ?? "",
+    identificationNumber: "",
+    effectiveDate: extraction.maintenanceDate.value ?? "",
+    expirationDate: extraction.complianceExpirationDate?.value ?? "",
+    reminderDays: "30",
+    documentNumber: "",
     notes: extraction.notes.value ?? "",
     confirmMeterDecrease: false,
   };
@@ -73,7 +85,9 @@ export function extractionToReviewFields(
 
 export function emptyInboxReviewFields(): InboxReviewFields {
   return {
-    assetId: "",
+    category: "general",
+    documentName: "",
+    documentType: "Other",
     maintenanceRuleId: "",
     maintenanceType: "",
     completionDate: new Date().toISOString().slice(0, 10),
@@ -84,6 +98,12 @@ export function emptyInboxReviewFields(): InboxReviewFields {
     laborCost: "0",
     otherCost: "0",
     taxCost: "0",
+    issuingOrganization: "",
+    identificationNumber: "",
+    effectiveDate: "",
+    expirationDate: "",
+    reminderDays: "30",
+    documentNumber: "",
     notes: "",
     confirmMeterDecrease: false,
   };
@@ -93,7 +113,9 @@ export function getInboxReviewFieldsFromFormData(formData: FormData): InboxRevie
   const getString = (key: keyof InboxReviewFields) => String(formData.get(key) ?? "");
 
   return {
-    assetId: getString("assetId"),
+    category: normalizeReviewCategory(getString("category")),
+    documentName: getString("documentName"),
+    documentType: getString("documentType"),
     maintenanceRuleId: getString("maintenanceRuleId"),
     maintenanceType: getString("maintenanceType"),
     completionDate: getString("completionDate"),
@@ -104,9 +126,19 @@ export function getInboxReviewFieldsFromFormData(formData: FormData): InboxRevie
     laborCost: getString("laborCost"),
     otherCost: getString("otherCost"),
     taxCost: getString("taxCost"),
+    issuingOrganization: getString("issuingOrganization"),
+    identificationNumber: getString("identificationNumber"),
+    effectiveDate: getString("effectiveDate"),
+    expirationDate: getString("expirationDate"),
+    reminderDays: getString("reminderDays"),
+    documentNumber: getString("documentNumber"),
     notes: getString("notes"),
     confirmMeterDecrease: formData.get("confirmMeterDecrease") === "on",
   };
+}
+
+function normalizeReviewCategory(value: string): InboxReviewFields["category"] {
+  return value === "maintenance" || value === "compliance" ? value : "general";
 }
 
 export function calculateReviewedTotal(fields: {
@@ -142,7 +174,9 @@ export function findMeterDecreaseWarnings(
   return warnings;
 }
 
-export function hasCostMismatch(extraction: MaintenanceExtraction | Record<string, never>) {
+export function hasCostMismatch(
+  extraction: MaintenanceExtraction | Record<string, never>,
+) {
   if (!("totalCost" in extraction) || extraction.totalCost.value === null) {
     return false;
   }
@@ -188,10 +222,7 @@ function matchExtractedAsset(
     ].map((value) => normalizeMatchText(value ?? ""));
     const score = hintTokens.reduce(
       (current, token) =>
-        Math.max(
-          current,
-          ...fields.map((field) => scoreTokenMatch(token, field)),
-        ),
+        Math.max(current, ...fields.map((field) => scoreTokenMatch(token, field))),
       0,
     );
 

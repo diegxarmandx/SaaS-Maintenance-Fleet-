@@ -29,8 +29,9 @@ describe("maintenance responsive UI structure", () => {
   });
 
   it("integrates maintenance context into asset profiles", () => {
-    expect(assetProfileSource).toContain("Maintenance status");
-    expect(assetProfileSource).toContain("Recent completed maintenance");
-    expect(assetProfileSource).toContain("nextDueItems");
+    expect(assetProfileSource).toContain("Maintenance rules");
+    expect(assetProfileSource).toContain("Completed maintenance");
+    expect(assetProfileSource).toContain("overdueItems");
+    expect(assetProfileSource).toContain('section === "maintenance"');
   });
 });

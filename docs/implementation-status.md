@@ -162,19 +162,21 @@ Last updated: 2026-06-15
 - Updated GitHub Actions to install Chromium and run `npm run test:e2e` without Stripe or Supabase secrets.
 - Added `docs/playwright-smoke-tests.md`.
 
-## Completed in FleetReady Inbox MVP Step
+## Completed in Asset Inbox Step
 
-- Added protected `/inbox`, `/inbox/new`, and `/inbox/[jobId]` owner routes.
-- Added FleetReady Inbox navigation for desktop and mobile owner shells.
-- Added private maintenance invoice/receipt/photo upload using the existing `maintenance-attachments` bucket, MIME validation, size checks, company-scoped randomized paths, rate limiting, and storage quota hook.
+- Removed the main/global Inbox routes and primary-navigation entry.
+- Added Overview, Maintenance, Compliance, Documents, and Inbox tabs to each asset profile.
+- Added protected `/fleet/[assetId]/upload` and `/fleet/[assetId]/inbox/[jobId]` routes.
+- Added private asset-bound PDF/image upload using the existing `maintenance-attachments` bucket, MIME validation, size checks, company/asset-scoped randomized paths, rate limiting, and storage quota hook.
 - Added server-only OpenAI extraction adapter behind `AI_INGESTION_PROVIDER`, `OPENAI_API_KEY`, and `OPENAI_INGESTION_MODEL`.
-- Added safe extraction-unavailable behavior that shows the manual-entry fallback message when AI is disabled, unconfigured, or fails.
-- Added owner review UI with signed/private preview, editable extracted fields, confidence badges, missing/low-confidence warnings, cost mismatch warning, meter-decrease confirmation, manual-entry fallback, save-document-only, and discard actions.
+- Added safe extraction-unavailable behavior that keeps an editable Needs Attention item.
+- Added owner review UI for maintenance, compliance, and general documents with signed/private preview, editable fields, confidence warnings, meter-decrease confirmation, completion, flagging, and pending-item deletion.
+- Added asset timeline integration and automatic Documents-tab visibility after completion.
 - Added `ingestion_jobs` and `ingestion_job_events` tables with RLS, owner/company policies, indexes, company-scoped storage path checks, extracted JSON, corrected JSON, confidence, provider/model metadata, status, and created-record references.
 - Added `maintenance_records.tax_cost` and regenerated `total_cost` from parts, labor, other, and tax.
 - Updated manual completed-maintenance entry, detail, summaries, export fields, seed data, and tests for tax cost.
 - Added unit/static tests for Inbox extraction normalization, asset matching, meter warnings, cost mismatch, tax totals, and ingestion-table migration expectations.
-- Added Playwright smoke coverage for the Inbox route in desktop, mobile, and accessibility checks.
+- Added Playwright smoke coverage for asset tabs, Asset Inbox, mobile upload entry, removed global route behavior, and accessibility.
 
 ## Still Deferred Beyond Current Local Scope
 
@@ -182,7 +184,7 @@ Last updated: 2026-06-15
 - Hard per-fleet storage quota enforcement after plan-specific storage allowances are defined.
 - App-owned email verification resend endpoint protection; no such endpoint exists today.
 - Reliable PDF generation.
-- Insurance/registration extraction, odometer-only photo extraction, duplicate detection, batch inbox, email forwarding, and bulk import.
+- Duplicate detection, batch ingestion, QR/public upload links, email forwarding, and bulk import.
 - Production observability dashboards, alerting, and audit review UI.
 - Automated processing of confirmed account deletion requests.
 - Final legal counsel review of privacy and terms content.

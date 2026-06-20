@@ -59,8 +59,9 @@ It adds the `account_deletion_status` enum and `account_deletion_requests` table
 The FleetReady Inbox migration is:
 
 - `supabase/migrations/20260617120000_fleetready_inbox_ingestion.sql`
+- `supabase/migrations/20260620120000_asset_inbox.sql`
 
-It adds `maintenance_records.tax_cost`, regenerates `maintenance_records.total_cost` from parts, labor, other, and tax, and creates owner-scoped `ingestion_jobs` plus `ingestion_job_events` for maintenance receipt draft extraction and review auditability.
+The first migration adds tax-aware maintenance totals and owner-scoped ingestion audit tables. The Asset Inbox migration requires asset-scoped uploads, adds Needs Attention and completion metadata, and provides transaction-backed maintenance, compliance, and document completion functions.
 
 ## Tables
 
@@ -213,7 +214,7 @@ Maintenance attachments use `maintenance-attachments` and are validated before u
 - Allowed types: `application/pdf`, `image/jpeg`, `image/png`, `image/webp`
 - Maximum size: 10 MB
 - Path shape: `{company_id}/maintenance/{maintenance_record_id}/{uuid}-{filename}`
-- FleetReady Inbox draft path shape: `{company_id}/inbox/{ingestion_job_id}/{uuid}-{filename}`
+- Asset Inbox draft path shape: `{company_id}/assets/{asset_id}/inbox/{ingestion_job_id}/{uuid}-{filename}`
 - Attachment metadata is inserted into `documents` with `category = 'maintenance'` and the matching company, asset, and maintenance record IDs.
 
 Compliance and fleet documents are validated before upload:

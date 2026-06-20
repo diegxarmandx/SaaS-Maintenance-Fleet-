@@ -10,7 +10,6 @@ const criticalMobileRoutes = [
   "/privacy",
   "/terms",
   "/dashboard",
-  "/inbox",
   "/settings",
 ] as const;
 
@@ -55,14 +54,27 @@ test.describe("mobile smoke tests", () => {
     const health = attachPageHealthMonitor(page, testInfo);
 
     await page.goto("/settings");
-    await expect(
-      page.getByRole("link", { name: "Download JSON export" }),
-    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Download JSON export" })).toBeVisible();
     await expect(page.getByLabel("Company name confirmation")).toBeVisible();
     await page.getByRole("button", { name: "Request deletion" }).click();
     await expect(
       page.getByText("Confirm the company name before requesting deletion."),
     ).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await health.assertHealthy();
+  });
+
+  test("asset Inbox tabs and upload page remain usable on mobile", async ({
+    page,
+  }, testInfo) => {
+    const health = attachPageHealthMonitor(page, testInfo);
+
+    await page.goto("/fleet");
+    await page.getByRole("link", { name: "View asset" }).first().click();
+    await page.getByRole("link", { name: /Inbox/ }).click();
+    await expectNoHorizontalOverflow(page);
+    await page.getByRole("link", { name: "Upload paperwork" }).first().click();
+    await expect(page.getByText(/Take a photo or upload a file/i)).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await health.assertHealthy();
   });
