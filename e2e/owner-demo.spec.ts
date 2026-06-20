@@ -9,6 +9,7 @@ const ownerRoutes = [
   { path: "/dashboard", heading: "Dashboard" },
   { path: "/fleet", heading: "Fleet assets" },
   { path: "/maintenance", heading: "Maintenance" },
+  { path: "/inbox", heading: "Inbox" },
   { path: "/compliance", heading: "Compliance" },
   { path: "/documents", heading: "Documents" },
   { path: "/reports", heading: "Reports" },
@@ -50,6 +51,10 @@ test.describe("owner demo smoke tests", () => {
     await expect(
       page.getByRole("heading", { name: "Maintenance", exact: true }),
     ).toBeVisible();
+
+    await navigation.getByRole("link", { name: "Inbox" }).click();
+    await expect(page).toHaveURL(/\/inbox$/);
+    await expect(page.getByRole("heading", { name: "Inbox", exact: true })).toBeVisible();
 
     await navigation.getByRole("link", { name: "Compliance" }).click();
     await expect(page).toHaveURL(/\/compliance$/);

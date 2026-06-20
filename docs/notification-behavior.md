@@ -32,7 +32,7 @@ Local development should use:
 EMAIL_PROVIDER=none
 ```
 
-Production reminder email delivery currently supports:
+Production reminder email delivery supports:
 
 ```text
 EMAIL_PROVIDER=resend

@@ -26,6 +26,7 @@ FleetReady manages only these areas:
 - Owner-facing reports
 - Subscription billing based on active-asset limits
 - Owner account controls for support, legal links, data export, and deletion requests
+- FleetReady Inbox for owner-reviewed maintenance invoice, receipt, and photo ingestion
 
 ## Excluded Capabilities
 
@@ -63,6 +64,8 @@ FleetReady must not expand into these areas:
 - Keep subscription limits tied to active, non-archived assets rather than managers, drivers, mechanics, employees, or user seats.
 - Do not hide, delete, or mutate an owner's fleet records because of a billing-state change.
 - Treat data export and deletion requests as account controls, not as a new operational fleet workflow.
+- Treat AI extraction as a draft-preparation aid only. It must not create maintenance records without owner confirmation.
+- Keep Inbox MVP ingestion limited to maintenance invoices, receipts, and photos. Insurance cards, registrations, odometer-only photos, batch import, duplicate detection, and email forwarding remain out of scope for this slice.
 
 ## Billing Guardrails
 

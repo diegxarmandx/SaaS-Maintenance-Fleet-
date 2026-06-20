@@ -66,8 +66,9 @@ describe("validation schemas", () => {
       maintenanceType: "Oil service",
       completionDate: "2026-06-10",
       partsCost: 10,
-      laborCost: -1,
+      laborCost: 1,
       otherCost: 0,
+      taxCost: -1,
     });
 
     expect(parsed.success).toBe(false);

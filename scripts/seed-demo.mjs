@@ -144,7 +144,15 @@ async function seedDataset(dataset, ownerId) {
   await upsert("meter_readings", dataset.meterReadings);
   await upsert("maintenance_templates", dataset.maintenanceTemplates);
   await upsert("maintenance_rules", dataset.maintenanceRules);
-  await upsert("maintenance_records", dataset.maintenanceRecords);
+  await upsert(
+    "maintenance_records",
+    dataset.maintenanceRecords.map((record) => {
+      const { total_cost: generatedTotalCost, ...upsertableRecord } = record;
+      void generatedTotalCost;
+
+      return upsertableRecord;
+    }),
+  );
   await upsert("compliance_requirements", dataset.complianceRequirements);
   await upsert("compliance_records", dataset.complianceRecords);
   await upsert("documents", dataset.documents);

@@ -23,7 +23,7 @@ The CSP is generated from directive arrays rather than a single hand-written str
 
 ## Unsafe Directives
 
-Two unsafe directives remain intentionally:
+FleetReady keeps two unsafe directives for known framework and UI constraints:
 
 - `script-src 'unsafe-inline'`: required by the current Next.js App Router hydration and Flight payloads because the app does not yet issue CSP nonces from proxy middleware.
 - `style-src 'unsafe-inline'`: required by existing inline chart width styles and by Next development styles.

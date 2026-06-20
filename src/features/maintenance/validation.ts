@@ -93,6 +93,7 @@ export const completedMaintenanceFormSchema = z.object({
   partsCost: requiredNonnegativeNumber,
   laborCost: requiredNonnegativeNumber,
   otherCost: requiredNonnegativeNumber,
+  taxCost: requiredNonnegativeNumber,
   notes: optionalText(1000),
 });
 

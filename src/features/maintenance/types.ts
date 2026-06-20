@@ -67,6 +67,7 @@ export type MaintenanceRecord = {
   parts_cost: number;
   labor_cost: number;
   other_cost: number;
+  tax_cost: number;
   total_cost: number;
   notes: string | null;
   archived_at: string | null;
@@ -94,6 +95,7 @@ export type MaintenanceCostSummary = {
   partsCost: number;
   laborCost: number;
   otherCost: number;
+  taxCost: number;
   byAsset: Array<{ assetId: string; label: string; totalCost: number }>;
   byCategory: Array<{ category: string; totalCost: number }>;
 };
@@ -134,6 +136,7 @@ export type CompletedMaintenanceFormFields = {
   partsCost: string;
   laborCost: string;
   otherCost: string;
+  taxCost: string;
   notes: string;
 };
 
@@ -142,7 +145,9 @@ export type CompletedMaintenanceFormState = {
   code?: SafeActionErrorCode;
   message: string;
   fields: CompletedMaintenanceFormFields;
-  errors: Partial<Record<keyof CompletedMaintenanceFormFields | "attachment", string>>;
+  errors: Partial<
+    Record<keyof CompletedMaintenanceFormFields | "attachment" | "meterConfirmation", string>
+  >;
 };
 
 export type MaintenanceRuleFilters = {

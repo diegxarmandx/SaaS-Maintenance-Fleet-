@@ -14,7 +14,7 @@ RATE_LIMIT_KEY_SALT=
 
 `RATE_LIMIT_KEY_SALT` is used before hashing sensitive key material such as normalized emails, owner IDs, company IDs, and IP addresses. Do not reuse an application secret that may be exposed to the browser.
 
-When Redis or the key salt is missing in production, the rate-limit utility fails closed and returns a generic 429. In development and test, missing Redis fails open so explicitly enabled local demo mode remains usable without external services.
+Missing Redis or key salt makes the production rate-limit utility fail closed with a generic 429. In development and test, missing Redis fails open so local demo mode can run without external services.
 
 ## Local Redis Setup
 
@@ -61,7 +61,7 @@ Keys are built from hashed segments only. Full emails, access tokens, document n
 - Onboarding completion
 - Stripe Checkout and Billing Portal actions
 
-The app currently does not expose an owner-facing email-verification resend endpoint. The policy is configured for that endpoint when one is added. Password reset completion is handled by the Supabase authenticated session in the client form, not by a FleetReady server endpoint.
+The app has no owner-facing email-verification resend endpoint. The policy already covers that endpoint for a future route. The Supabase authenticated session in the client form handles password reset completion.
 
 ## Client IP Handling
 

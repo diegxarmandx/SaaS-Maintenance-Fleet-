@@ -167,6 +167,7 @@ const maintenanceRecordFields = [
   "parts_cost",
   "labor_cost",
   "other_cost",
+  "tax_cost",
   "total_cost",
   "notes",
   "created_at",

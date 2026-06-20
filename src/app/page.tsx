@@ -34,7 +34,7 @@ const features = [
   {
     title: "Service reminders",
     description:
-      "See upcoming and overdue work clearly, with alerts based on the readings and dates you manage.",
+      "See upcoming and overdue work with alerts based on the readings and dates you manage.",
     icon: BellRing,
   },
   {
@@ -100,7 +100,7 @@ export default function Home() {
               Features
             </a>
             <a className="hover:text-primary" href="#how-it-works">
-              How It Works
+              Workflow
             </a>
           </div>
           <div className="flex items-center gap-2">
@@ -233,7 +233,7 @@ export default function Home() {
         <div className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
           <div className="max-w-2xl">
             <p className="text-sm font-semibold uppercase tracking-[0.12em] text-primary">
-              How It Works
+              Workflow
             </p>
             <h2
               className="mt-3 text-3xl font-semibold leading-tight text-foreground"
@@ -292,7 +292,7 @@ export default function Home() {
               Features
             </a>
             <a className="hover:text-primary" href="#how-it-works">
-              How It Works
+              Workflow
             </a>
             <Link className="hover:text-primary" href="/login">
               Log In

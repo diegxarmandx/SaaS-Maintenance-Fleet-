@@ -64,6 +64,11 @@ export const serverEnvSchema = publicEnvSchema.extend({
   STRIPE_STARTER_PRICE_ID: optionalString,
   STRIPE_SMALL_FLEET_PRICE_ID: optionalString,
   STRIPE_GROWING_FLEET_PRICE_ID: optionalString,
+  AI_INGESTION_PROVIDER: z.enum(["none", "openai"]).default("none"),
+  OPENAI_API_KEY: optionalString,
+  OPENAI_INGESTION_MODEL: z
+    .preprocess(emptyStringToUndefined, z.string().trim().min(1).optional())
+    .default("gpt-4o-mini"),
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;

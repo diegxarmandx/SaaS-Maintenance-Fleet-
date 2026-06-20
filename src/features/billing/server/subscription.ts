@@ -53,7 +53,7 @@ export async function requireActiveAssetCapacity(context: OwnerDatabaseContext) 
   if (!guard.canCreateAssets) {
     throw new AppError(
       "AUTHORIZATION_ERROR",
-      guard.reason ?? "Your subscription does not currently allow another active asset.",
+      guard.reason ?? "Your subscription does not allow another active asset.",
     );
   }
 }

@@ -10,6 +10,7 @@ const accessibilityRoutes = [
   "/terms",
   "/support",
   "/dashboard",
+  "/inbox",
   "/settings",
 ] as const;
 

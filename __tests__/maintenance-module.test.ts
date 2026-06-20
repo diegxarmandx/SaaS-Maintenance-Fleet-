@@ -74,10 +74,11 @@ describe("maintenance rule and record helpers", () => {
       partsCost: "80",
       laborCost: "25",
       otherCost: "10",
+      taxCost: "5",
       notes: "",
     });
 
-    expect(calculateTotalCost(values)).toBe(115);
+    expect(calculateTotalCost(values)).toBe(120);
   });
 
   it("summarizes costs by asset and category", () => {
@@ -96,6 +97,7 @@ describe("maintenance rule and record helpers", () => {
 
     expect(summary.totalCost).toBe(180);
     expect(summary.byAsset[0]?.label).toContain("T-101");
+    expect(summary.taxCost).toBe(0);
     expect(summary.byCategory[0]?.category).toBe("Engine oil and filter");
     expect(summary.byCategory[0]?.totalCost).toBe(140);
   });
@@ -120,6 +122,7 @@ function buildRecord(
     parts_cost: totalCost,
     labor_cost: 0,
     other_cost: 0,
+    tax_cost: 0,
     total_cost: totalCost,
     notes: null,
     archived_at: null,

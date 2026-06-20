@@ -56,6 +56,12 @@ The legal/account-controls migration is:
 
 It adds the `account_deletion_status` enum and `account_deletion_requests` table for owner-requested account/company deletion. The table records owner ID, company ID, request/confirmation/processing/completion/failure/cancellation timestamps, status, a confirmation hash, and an internal failure reason field.
 
+The FleetReady Inbox migration is:
+
+- `supabase/migrations/20260617120000_fleetready_inbox_ingestion.sql`
+
+It adds `maintenance_records.tax_cost`, regenerates `maintenance_records.total_cost` from parts, labor, other, and tax, and creates owner-scoped `ingestion_jobs` plus `ingestion_job_events` for maintenance receipt draft extraction and review auditability.
+
 ## Tables
 
 - `profiles`
@@ -76,6 +82,8 @@ It adds the `account_deletion_status` enum and `account_deletion_requests` table
 - `subscription_records`
 - `stripe_events`
 - `account_deletion_requests`
+- `ingestion_jobs`
+- `ingestion_job_events`
 
 ## Security Functions
 
@@ -98,7 +106,7 @@ It adds the `account_deletion_status` enum and `account_deletion_requests` table
 - Money values use `numeric(12, 2)`.
 - Mileage and hour values use `numeric(14, 2)`.
 - Negative mileage, hours, file sizes, asset limits, and costs are rejected.
-- `maintenance_records.total_cost` is a generated column from parts, labor, and other costs.
+- `maintenance_records.total_cost` is a generated column from parts, labor, other, and tax costs.
 - Meter readings update the asset meter through a trigger.
 - A lower meter reading requires `is_correction = true` and a note.
 - The Step 3 meter-reading RPC verifies the authenticated owner company before inserting a reading.
@@ -167,12 +175,16 @@ RLS is enabled and forced for every tenant-owned table:
 - `subscription_records`
 - `stripe_events`
 - `account_deletion_requests`
+- `ingestion_jobs`
+- `ingestion_job_events`
 
 Authenticated owners can access tenant rows only where their completed profile belongs to the row's company. System maintenance templates use `company_id is null` and are readable, but only company-owned templates can be mutated by owners.
 
 `stripe_events` is deliberately different: it has RLS enabled and forced but no owner access policy. It is written by server-side service-role webhook processing only and stores a minimized event payload for idempotency and troubleshooting.
 
 `account_deletion_requests` is owner-selectable and owner-insertable for the authenticated owner company. Authenticated owners do not receive update or delete policies; status processing is reserved for an operations/service-role boundary.
+
+`ingestion_jobs` and `ingestion_job_events` are owner-selectable/mutable only for the authenticated owner and company. Storage paths are constrained to the company UUID prefix. These tables store extraction metadata, corrected review values, status transitions, provider/model metadata, and created-record references, but final maintenance records are still created only after owner confirmation.
 
 ## Storage
 
@@ -201,6 +213,7 @@ Maintenance attachments use `maintenance-attachments` and are validated before u
 - Allowed types: `application/pdf`, `image/jpeg`, `image/png`, `image/webp`
 - Maximum size: 10 MB
 - Path shape: `{company_id}/maintenance/{maintenance_record_id}/{uuid}-{filename}`
+- FleetReady Inbox draft path shape: `{company_id}/inbox/{ingestion_job_id}/{uuid}-{filename}`
 - Attachment metadata is inserted into `documents` with `category = 'maintenance'` and the matching company, asset, and maintenance record IDs.
 
 Compliance and fleet documents are validated before upload:
@@ -215,7 +228,7 @@ Compliance and fleet documents are validated before upload:
 - If upload succeeds but metadata creation fails, the server action removes the uploaded object
 - If file replacement succeeds but metadata update fails, the new object is removed and the existing file remains referenced
 - Successful file replacement now records a new `document_versions` row and keeps previous storage objects available as history.
-- HEIC is intentionally not enabled.
+- HEIC stays disabled until the platform can process it with enough consistency.
 
 ## Development Seed
 
@@ -257,7 +270,7 @@ Verified Stripe webhooks are authoritative for subscription state. Checkout succ
 ## Deferred Database Work
 
 - Reliable PDF exports.
-- Document OCR, extracted fields, and bulk import.
+- Broad document OCR, batch import, and non-maintenance ingestion types.
 - Live Supabase integration-test execution in CI.
 - Additional billing analytics beyond the operational Stripe sync fields.
 - Account deletion processing worker/runbook that transitions confirmed requests through processing to completed, failed, or canceled.

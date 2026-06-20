@@ -139,7 +139,7 @@ export function AccountDataSettings({
               </dl>
             ) : (
               <p className="text-sm leading-6 text-muted">
-                No account deletion request is currently recorded for this company.
+                This company has no account deletion request.
               </p>
             )}
           </CardContent>

@@ -29,6 +29,6 @@ curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/remi
 
 ## Future Scheduler Preparation
 
-No production schedule is committed. When production is ready, configure the approved scheduler to call `/api/cron/reminders` with the secret header and a cadence appropriate for owner reminders, usually once daily.
+No production schedule is committed. For production, configure the approved scheduler to call `/api/cron/reminders` with the secret header and an owner-reminder cadence, usually once daily.
 
-Logs intentionally include only aggregate counts and duration. They must not include owner emails, company names, file paths, secrets, or document contents.
+Logs include aggregate counts and duration. They must not include owner emails, company names, file paths, secrets, or document contents.

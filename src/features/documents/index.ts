@@ -15,6 +15,6 @@ export const documentsModule = {
   deferred: [
     "Document versioning decisions",
     "Bulk import",
-    "OCR or extracted document fields",
+    "Broad document OCR beyond the maintenance Inbox MVP",
   ],
 } satisfies ModuleDefinition;

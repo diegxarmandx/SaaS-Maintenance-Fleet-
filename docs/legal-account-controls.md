@@ -18,7 +18,7 @@ Set:
 SUPPORT_EMAIL=support@example.com
 ```
 
-When `SUPPORT_EMAIL` is missing, the support page displays a safe configuration warning and does not render a fake production contact. Configure and verify the mailbox before launch. Support messages should not include passwords, authentication tokens, signed document links, or private uploaded files.
+Missing `SUPPORT_EMAIL` makes the support page show a configuration warning instead of a fake production contact. Configure and verify the mailbox before launch. Support messages should not include passwords, authentication tokens, signed document links, or private uploaded files.
 
 ## Owner Data Export
 
@@ -39,7 +39,7 @@ The export is versioned as `fleetready-owner-data-export-v1` and includes:
 - Audit events
 - Safe subscription metadata
 
-The export intentionally excludes:
+The export excludes:
 
 - Supabase service-role keys and authentication tokens
 - Stripe webhook payloads and provider secrets

@@ -26,6 +26,7 @@
 - `src/features/dashboard`: Owner dashboard boundary with server aggregates, attention ordering, and dashboard UI
 - `src/features/fleet`: Fleet asset boundary with constants, validation, pure helpers, server queries/actions, responsive list UI, asset forms, asset profile, and meter-reading form
 - `src/features/maintenance`: Preventive maintenance boundary with status calculations, rule forms, completed record entry, history, cost summaries, attachment handling, and server actions/queries
+- `src/features/inbox`: FleetReady Inbox boundary for maintenance invoice/receipt/photo upload, server-side AI extraction, owner review, document-only save, discard, and audit status tracking
 - `src/features/compliance`: Compliance boundary with assigned requirements, status calculations, record forms, attachment handling, server actions/queries, and responsive overview/detail UI
 - `src/features/documents`: Document boundary with file validation, document library UI, relationship handling, signed URL helpers, document version history, and server actions/queries
 - `src/features/notifications`: In-app notification, reminder generation, email template, cron auth, and preference logic
@@ -77,7 +78,7 @@ Settings includes an Account and Data section:
 - Uploaded file contents are not embedded in the export; document and file metadata are included.
 - Export audit events are recorded for requested/completed states without logging exported content.
 - Deletion requests require typing the company name and are recorded as `confirmed`.
-- Deletion processing is intentionally deferred to an operations boundary; the app does not claim data is deleted until processing marks the request completed.
+- An operations workflow handles deletion processing; the app does not claim data is deleted until processing marks the request completed.
 
 See `docs/legal-account-controls.md` for retention, retries, support configuration, and launch review notes.
 
@@ -93,7 +94,7 @@ See `docs/rate-limiting.md` for exact limits and deployment configuration.
 
 The app remains a quiet operational SaaS interface. It avoids role management, dispatching, driver workflows, work orders, repair-shop scheduling, and other excluded product areas.
 
-The authenticated shell uses a desktop sidebar, mobile navigation, current company context, owner profile menu, fleet asset search, and active notification menu. The company area intentionally represents one current owner company only.
+The authenticated shell uses a desktop sidebar, mobile navigation, current company context, owner profile menu, fleet asset search, and active notification menu. The company area represents one current owner company.
 
 Statuses use text plus Lucide icons, not color alone. The current shared status vocabulary is:
 
@@ -123,7 +124,7 @@ Stripe price IDs are environment variables. The code does not hard-code live pri
 
 Checkout is started from a server action after owner and company context are verified. Billing Portal access is also server initiated and requires an existing Stripe customer ID. Checkout success redirects are treated as informational only. The verified `/api/stripe/webhook` route uses Stripe signature verification and then persists event IDs in `stripe_events` before processing, so duplicate webhooks are idempotent.
 
-Webhook processing syncs `subscription_records` and `companies` for checkout completion, subscription create/update/delete, and successful or failed invoice payment. The service-role Supabase client is used only in server code. Event payload persistence is intentionally minimal and avoids storing complete customer, invoice, or payment objects.
+Webhook processing syncs `subscription_records` and `companies` for checkout completion, subscription create/update/delete, and successful or failed invoice payment. Server code uses the service-role Supabase client. Event payload storage keeps only the fields FleetReady needs for idempotency and troubleshooting.
 
 Subscription-state behavior:
 
@@ -167,7 +168,7 @@ Step 4 implements owner-managed preventive maintenance without adding repair-sho
 
 - `/maintenance` lists active maintenance rules with search, asset/type/status filters, urgency sorting, desktop table, mobile cards, current/due-soon/overdue counts, history filters, and cost summaries.
 - `/maintenance/rules/new` creates owner maintenance rules from system templates or custom rule names.
-- `/maintenance/complete` records completed maintenance, optional receipt or invoice attachment metadata, and advances a related rule when selected.
+- `/maintenance/complete` records completed maintenance, optional receipt or invoice attachment metadata, tax cost, and advances a related rule when selected.
 - `/maintenance/history/[recordId]` displays completed maintenance detail, costs, and secure attachment download.
 - `/maintenance/history/[recordId]/edit` supports correction edits while preserving the historical record identity.
 
@@ -179,9 +180,21 @@ Maintenance status is calculated from source values, not stored permanently:
 
 Date calculations use the company configured timezone via the centralized maintenance schedule service. Mileage and engine-hour calculations use the asset's current meter values.
 
-Completed maintenance uses `public.complete_maintenance_and_update_rule(...)`, a security-definer RPC that resolves the owner company from `auth.uid()`, verifies asset/rule ownership, inserts the historical record, updates the related rule's last completed and next due values, and inserts optional attachment metadata in one database transaction.
+Completed maintenance uses `public.complete_maintenance_and_update_rule(...)`, a security-definer RPC that resolves the owner company from `auth.uid()`, verifies asset/rule ownership, inserts the historical record including parts/labor/other/tax costs, updates the related rule's last completed and next due values, and inserts optional attachment metadata in one database transaction.
 
 Attachments use the private `maintenance-attachments` bucket. Server actions validate file type and size, use company-scoped non-guessable paths, and create signed URLs for preview/download. The browser never receives storage service credentials.
+
+## FleetReady Inbox Slice
+
+FleetReady Inbox is an owner-reviewed AI draft workflow for maintenance invoices, receipts, and photos only.
+
+- `/inbox` lists recent ingestion jobs and statuses.
+- `/inbox/new` uploads one private maintenance invoice, receipt, or photo into the `maintenance-attachments` bucket under `{company_id}/inbox/{job_id}/...`.
+- `/inbox/[jobId]` previews the private file through a signed URL, shows extracted editable fields, flags low-confidence/missing data, supports manual entry fallback, saves as document-only, discards the draft, or creates a completed maintenance record.
+
+The AI adapter is server-only. The browser never receives `OPENAI_API_KEY`, private storage credentials, or public document URLs. If `AI_INGESTION_PROVIDER=none`, `OPENAI_API_KEY` is missing, or extraction fails, the job remains safe and shows the manual-entry fallback message.
+
+AI extraction can only prepare draft JSON. Final writes still pass through owner authentication, company ownership checks, Zod validation, meter-decrease confirmation, and the existing maintenance RPC. The database stores `ingestion_jobs` and `ingestion_job_events` for extraction metadata, corrected values, status, provider/model metadata, and created-record references.
 
 ## Compliance Slice
 
@@ -214,7 +227,7 @@ Step 5 implements a private owner document library.
 
 Document metadata stores both a broad domain category and the exact owner-facing `document_type`. The database also stores `storage_bucket`, so signed URL generation does not guess which bucket contains a file.
 
-Supported uploads are PDF, JPEG, and PNG. Server actions validate declared MIME type, detected file signature, size, owner relationships, company-scoped paths, and private bucket placement. Replacements create `document_versions` records and preserve previous storage objects as history. HEIC is intentionally deferred.
+Supported uploads are PDF, JPEG, and PNG. Server actions validate declared MIME type, detected file signature, size, owner relationships, company-scoped paths, and private bucket placement. Replacements create `document_versions` records and preserve previous storage objects as history. The app leaves HEIC out until the platform can process it with enough consistency.
 
 ## Testing Strategy
 
@@ -230,7 +243,8 @@ Unit tests cover:
 - Mileage and engine-hour update calculations and correction rejection
 - Responsive fleet list structure
 - Maintenance status calculations for date, mileage, hours, combined intervals, reminder thresholds, and timezone behavior
-- Completed maintenance cost calculations and cost summaries
+- Completed maintenance cost calculations and cost summaries, including tax cost
+- FleetReady Inbox extraction normalization, asset matching, meter-decrease warnings, cost mismatch warnings, and RLS migration checks
 - Static migration checks for the maintenance transaction RPC, seeded system templates, attachment metadata ownership, and archive behavior
 - Responsive maintenance UI structure and asset-profile maintenance integration
 - Compliance status calculations for expiration, reminder windows, missing requirements, archived state, urgency, and timezone boundaries
@@ -256,7 +270,7 @@ GitHub Actions runs install, lint, type checking, tests, and production build. L
 ## Deferred Integrations
 
 - Reliable PDF generation
-- Document OCR, extracted fields, and bulk import
+- Broad document OCR, batch import, and non-maintenance ingestion types
 - Live Supabase integration-test execution
 - Stripe product/price creation or reuse confirmation after the Stripe connector is re-authenticated
 - Production deployment, domain configuration, scheduler configuration, and observability service wiring

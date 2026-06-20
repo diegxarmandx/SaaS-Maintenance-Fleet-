@@ -105,6 +105,7 @@ export default async function MaintenanceRecordPage({
               <Metric label="Parts cost" value={formatCurrency(record.parts_cost)} />
               <Metric label="Labor cost" value={formatCurrency(record.labor_cost)} />
               <Metric label="Other cost" value={formatCurrency(record.other_cost)} />
+              <Metric label="Tax" value={formatCurrency(record.tax_cost)} />
               <Metric label="Total cost" value={formatCurrency(record.total_cost)} />
             </dl>
             <div className="mt-6">

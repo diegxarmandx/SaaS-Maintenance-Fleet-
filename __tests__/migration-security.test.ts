@@ -49,6 +49,14 @@ const step7MigrationSql = readFileSync(
   "utf8",
 );
 
+const inboxMigrationSql = readFileSync(
+  new URL(
+    "../supabase/migrations/20260617120000_fleetready_inbox_ingestion.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
+
 const tenantTables = [
   "profiles",
   "companies",
@@ -116,6 +124,11 @@ describe("database migration security", () => {
     expect(migrationSql).toContain("parts_cost numeric(12, 2)");
     expect(migrationSql).toContain("check (parts_cost >= 0)");
     expect(migrationSql).toContain("check (current_mileage >= 0)");
+    expect(inboxMigrationSql).toContain("tax_cost numeric(12, 2)");
+    expect(inboxMigrationSql).toContain("check (tax_cost >= 0)");
+    expect(inboxMigrationSql).toContain(
+      "parts_cost + labor_cost + other_cost + tax_cost",
+    );
   });
 
   it("adds flexible asset types for owner-facing defaults", () => {
@@ -271,5 +284,29 @@ describe("database migration security", () => {
     expect(step7MigrationSql).toContain("audit_events_owner_select");
     expect(step7MigrationSql).toContain("audit_events_owner_insert");
     expect(step7MigrationSql).not.toContain("audit_events_owner_update");
+  });
+
+  it("adds owner-scoped FleetReady Inbox ingestion audit tables", () => {
+    expect(inboxMigrationSql).toContain(
+      "create table if not exists public.ingestion_jobs",
+    );
+    expect(inboxMigrationSql).toContain(
+      "create table if not exists public.ingestion_job_events",
+    );
+    expect(inboxMigrationSql).toContain(
+      "alter table public.ingestion_jobs enable row level security",
+    );
+    expect(inboxMigrationSql).toContain(
+      "alter table public.ingestion_jobs force row level security",
+    );
+    expect(inboxMigrationSql).toContain(
+      "alter table public.ingestion_job_events enable row level security",
+    );
+    expect(inboxMigrationSql).toContain("ingestion_jobs_owner_access");
+    expect(inboxMigrationSql).toContain("ingestion_job_events_owner_select");
+    expect(inboxMigrationSql).toContain("ingestion_job_events_owner_insert");
+    expect(inboxMigrationSql).toContain(
+      "split_part(storage_path, '/', 1) = company_id::text",
+    );
   });
 });

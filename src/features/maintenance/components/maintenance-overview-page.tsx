@@ -457,11 +457,12 @@ function FilterAssetSelect({
 
 function CostSummaryCards({ history }: { history: MaintenanceHistoryResult }) {
   return (
-    <section className="grid gap-3 sm:grid-cols-4">
+    <section className="grid gap-3 sm:grid-cols-5">
       <CostCard label="Total" value={history.costSummary.totalCost} />
       <CostCard label="Parts" value={history.costSummary.partsCost} />
       <CostCard label="Labor" value={history.costSummary.laborCost} />
       <CostCard label="Other" value={history.costSummary.otherCost} />
+      <CostCard label="Tax" value={history.costSummary.taxCost} />
     </section>
   );
 }

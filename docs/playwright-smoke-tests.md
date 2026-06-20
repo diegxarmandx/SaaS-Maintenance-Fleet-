@@ -46,7 +46,7 @@ Production behavior is unchanged. Installing Playwright does not enable demo mod
 - `chromium`: desktop public, owner-demo, account-control, security-header, and accessibility smoke tests.
 - `mobile-chromium`: Pixel 5-style mobile smoke tests for landing, legal pages, dashboard, settings, mobile navigation, and account controls.
 
-Firefox and WebKit are intentionally not enabled in CI yet to keep duration and platform variance low. They can be added later if they run reliably.
+CI runs Chromium only to keep duration and platform variance low. Add Firefox and WebKit after they prove stable for this suite.
 
 ## Accessibility Gate
 

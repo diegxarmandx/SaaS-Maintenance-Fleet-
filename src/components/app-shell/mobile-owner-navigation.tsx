@@ -8,6 +8,7 @@ import {
   ClipboardCheck,
   FileArchive,
   Gauge,
+  Inbox,
   LayoutDashboard,
   Menu,
   Settings,
@@ -27,6 +28,7 @@ const icons = {
   "/dashboard": LayoutDashboard,
   "/fleet": Gauge,
   "/maintenance": ClipboardCheck,
+  "/inbox": Inbox,
   "/compliance": ShieldCheck,
   "/documents": FileArchive,
   "/reports": BarChart3,
@@ -65,7 +67,7 @@ export function MobileOwnerNavigation({ className }: MobileOwnerNavigationProps)
         >
           {ownerModules.map((item) => {
             const Icon = icons[item.href];
-            const active = pathname === item.href;
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
             return (
               <Link

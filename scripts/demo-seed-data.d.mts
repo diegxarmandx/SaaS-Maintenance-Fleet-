@@ -74,6 +74,7 @@ export interface DemoMaintenanceRecord extends DemoIdentifiedRow {
   parts_cost: number;
   labor_cost: number;
   other_cost: number;
+  tax_cost: number;
   total_cost: number;
   notes: string | null;
   archived_at: string | null;

@@ -71,12 +71,14 @@ export function CompletedMaintenanceForm({
     partsCost: state.fields.partsCost || "0",
     laborCost: state.fields.laborCost || "0",
     otherCost: state.fields.otherCost || "0",
+    taxCost: state.fields.taxCost || "0",
   });
   const totalCost = useMemo(
     () =>
       Number(costs.partsCost || 0) +
       Number(costs.laborCost || 0) +
-      Number(costs.otherCost || 0),
+      Number(costs.otherCost || 0) +
+      Number(costs.taxCost || 0),
     [costs],
   );
   const visibleRules = options.rules.filter(
@@ -190,7 +192,7 @@ export function CompletedMaintenanceForm({
             {formatCurrency(totalCost)}
           </p>
         </div>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <div className="mt-4 grid gap-4 sm:grid-cols-4">
           <CostField
             error={state.errors.partsCost}
             id="partsCost"
@@ -211,6 +213,13 @@ export function CompletedMaintenanceForm({
             label="Other cost"
             setCosts={setCosts}
             value={state.fields.otherCost}
+          />
+          <CostField
+            error={state.errors.taxCost}
+            id="taxCost"
+            label="Tax"
+            setCosts={setCosts}
+            value={state.fields.taxCost}
           />
         </div>
       </section>
@@ -264,12 +273,17 @@ function CostField({
   error,
   setCosts,
 }: {
-  id: "partsCost" | "laborCost" | "otherCost";
+  id: "partsCost" | "laborCost" | "otherCost" | "taxCost";
   label: string;
   value: string;
   error?: string | undefined;
   setCosts: React.Dispatch<
-    React.SetStateAction<{ partsCost: string; laborCost: string; otherCost: string }>
+    React.SetStateAction<{
+      partsCost: string;
+      laborCost: string;
+      otherCost: string;
+      taxCost: string;
+    }>
   >;
 }) {
   return (
@@ -306,6 +320,7 @@ function recordToFields(
     partsCost: record.parts_cost.toString(),
     laborCost: record.labor_cost.toString(),
     otherCost: record.other_cost.toString(),
+    taxCost: record.tax_cost.toString(),
     notes: record.notes ?? "",
   };
 }

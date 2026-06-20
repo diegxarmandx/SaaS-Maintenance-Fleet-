@@ -10,6 +10,7 @@ const criticalMobileRoutes = [
   "/privacy",
   "/terms",
   "/dashboard",
+  "/inbox",
   "/settings",
 ] as const;
 

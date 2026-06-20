@@ -47,6 +47,7 @@ export const emptyCompletedMaintenanceFormFields: CompletedMaintenanceFormFields
   partsCost: "0",
   laborCost: "0",
   otherCost: "0",
+  taxCost: "0",
   notes: "",
 };
 
@@ -98,6 +99,7 @@ export function getCompletedMaintenanceFieldsFromFormData(
     partsCost: getString("partsCost"),
     laborCost: getString("laborCost"),
     otherCost: getString("otherCost"),
+    taxCost: getString("taxCost"),
     notes: getString("notes"),
   };
 }
@@ -143,7 +145,7 @@ export function buildMaintenanceRulePayload(
 }
 
 export function calculateTotalCost(values: CompletedMaintenanceFormValues) {
-  return values.partsCost + values.laborCost + values.otherCost;
+  return values.partsCost + values.laborCost + values.otherCost + values.taxCost;
 }
 
 export function summarizeMaintenanceCosts(
@@ -154,6 +156,7 @@ export function summarizeMaintenanceCosts(
     partsCost: 0,
     laborCost: 0,
     otherCost: 0,
+    taxCost: 0,
     byAsset: [],
     byCategory: [],
   };
@@ -169,6 +172,7 @@ export function summarizeMaintenanceCosts(
     summary.partsCost += Number(record.parts_cost ?? 0);
     summary.laborCost += Number(record.labor_cost ?? 0);
     summary.otherCost += Number(record.other_cost ?? 0);
+    summary.taxCost += Number(record.tax_cost ?? 0);
 
     const assetLabel = `${record.asset.unit_number} ${record.asset.asset_name}`;
     const assetSummary = byAsset.get(record.asset_id) ?? {

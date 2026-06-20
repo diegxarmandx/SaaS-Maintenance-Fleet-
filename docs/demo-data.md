@@ -4,7 +4,7 @@ FleetReady includes development-only demo data for reviewing the existing owner-
 
 ## Purpose
 
-When Supabase is not configured, read-only application pages show empty not-connected states by default. Set `ENABLE_LOCAL_DEMO=1` to intentionally use the same fictional dataset so dashboard cards, fleet lists, asset profiles, meter history, maintenance, compliance, documents, reports, settings, subscription display, search, filters, sorting, pagination, and asset-limit behavior can be reviewed locally.
+When Supabase is not configured, read-only application pages show empty not-connected states. Set `ENABLE_LOCAL_DEMO=1` to use the same fictional dataset for local review of dashboard cards, fleet lists, asset profiles, meter history, maintenance, compliance, documents, reports, settings, subscription display, search, filters, sorting, pagination, and asset-limit behavior.
 
 The seed script remains available for loading the same fictional owner company into a local Supabase project when persistence, authentication, uploads, RLS, and server actions need to be tested.
 

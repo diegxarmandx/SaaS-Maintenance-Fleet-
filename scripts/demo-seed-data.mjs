@@ -986,6 +986,7 @@ function buildMaintenanceRecords(dates, assetByUnit, rules) {
       parts_cost: parts,
       labor_cost: labor,
       other_cost: other,
+      tax_cost: 0,
       total_cost: Number(parts) + Number(labor) + Number(other),
       notes: `${notes} DEMO RECORD - NOT REAL.`,
       archived_at: null,

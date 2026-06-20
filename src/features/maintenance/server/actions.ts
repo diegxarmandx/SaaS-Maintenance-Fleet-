@@ -126,6 +126,7 @@ export async function recordCompletedMaintenanceAction(
       p_parts_cost: parsed.data.partsCost,
       p_labor_cost: parsed.data.laborCost,
       p_other_cost: parsed.data.otherCost,
+      p_tax_cost: parsed.data.taxCost,
       p_notes: parsed.data.notes ?? null,
       p_attachment_name: upload.name,
       p_attachment_storage_path: upload.path,
@@ -195,6 +196,7 @@ export async function updateMaintenanceRecordAction(
         parts_cost: parsed.data.partsCost,
         labor_cost: parsed.data.laborCost,
         other_cost: parsed.data.otherCost,
+        tax_cost: parsed.data.taxCost,
         notes: parsed.data.notes ?? null,
       })
       .eq("id", recordId)

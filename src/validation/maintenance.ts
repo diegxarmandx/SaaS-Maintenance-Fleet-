@@ -29,6 +29,7 @@ export const completedMaintenanceSchema = z.object({
   partsCost: z.number().nonnegative().default(0),
   laborCost: z.number().nonnegative().default(0),
   otherCost: z.number().nonnegative().default(0),
+  taxCost: z.number().nonnegative().default(0),
   notes: z.string().trim().max(1000).optional(),
 });
 

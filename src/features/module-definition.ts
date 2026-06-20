@@ -2,6 +2,7 @@ export type ModuleHref =
   | "/dashboard"
   | "/fleet"
   | "/maintenance"
+  | "/inbox"
   | "/compliance"
   | "/documents"
   | "/reports"

@@ -17,6 +17,7 @@ The repository now includes the local product foundation plus subscription-billi
 - Preventive maintenance rule creation, status calculations, and overview
 - Completed maintenance records with transactional rule advancement
 - Maintenance history, cost summaries, and secure attachment preparation
+- FleetReady Inbox for maintenance invoice/receipt/photo uploads with private storage, server-side AI extraction when configured, owner review, manual fallback, document-only save, and discard flows
 - Compliance requirement assignment, status calculations, overview, detail, edit, and archive flows
 - Compliance document attachment preparation with private signed access
 - Fleet document library with upload, preview, secure download, replacement, archive, search, filters, and expiration views
@@ -39,7 +40,7 @@ The repository now includes the local product foundation plus subscription-billi
 - Zod validation, React Hook Form forms, and unit/static tests
 - Centralized environment validation and error handling
 
-Reliable PDF generation, OCR/extracted fields, bulk import, live Supabase CI execution, production observability service wiring, and deployment are intentionally deferred. Stripe code is implemented for test mode, but actual Stripe products/prices must be configured with real test price IDs before checkout can be used.
+The app defers reliable PDF generation, broad document OCR, bulk import, live Supabase CI execution, production observability service wiring, and deployment. FleetReady Inbox supports maintenance invoice, receipt, and photo ingestion. Real extraction requires server-only OpenAI configuration. Stripe code supports test mode, but checkout needs real test price IDs before an owner can use it.
 
 ## Routes
 
@@ -55,6 +56,9 @@ Reliable PDF generation, OCR/extracted fields, bulk import, live Supabase CI exe
 - `/dashboard`
 - `/fleet`
 - `/maintenance`
+- `/inbox`
+- `/inbox/new`
+- `/inbox/[jobId]`
 - `/compliance`
 - `/documents`
 - `/reports`
@@ -103,13 +107,23 @@ npm run test:e2e
 npm run build
 ```
 
-When Supabase environment variables are absent, owner pages render empty not-connected states by default. To intentionally inspect the read-only fictional demo workspace, enable the local-only demo flag:
+When Supabase environment variables are absent, owner pages render empty not-connected states. To inspect the read-only fictional demo workspace, enable the local demo flag:
 
 ```bash
 ENABLE_LOCAL_DEMO=1 npm run dev
 ```
 
-The explicit local demo covers the dashboard, fleet, asset profiles, maintenance, compliance, documents, reports, and settings. Saving records, uploads, signed document downloads, authentication, billing actions, and tenant-security verification still require a configured Supabase project.
+The explicit local demo covers the dashboard, fleet, asset profiles, maintenance, Inbox preview states, compliance, documents, reports, and settings. Saving records, uploads, AI extraction, signed document downloads, authentication, billing actions, and tenant-security verification still require a configured Supabase project.
+
+FleetReady Inbox uses these server-only variables:
+
+```bash
+AI_INGESTION_PROVIDER=none # use openai to enable real extraction
+OPENAI_API_KEY=
+OPENAI_INGESTION_MODEL=gpt-4o-mini
+```
+
+When `AI_INGESTION_PROVIDER=none` or `OPENAI_API_KEY` is missing, uploads still create a private Inbox draft in a configured Supabase project, then show the manual-entry fallback message instead of calling AI.
 
 For real Supabase work, keep `ENABLE_LOCAL_DEMO=0` or omit it:
 
@@ -207,7 +221,7 @@ General fleet documents are stored in the private `fleet-documents` bucket:
 {company_id}/{category}/{document_id}/{uuid}-{filename}
 ```
 
-All document downloads use short-lived signed URLs created only after the server verifies the owner company can access the document metadata. Supported document uploads are PDF, JPEG, and PNG, with declared MIME type and file-signature validation. HEIC is intentionally not enabled because the current platform does not process it reliably.
+The server creates short-lived signed URLs after it verifies the owner company can access the document metadata. Supported document uploads are PDF, JPEG, and PNG, with declared MIME type and file-signature validation. The app leaves HEIC disabled because the platform does not process it with enough consistency.
 
 ## Environment Variables
 
