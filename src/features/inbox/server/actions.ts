@@ -4,28 +4,28 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { validateUploadFile } from "@/features/documents/file-validation";
-import { recordDocumentVersion } from "@/features/documents/server/versions";
 import { assertFleetStorageQuotaAvailable } from "@/features/documents/server/storage-quota";
-import {
-  MAINTENANCE_ATTACHMENT_ALLOWED_TYPES,
-  MAINTENANCE_ATTACHMENT_MAX_SIZE_BYTES,
-} from "@/features/maintenance/constants";
-import type { MaintenanceAssetOption } from "@/features/maintenance/types";
+import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
 import {
   calculateReviewedTotal,
   findMeterDecreaseWarnings,
   getInboxReviewFieldsFromFormData,
 } from "@/features/inbox/helpers";
+import { extractAssetDraftFromFile } from "@/features/inbox/server/ai";
 import type {
   InboxReviewFormState,
   InboxUploadFormState,
   IngestionJob,
+  MaintenanceExtraction,
 } from "@/features/inbox/types";
 import { inboxReviewSchema } from "@/features/inbox/validation";
-import { extractMaintenanceDraftFromFile } from "@/features/inbox/server/ai";
-import { requireOwnerDatabaseContext } from "@/features/fleet/server/owner";
-import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
+import {
+  MAINTENANCE_ATTACHMENT_ALLOWED_TYPES,
+  MAINTENANCE_ATTACHMENT_MAX_SIZE_BYTES,
+} from "@/features/maintenance/constants";
+import type { MaintenanceAssetOption } from "@/features/maintenance/types";
 import { serverEnv } from "@/lib/env/server";
+import { enforceOwnerTenantRateLimit } from "@/lib/rate-limit/server";
 import { recordAuditEvent } from "@/server/audit/log";
 import {
   expectedActionError,
@@ -34,39 +34,38 @@ import {
   toSafeActionException,
 } from "@/server/actions/safe-error";
 
-type InboxAssetCandidate = MaintenanceAssetOption & {
-  vin_or_serial: string | null;
-  license_plate: string | null;
-  make: string | null;
-  model: string | null;
-};
-
-export async function uploadInboxDocumentAction(
+export async function uploadAssetInboxDocumentAction(
+  assetId: string,
   _previousState: InboxUploadFormState,
   formData: FormData,
 ): Promise<InboxUploadFormState> {
-  let redirectPath: string | null = null;
+  let uploaded: { bucket: string; path: string } | null = null;
   let jobCreated = false;
-  let uploaded:
-    | {
-        bucket: string;
-        path: string;
-      }
-    | null = null;
+  let redirectPath: string | null = null;
 
   try {
     const context = await requireOwnerDatabaseContext();
     await enforceOwnerTenantRateLimit("mutation", context);
     await enforceOwnerTenantRateLimit("documentUpload", context);
 
-    const candidate = formData.get("file");
+    const asset = await getActionAsset(context, assetId);
+    const note = String(formData.get("note") ?? "").trim();
+    if (note.length > 500) {
+      return {
+        status: "error",
+        code: "VALIDATION_ERROR",
+        message: "Shorten the upload note.",
+        errors: { note: "Notes must be 500 characters or fewer." },
+      };
+    }
 
+    const candidate = formData.get("file");
     if (!(candidate instanceof File) || candidate.size === 0) {
       return {
         status: "error",
         code: "INVALID_FILE",
-        message: "Choose a maintenance invoice, receipt, or photo to upload.",
-        errors: { file: "Choose a maintenance invoice, receipt, or photo to upload." },
+        message: "Choose a PDF or image to upload.",
+        errors: { file: "Choose a PDF or image to upload." },
       };
     }
 
@@ -74,7 +73,7 @@ export async function uploadInboxDocumentAction(
       allowedTypes: MAINTENANCE_ATTACHMENT_ALLOWED_TYPES,
       maxSizeBytes: MAINTENANCE_ATTACHMENT_MAX_SIZE_BYTES,
       maxSizeLabel: "10 MB",
-      allowedTypeLabel: "PDF, JPG, PNG, or WebP maintenance invoice or receipt",
+      allowedTypeLabel: "PDF, JPG, PNG, or WebP fleet document",
     });
 
     if (!validation.ok) {
@@ -93,9 +92,10 @@ export async function uploadInboxDocumentAction(
     });
 
     const jobId = crypto.randomUUID();
-    const storagePath = `${context.companyId}/inbox/${jobId}/${crypto.randomUUID()}-${validation.safeName}`;
+    const storagePath = `${context.companyId}/assets/${asset.id}/inbox/${jobId}/${crypto.randomUUID()}-${validation.safeName}`;
+    const bucket = serverEnv.SUPABASE_MAINTENANCE_ATTACHMENTS_BUCKET;
     const { error: uploadError } = await context.supabase.storage
-      .from(serverEnv.SUPABASE_MAINTENANCE_ATTACHMENTS_BUCKET)
+      .from(bucket)
       .upload(storagePath, candidate, {
         cacheControl: "3600",
         contentType: validation.mimeType,
@@ -105,36 +105,33 @@ export async function uploadInboxDocumentAction(
     if (uploadError) {
       return {
         status: "error",
-        ...toSafeActionError(uploadError, { action: "inbox.upload.storage" }),
+        ...toSafeActionError(uploadError, { action: "assetInbox.upload.storage" }),
         errors: {},
       };
     }
 
-    uploaded = {
-      bucket: serverEnv.SUPABASE_MAINTENANCE_ATTACHMENTS_BUCKET,
-      path: storagePath,
-    };
-
+    uploaded = { bucket, path: storagePath };
     const { error: insertError } = await context.supabase.from("ingestion_jobs").insert({
       id: jobId,
       company_id: context.companyId,
       owner_id: context.ownerId,
-      storage_bucket: uploaded.bucket,
-      storage_path: uploaded.path,
+      asset_id: asset.id,
+      storage_bucket: bucket,
+      storage_path: storagePath,
       original_file_name: validation.safeName,
       mime_type: validation.mimeType,
       file_size: validation.fileSize,
-      source_type: "owner_upload",
+      source_type: "asset_upload",
+      upload_note: note || null,
       status: "uploaded",
       extracted_data: {},
     });
 
     if (insertError) {
-      await context.supabase.storage.from(uploaded.bucket).remove([uploaded.path]);
-
+      await context.supabase.storage.from(bucket).remove([storagePath]);
       return formActionFailure(
         insertError,
-        { action: "inbox.upload.insertJob" },
+        { action: "assetInbox.upload.insertJob" },
         {},
         {},
       );
@@ -142,68 +139,63 @@ export async function uploadInboxDocumentAction(
 
     jobCreated = true;
     await recordInboxEvent(context, jobId, "uploaded", {
+      assetId: asset.id,
       mimeType: validation.mimeType,
       fileSize: validation.fileSize,
     });
 
-    const assets = await getInboxAssetCandidates(context);
     await context.supabase
       .from("ingestion_jobs")
       .update({ status: "classifying" })
       .eq("id", jobId)
-      .eq("company_id", context.companyId);
-    await recordInboxEvent(context, jobId, "classifying");
+      .eq("company_id", context.companyId)
+      .eq("asset_id", asset.id);
 
-    const extraction = await extractMaintenanceDraftFromFile({
-      file: candidate,
-      assets,
-    });
-
-    if (!extraction.ok) {
+    const extraction = await extractAssetDraftFromFile({ file: candidate, asset });
+    if (extraction.ok) {
       await context.supabase
         .from("ingestion_jobs")
         .update({
-          status: "failed",
-          model_provider: extraction.provider === "openai" ? "openai" : null,
-          model_version: extraction.model,
-          error_message: extraction.ownerMessage,
-        })
-        .eq("id", jobId)
-        .eq("company_id", context.companyId);
-      await recordInboxEvent(context, jobId, "failed", {
-        provider: extraction.provider,
-      });
-
-      revalidatePath("/inbox");
-      redirectPath = `/inbox/${jobId}`;
-    } else {
-      await context.supabase
-        .from("ingestion_jobs")
-        .update({
-          asset_id: extraction.extraction.asset.assetId,
           detected_document_type: extraction.extraction.detectedDocumentType,
           status: "needs_review",
           extracted_data: extraction.extraction,
           confidence_score: extraction.extraction.overallConfidence,
           model_provider: extraction.provider,
           model_version: extraction.model,
+          error_message: null,
         })
         .eq("id", jobId)
-        .eq("company_id", context.companyId);
+        .eq("company_id", context.companyId)
+        .eq("asset_id", asset.id);
       await recordInboxEvent(context, jobId, "extracted", {
         confidence: extraction.extraction.overallConfidence,
       });
-
-      revalidatePath("/inbox");
-      redirectPath = `/inbox/${jobId}`;
+    } else {
+      await context.supabase
+        .from("ingestion_jobs")
+        .update({
+          status: "needs_attention",
+          extracted_data: createEmptyExtraction(asset),
+          model_provider: extraction.provider === "openai" ? "openai" : null,
+          model_version: extraction.model,
+          error_message: extraction.ownerMessage,
+        })
+        .eq("id", jobId)
+        .eq("company_id", context.companyId)
+        .eq("asset_id", asset.id);
+      await recordInboxEvent(context, jobId, "needs_attention", {
+        provider: extraction.provider,
+      });
     }
+
+    revalidateAssetPaths(asset.id);
+    redirectPath = `/fleet/${asset.id}/inbox/${jobId}`;
   } catch (error) {
     if (uploaded && !jobCreated) {
       const context = await requireOwnerDatabaseContext();
       await context.supabase.storage.from(uploaded.bucket).remove([uploaded.path]);
     }
-
-    return formActionFailure(error, { action: "inbox.upload" }, {}, {});
+    return formActionFailure(error, { action: "assetInbox.upload" }, {}, {});
   }
 
   if (redirectPath) {
@@ -218,7 +210,8 @@ export async function uploadInboxDocumentAction(
   };
 }
 
-export async function confirmInboxMaintenanceAction(
+export async function completeAssetInboxItemAction(
+  assetId: string,
   jobId: string,
   _previousState: InboxReviewFormState,
   formData: FormData,
@@ -230,7 +223,7 @@ export async function confirmInboxMaintenanceAction(
     return {
       status: "error",
       code: "VALIDATION_ERROR",
-      message: "Review the highlighted maintenance fields.",
+      message: "Review the highlighted fields.",
       fields,
       errors: Object.fromEntries(
         Object.entries(parsed.error.flatten().fieldErrors).map(([key, messages]) => [
@@ -242,228 +235,184 @@ export async function confirmInboxMaintenanceAction(
   }
 
   const recordId = crypto.randomUUID();
-
   try {
     const context = await requireOwnerDatabaseContext();
     await enforceOwnerTenantRateLimit("mutation", context);
-
-    const job = await getActionJob(context, jobId);
+    const [job, asset] = await Promise.all([
+      getActionJob(context, assetId, jobId),
+      getActionAsset(context, assetId),
+    ]);
     assertJobCanBeReviewed(job);
 
-    const asset = await getActionAsset(context, parsed.data.assetId);
-    const meterWarnings = findMeterDecreaseWarnings(fields, asset);
+    if (parsed.data.category === "maintenance") {
+      const meterWarnings = findMeterDecreaseWarnings(fields, asset);
+      if (meterWarnings.length > 0 && !parsed.data.confirmMeterDecrease) {
+        return {
+          status: "error",
+          code: "VALIDATION_ERROR",
+          message: "Confirm the lower meter reading before marking completed.",
+          fields,
+          errors: {
+            meterConfirmation:
+              "Confirm this is intentional before saving the maintenance record.",
+          },
+        };
+      }
 
-    if (meterWarnings.length > 0 && !parsed.data.confirmMeterDecrease) {
-      return {
-        status: "error",
-        code: "VALIDATION_ERROR",
-        message: "Confirm the lower meter reading before creating the record.",
-        fields,
-        errors: {
-          meterConfirmation:
-            "Confirm this is intentional before saving the maintenance record.",
-        },
-      };
-    }
-
-    const { error } = await context.supabase.rpc("complete_maintenance_and_update_rule", {
-      p_record_id: recordId,
-      p_asset_id: parsed.data.assetId,
-      p_maintenance_rule_id: parsed.data.maintenanceRuleId ?? null,
-      p_maintenance_type: parsed.data.maintenanceType,
-      p_completion_date: parsed.data.completionDate,
-      p_mileage: parsed.data.mileage ?? null,
-      p_engine_hours: parsed.data.engineHours ?? null,
-      p_service_provider: parsed.data.serviceProvider ?? null,
-      p_parts_cost: parsed.data.partsCost,
-      p_labor_cost: parsed.data.laborCost,
-      p_other_cost: parsed.data.otherCost,
-      p_tax_cost: parsed.data.taxCost,
-      p_notes: parsed.data.notes ?? null,
-      p_attachment_name: job.original_file_name,
-      p_attachment_storage_path: job.storage_path,
-      p_attachment_mime_type: job.mime_type,
-      p_attachment_file_size: job.file_size,
-    });
-
-    if (error) {
-      return formActionFailure(
-        error,
-        { action: "inbox.confirm.rpc" },
-        fields,
-        {},
-      );
-    }
-
-    await context.supabase
-      .from("ingestion_jobs")
-      .update({
-        status: "confirmed",
-        corrected_data: {
+      const { error } = await context.supabase.rpc("complete_asset_inbox_maintenance", {
+        p_job_id: jobId,
+        p_record_id: recordId,
+        p_maintenance_rule_id: parsed.data.maintenanceRuleId || null,
+        p_maintenance_type: parsed.data.maintenanceType,
+        p_completion_date: parsed.data.completionDate,
+        p_mileage: parsed.data.mileage ?? null,
+        p_engine_hours: parsed.data.engineHours ?? null,
+        p_service_provider: parsed.data.serviceProvider || null,
+        p_parts_cost: parsed.data.partsCost,
+        p_labor_cost: parsed.data.laborCost,
+        p_other_cost: parsed.data.otherCost,
+        p_tax_cost: parsed.data.taxCost,
+        p_notes: parsed.data.notes || null,
+        p_document_name: parsed.data.documentName,
+        p_document_type: parsed.data.documentType,
+        p_corrected_data: {
           ...parsed.data,
           reviewedTotalCost: calculateReviewedTotal(fields),
           meterWarnings,
         },
-        created_record_type: "maintenance_record",
-        created_record_id: recordId,
-      })
-      .eq("id", jobId)
-      .eq("company_id", context.companyId);
-    await recordInboxEvent(context, jobId, "confirmed", {
-      createdRecordType: "maintenance_record",
-      createdRecordId: recordId,
-    });
+      });
+      if (error) {
+        return formActionFailure(
+          error,
+          { action: "assetInbox.complete.maintenance" },
+          fields,
+          {},
+        );
+      }
+    } else if (parsed.data.category === "compliance") {
+      const { error } = await context.supabase.rpc("complete_asset_inbox_compliance", {
+        p_job_id: jobId,
+        p_record_id: recordId,
+        p_requirement_id: null,
+        p_compliance_type: parsed.data.documentType,
+        p_issuing_organization: parsed.data.issuingOrganization || null,
+        p_identification_number: parsed.data.identificationNumber || null,
+        p_effective_date: parsed.data.effectiveDate || null,
+        p_expiration_date: parsed.data.expirationDate,
+        p_reminder_days: parsed.data.reminderDays,
+        p_notes: parsed.data.notes || null,
+        p_document_name: parsed.data.documentName,
+        p_corrected_data: parsed.data,
+      });
+      if (error) {
+        return formActionFailure(
+          error,
+          { action: "assetInbox.complete.compliance" },
+          fields,
+          {},
+        );
+      }
+    } else {
+      const { error } = await context.supabase.rpc("complete_asset_inbox_document", {
+        p_job_id: jobId,
+        p_document_id: recordId,
+        p_document_name: parsed.data.documentName,
+        p_document_type: parsed.data.documentType,
+        p_issue_date: parsed.data.effectiveDate || null,
+        p_expiration_date: parsed.data.expirationDate || null,
+        p_document_number: parsed.data.documentNumber || null,
+        p_notes: parsed.data.notes || null,
+        p_corrected_data: parsed.data,
+      });
+      if (error) {
+        return formActionFailure(
+          error,
+          { action: "assetInbox.complete.document" },
+          fields,
+          {},
+        );
+      }
+    }
+
     await recordAuditEvent(context, {
-      eventType: "inbox.maintenance_confirmed",
-      entityType: "maintenance_record",
+      eventType: "asset_inbox.completed",
+      entityType: parsed.data.category,
       entityId: recordId,
-      metadata: { ingestionJobId: jobId },
+      metadata: {
+        ingestionJobId: jobId,
+        assetId,
+        reviewedTotalCost: calculateReviewedTotal(fields),
+      },
     });
   } catch (error) {
-    return formActionFailure(error, { action: "inbox.confirm" }, fields, {});
+    return formActionFailure(error, { action: "assetInbox.complete" }, fields, {});
   }
 
-  revalidatePath("/inbox");
-  revalidatePath("/maintenance");
-  redirect(`/maintenance/history/${recordId}`);
+  revalidateAssetPaths(assetId);
+  redirect(`/fleet/${assetId}?section=inbox`);
 }
 
-export async function saveInboxDocumentOnlyAction(jobId: string) {
+export async function markAssetInboxNeedsAttentionAction(assetId: string, jobId: string) {
   try {
     const context = await requireOwnerDatabaseContext();
     await enforceOwnerTenantRateLimit("mutation", context);
-
-    const job = await getActionJob(context, jobId);
+    const job = await getActionJob(context, assetId, jobId);
     assertJobCanBeReviewed(job);
 
-    const documentId = crypto.randomUUID();
-    const extraction =
-      "maintenanceDate" in job.extracted_data ? job.extracted_data : null;
-    const { error } = await context.supabase.from("documents").insert({
-      id: documentId,
-      company_id: context.companyId,
-      asset_id: job.asset_id,
-      maintenance_record_id: null,
-      compliance_record_id: null,
-      document_name: job.original_file_name,
-      category: "maintenance",
-      document_type: "Maintenance receipt",
-      storage_bucket: job.storage_bucket,
-      storage_path: job.storage_path,
-      mime_type: job.mime_type,
-      file_size: job.file_size,
-      issue_date: extraction?.maintenanceDate.value ?? null,
-      notes: "Saved from FleetReady Inbox without creating a maintenance record.",
-    });
-
+    const { error } = await context.supabase
+      .from("ingestion_jobs")
+      .update({ status: "needs_attention" })
+      .eq("id", jobId)
+      .eq("company_id", context.companyId)
+      .eq("asset_id", assetId);
     if (error) {
       throw error;
     }
-
-    await recordDocumentVersion(context, {
-      documentId,
-      storageBucket: job.storage_bucket,
-      storagePath: job.storage_path,
-      mimeType: job.mime_type,
-      fileSize: job.file_size,
-      changeReason: "upload",
-    });
-    await context.supabase
-      .from("ingestion_jobs")
-      .update({
-        status: "confirmed",
-        created_record_type: "document",
-        created_record_id: documentId,
-      })
-      .eq("id", jobId)
-      .eq("company_id", context.companyId);
-    await recordInboxEvent(context, jobId, "confirmed", {
-      createdRecordType: "document",
-      createdRecordId: documentId,
-    });
+    await recordInboxEvent(context, jobId, "needs_attention");
   } catch (error) {
-    throw toSafeActionException(error, { action: "inbox.saveDocumentOnly" });
+    throw toSafeActionException(error, {
+      action: "assetInbox.markNeedsAttention",
+    });
   }
 
-  revalidatePath("/inbox");
-  revalidatePath("/documents");
-  redirect("/documents");
+  revalidateAssetPaths(assetId);
+  redirect(`/fleet/${assetId}?section=inbox`);
 }
 
-export async function discardInboxJobAction(jobId: string) {
+export async function deleteAssetInboxItemAction(assetId: string, jobId: string) {
   try {
     const context = await requireOwnerDatabaseContext();
     await enforceOwnerTenantRateLimit("mutation", context);
-    const job = await getActionJob(context, jobId);
+    const job = await getActionJob(context, assetId, jobId);
+    assertJobCanBeReviewed(job);
 
-    if (job.status === "confirmed") {
-      throw expectedActionError(
-        "CONFLICT",
-        "This Inbox draft was already confirmed.",
-      );
-    }
-
-    await recordInboxEvent(context, jobId, "discarded", {
-      deletedFile: true,
-      storageBucket: job.storage_bucket,
-      storagePath: job.storage_path,
-    });
-
-    const { error: removeFileError } = await context.supabase.storage
+    const { error: storageError } = await context.supabase.storage
       .from(job.storage_bucket)
       .remove([job.storage_path]);
-
-    if (removeFileError) {
-      throw removeFileError;
+    if (storageError) {
+      throw storageError;
     }
 
-    const { error: deleteEventsError } = await context.supabase
-      .from("ingestion_job_events")
-      .delete()
-      .eq("ingestion_job_id", jobId)
-      .eq("company_id", context.companyId);
-
-    if (deleteEventsError) {
-      throw deleteEventsError;
-    }
-
-    const { error: deleteJobError } = await context.supabase
+    const { error: deleteError } = await context.supabase
       .from("ingestion_jobs")
       .delete()
       .eq("id", jobId)
-      .eq("company_id", context.companyId);
-
-    if (deleteJobError) {
-      throw deleteJobError;
+      .eq("company_id", context.companyId)
+      .eq("asset_id", assetId);
+    if (deleteError) {
+      throw deleteError;
     }
   } catch (error) {
-    throw toSafeActionException(error, { action: "inbox.discard" });
+    throw toSafeActionException(error, { action: "assetInbox.delete" });
   }
 
-  revalidatePath("/inbox");
-  redirect("/inbox");
-}
-
-async function getInboxAssetCandidates(
-  context: Awaited<ReturnType<typeof requireOwnerDatabaseContext>>,
-): Promise<InboxAssetCandidate[]> {
-  const { data, error } = await context.supabase
-    .from("assets")
-    .select(
-      "id,unit_number,asset_name,asset_type,current_mileage,current_engine_hours,vin_or_serial:vin_or_serial_number,license_plate,make,model",
-    )
-    .eq("company_id", context.companyId)
-    .is("archived_at", null);
-
-  if (error) {
-    throw error;
-  }
-
-  return (data ?? []) as InboxAssetCandidate[];
+  revalidateAssetPaths(assetId);
+  redirect(`/fleet/${assetId}?section=inbox`);
 }
 
 async function getActionJob(
   context: Awaited<ReturnType<typeof requireOwnerDatabaseContext>>,
+  assetId: string,
   jobId: string,
 ): Promise<IngestionJob> {
   const { data, error } = await context.supabase
@@ -471,23 +420,19 @@ async function getActionJob(
     .select("*")
     .eq("id", jobId)
     .eq("company_id", context.companyId)
+    .eq("asset_id", assetId)
     .maybeSingle();
 
   if (error) {
     throw error;
   }
-
   if (!data) {
-    throw expectedActionError("NOT_FOUND", "Inbox draft was not found.");
+    throw expectedActionError("NOT_FOUND", "Inbox item was not found.");
   }
 
   return {
     ...(data as IngestionJob),
     file_size: Number((data as { file_size: number }).file_size ?? 0),
-    confidence_score:
-      (data as { confidence_score: number | null }).confidence_score === null
-        ? null
-        : Number((data as { confidence_score: number }).confidence_score),
   };
 }
 
@@ -500,26 +445,24 @@ async function getActionAsset(
     .select("id,unit_number,asset_name,asset_type,current_mileage,current_engine_hours")
     .eq("id", assetId)
     .eq("company_id", context.companyId)
+    .is("archived_at", null)
     .maybeSingle();
 
   if (error) {
     throw error;
   }
-
   if (!data) {
-    throw expectedActionError("VALIDATION_ERROR", "Choose an asset from this company.");
+    throw expectedActionError("NOT_FOUND", "Asset was not found.");
   }
-
   return data as MaintenanceAssetOption;
 }
 
 function assertJobCanBeReviewed(job: IngestionJob) {
   if (job.status === "confirmed") {
-    throw expectedActionError("CONFLICT", "This Inbox draft was already confirmed.");
+    throw expectedActionError("CONFLICT", "This Inbox item is already completed.");
   }
-
   if (job.status === "discarded") {
-    throw expectedActionError("CONFLICT", "This Inbox draft was discarded.");
+    throw expectedActionError("CONFLICT", "This Inbox item was deleted.");
   }
 }
 
@@ -535,8 +478,44 @@ async function recordInboxEvent(
     event_type: eventType,
     metadata,
   });
-
   if (error) {
     throw error;
   }
+}
+
+function createEmptyExtraction(asset: MaintenanceAssetOption): MaintenanceExtraction {
+  return {
+    detectedDocumentType: null,
+    documentCategory: { value: "general", confidence: 0 },
+    documentType: { value: "Other", confidence: 0 },
+    asset: {
+      assetId: asset.id,
+      label: `${asset.unit_number} ${asset.asset_name}`,
+      confidence: 1,
+      reason: "The upload came from this asset's Inbox.",
+    },
+    maintenanceDate: { value: null, confidence: 0 },
+    mileage: { value: null, confidence: 0 },
+    engineHours: { value: null, confidence: 0 },
+    serviceProvider: { value: null, confidence: 0 },
+    maintenanceType: { value: null, confidence: 0 },
+    notes: { value: null, confidence: 0 },
+    partsCost: { value: 0, confidence: 0 },
+    laborCost: { value: 0, confidence: 0 },
+    otherCost: { value: 0, confidence: 0 },
+    taxCost: { value: 0, confidence: 0 },
+    totalCost: { value: 0, confidence: 0 },
+    complianceExpirationDate: { value: null, confidence: 0 },
+    overallConfidence: 0,
+    warnings: ["Automatic extraction was unavailable. Review every field."],
+  };
+}
+
+function revalidateAssetPaths(assetId: string) {
+  revalidatePath(`/fleet/${assetId}`);
+  revalidatePath(`/fleet/${assetId}/upload`);
+  revalidatePath(`/fleet/${assetId}/inbox`);
+  revalidatePath("/maintenance");
+  revalidatePath("/compliance");
+  revalidatePath("/documents");
 }

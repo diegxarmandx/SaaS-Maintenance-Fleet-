@@ -5,42 +5,50 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClassName } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { InboxOverviewResult } from "@/features/inbox/server/queries";
-import type { InboxJobListItem, IngestionStatus } from "@/features/inbox/types";
-import { cn } from "@/lib/utils";
+import { getOwnerInboxStatus } from "@/features/inbox/asset-helpers";
+import type { AssetInboxOverviewResult } from "@/features/inbox/server/queries";
+import type { InboxJobListItem } from "@/features/inbox/types";
 
-export function InboxPage({ inbox }: { inbox: InboxOverviewResult }) {
+export function AssetInboxPage({
+  assetId,
+  inbox,
+}: {
+  assetId: string;
+  inbox: AssetInboxOverviewResult;
+}) {
   return (
-    <div className="grid gap-5">
+    <div className="grid gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-base font-semibold text-foreground">Draft intake</h2>
+          <h2 className="text-base font-semibold text-foreground">
+            {inbox.pendingCount} pending {inbox.pendingCount === 1 ? "item" : "items"}
+          </h2>
           <p className="mt-1 text-sm leading-6 text-muted">
-            Review uploaded maintenance receipts before they become fleet history.
+            Review paperwork before saving it to this asset&apos;s history.
           </p>
         </div>
-        <Link className={buttonClassName()} href="/inbox/new">
+        <Link className={buttonClassName()} href={`/fleet/${assetId}/upload`}>
           <Plus aria-hidden="true" className="h-4 w-4" />
-          New upload
+          Upload paperwork
         </Link>
       </div>
 
       {inbox.jobs.length === 0 ? (
         <EmptyState
           action={
-            <Link className={buttonClassName()} href="/inbox/new">
+            <Link className={buttonClassName()} href={`/fleet/${assetId}/upload`}>
               <Plus aria-hidden="true" className="h-4 w-4" />
-              Upload receipt
+              Upload paperwork
             </Link>
           }
-          description="Upload a maintenance invoice, receipt, or photo when you want FleetReady to prepare a draft for owner review."
+          description="Upload a receipt, invoice, registration, insurance card, inspection document, photo, or other fleet paperwork."
           icon={<Inbox aria-hidden="true" className="h-5 w-5" />}
-          title="No Inbox drafts yet"
+          title="No paperwork waiting for review"
         />
       ) : (
-        <section className="grid gap-3">
+        <section aria-label="Asset Inbox items" className="grid gap-3">
           {inbox.jobs.map((job) => (
-            <InboxJobCard job={job} key={job.id} />
+            <InboxJobCard assetId={assetId} job={job} key={job.id} />
           ))}
         </section>
       )}
@@ -48,48 +56,39 @@ export function InboxPage({ inbox }: { inbox: InboxOverviewResult }) {
   );
 }
 
-function InboxJobCard({ job }: { job: InboxJobListItem }) {
+function InboxJobCard({ assetId, job }: { assetId: string; job: InboxJobListItem }) {
+  const status = getOwnerInboxStatus(job.status);
+  const tone = status === "Completed" ? "success" : "warning";
+
   return (
     <Card>
       <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <CardTitle className="flex items-center gap-2">
             <FileText aria-hidden="true" className="h-4 w-4 shrink-0 text-muted" />
-            <span className="truncate">{job.original_file_name}</span>
+            <span className="break-words">{job.original_file_name}</span>
           </CardTitle>
           <p className="mt-1 text-sm text-muted">
-            {job.detected_document_type ?? "Maintenance receipt"} ·{" "}
+            {job.detected_document_type ?? "Unknown document"} ·{" "}
             {formatDateTime(job.created_at)}
           </p>
         </div>
-        <StatusBadge status={job.status} />
+        <Badge tone={tone}>{status}</Badge>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-sm text-muted">
+        <p className="text-sm text-muted">
           {job.confidence_score === null
-            ? job.error_message || "Waiting for review."
+            ? job.error_message || "Ready for owner review."
             : `${Math.round(job.confidence_score * 100)}% extraction confidence`}
-        </div>
-        <Link className={buttonClassName({ variant: "secondary" })} href={`/inbox/${job.id}`}>
-          Review draft
+        </p>
+        <Link
+          className={buttonClassName({ variant: "secondary" })}
+          href={`/fleet/${assetId}/inbox/${job.id}`}
+        >
+          {status === "Completed" ? "View item" : "Review item"}
         </Link>
       </CardContent>
     </Card>
-  );
-}
-
-function StatusBadge({ status }: { status: IngestionStatus }) {
-  const tone =
-    status === "confirmed"
-      ? "success"
-      : status === "failed" || status === "discarded"
-        ? "warning"
-        : "neutral";
-
-  return (
-    <Badge className={cn("w-fit capitalize")} tone={tone}>
-      {status.replace("_", " ")}
-    </Badge>
   );
 }
 

@@ -16,7 +16,7 @@ This checklist describes readiness for a future deployment review. Deployment an
 - Privacy, terms, and support routes exist for review.
 - Settings includes owner data export and account/company deletion request controls.
 - Account deletion request migration is versioned and uses RLS.
-- FleetReady Inbox maintenance receipt ingestion is implemented locally with server-only AI configuration, owner review, and manual fallback.
+- Asset Inbox paperwork ingestion is implemented locally with server-only AI configuration, owner review, and manual fallback.
 - Playwright browser, mobile, security-header, and accessibility smoke tests run locally and in CI using local demo mode.
 
 ## Required Before Deployment
@@ -25,7 +25,7 @@ This checklist describes readiness for a future deployment review. Deployment an
 - Configure Supabase URL, anon key, and service-role key in the approved deployment environment.
 - Create or reuse Stripe test-mode products and recurring prices.
 - Set Stripe test price IDs and webhook secret.
-- Configure `AI_INGESTION_PROVIDER`, `OPENAI_API_KEY`, and `OPENAI_INGESTION_MODEL` before expecting real FleetReady Inbox extraction. Leave `AI_INGESTION_PROVIDER=none` when AI extraction should be disabled.
+- Apply `20260620120000_asset_inbox.sql`, then configure `AI_INGESTION_PROVIDER`, `OPENAI_API_KEY`, and `OPENAI_INGESTION_MODEL` before expecting real Asset Inbox extraction.
 - Run end-to-end Stripe Checkout and Billing Portal testing in test mode.
 - Configure the approved scheduler for `/api/cron/reminders`.
 - Choose and configure monitoring for app errors, webhook failures, scheduled-job failures, database errors, auth failures, upload failures, and email failures.
@@ -64,4 +64,4 @@ This checklist describes readiness for a future deployment review. Deployment an
 - Email provider disabled: reminders and notifications are generated, but email delivery is skipped with `EMAIL_PROVIDER=none`.
 - Support email missing: `/support` shows a safe configuration warning and does not expose a fake contact.
 - Deletion request recorded: Settings shows the request status, but no data is deleted until the operations workflow processes it.
-- OpenAI missing or disabled: Inbox uploads can still fall back to manual entry, but real extraction will not run.
+- OpenAI missing or disabled: Asset Inbox uploads remain editable as Needs Attention, but real extraction will not run.

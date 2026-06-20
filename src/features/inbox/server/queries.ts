@@ -14,80 +14,93 @@ import type {
 } from "@/features/inbox/types";
 import { AppError } from "@/lib/errors";
 
-export type InboxOverviewResult = {
+export type AssetInboxOverviewResult = {
   isConfigured: boolean;
-  companyName: string;
+  assetId: string;
   jobs: InboxJobListItem[];
+  pendingCount: number;
 };
 
 export type InboxJobDetailResult = {
   isConfigured: boolean;
-  companyName: string;
   job: IngestionJob | null;
   signedUrl: string | null;
   events: IngestionEvent[];
 };
 
-export async function getInboxOverview(): Promise<InboxOverviewResult> {
+export async function getAssetInboxOverview(
+  assetId: string,
+): Promise<AssetInboxOverviewResult> {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
     return shouldUseLocalDemoData
-      ? getLocalDemoInboxOverview()
-      : { isConfigured: false, companyName: "FleetReady workspace", jobs: [] };
+      ? getLocalDemoAssetInboxOverview(assetId)
+      : { isConfigured: false, assetId, jobs: [], pendingCount: 0 };
   }
 
-  const { data, error } = await context.supabase
-    .from("ingestion_jobs")
-    .select(
-      "id,original_file_name,status,detected_document_type,confidence_score,created_record_type,created_record_id,created_at,error_message",
-    )
-    .eq("company_id", context.companyId)
-    .order("created_at", { ascending: false })
-    .limit(25);
+  const [{ data, error }, { count: pendingCount, error: pendingCountError }] =
+    await Promise.all([
+      context.supabase
+        .from("ingestion_jobs")
+        .select(
+          "id,original_file_name,status,detected_document_type,confidence_score,created_record_type,created_record_id,created_at,completed_at,error_message",
+        )
+        .eq("company_id", context.companyId)
+        .eq("asset_id", assetId)
+        .neq("status", "discarded")
+        .order("created_at", { ascending: false })
+        .limit(50),
+      context.supabase
+        .from("ingestion_jobs")
+        .select("id", { count: "exact", head: true })
+        .eq("company_id", context.companyId)
+        .eq("asset_id", assetId)
+        .in("status", [
+          "uploaded",
+          "classifying",
+          "extracted",
+          "needs_review",
+          "needs_attention",
+          "failed",
+        ]),
+    ]);
 
-  if (error) {
-    throw new AppError("DATA_ACCESS_ERROR", error.message);
+  if (error || pendingCountError) {
+    throw new AppError(
+      "DATA_ACCESS_ERROR",
+      error?.message ?? pendingCountError?.message ?? "Inbox query failed.",
+    );
   }
 
+  const jobs = (data ?? []).map(normalizeListItem);
   return {
     isConfigured: true,
-    companyName: context.companyName,
-    jobs: (data ?? []).map((job) => ({
-      ...(job as InboxJobListItem),
-      confidence_score:
-        (job as { confidence_score: number | null }).confidence_score === null
-          ? null
-          : Number((job as { confidence_score: number }).confidence_score),
-    })),
+    assetId,
+    jobs,
+    pendingCount: pendingCount ?? 0,
   };
 }
 
-export async function getInboxJobDetail(
+export async function getAssetInboxJobDetail(
+  assetId: string,
   jobId: string,
 ): Promise<InboxJobDetailResult> {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
     return shouldUseLocalDemoData
-      ? getLocalDemoInboxJobDetail(jobId)
-      : {
-          isConfigured: false,
-          companyName: "FleetReady workspace",
-          job: null,
-          signedUrl: null,
-          events: [],
-        };
+      ? getLocalDemoInboxJobDetail(assetId, jobId)
+      : { isConfigured: false, job: null, signedUrl: null, events: [] };
   }
 
   const [job, events] = await Promise.all([
-    getInboxJob(context.supabase, context.companyId, jobId),
+    getInboxJob(context.supabase, context.companyId, assetId, jobId),
     getInboxEvents(context.supabase, context.companyId, jobId),
   ]);
 
   return {
     isConfigured: true,
-    companyName: context.companyName,
     job,
     signedUrl: job
       ? await createAuthorizedSignedDocumentUrl(context.supabase, context.companyId, {
@@ -102,6 +115,7 @@ export async function getInboxJobDetail(
 async function getInboxJob(
   supabase: SupabaseServerClient,
   companyId: string,
+  assetId: string,
   jobId: string,
 ) {
   const { data, error } = await supabase
@@ -109,17 +123,14 @@ async function getInboxJob(
     .select("*")
     .eq("id", jobId)
     .eq("company_id", companyId)
+    .eq("asset_id", assetId)
     .maybeSingle();
 
   if (error) {
     throw new AppError("DATA_ACCESS_ERROR", error.message);
   }
 
-  if (!data) {
-    return null;
-  }
-
-  return normalizeJob(data as IngestionJob);
+  return data ? normalizeJob(data as IngestionJob) : null;
 }
 
 async function getInboxEvents(
@@ -141,6 +152,27 @@ async function getInboxEvents(
   return (data ?? []) as IngestionEvent[];
 }
 
+function normalizeListItem(job: Record<string, unknown>): InboxJobListItem {
+  return {
+    id: String(job.id),
+    original_file_name: String(job.original_file_name),
+    status: job.status as InboxJobListItem["status"],
+    detected_document_type:
+      typeof job.detected_document_type === "string" ? job.detected_document_type : null,
+    confidence_score:
+      job.confidence_score === null || job.confidence_score === undefined
+        ? null
+        : Number(job.confidence_score),
+    created_record_type:
+      (job.created_record_type as InboxJobListItem["created_record_type"]) ?? null,
+    created_record_id:
+      typeof job.created_record_id === "string" ? job.created_record_id : null,
+    created_at: String(job.created_at),
+    completed_at: typeof job.completed_at === "string" ? job.completed_at : null,
+    error_message: typeof job.error_message === "string" ? job.error_message : null,
+  };
+}
+
 function normalizeJob(job: IngestionJob): IngestionJob {
   const parsedExtraction = maintenanceExtractionSchema.safeParse(job.extracted_data);
   const extractedData: MaintenanceExtraction | Record<string, never> =
@@ -149,105 +181,104 @@ function normalizeJob(job: IngestionJob): IngestionJob {
   return {
     ...job,
     file_size: Number(job.file_size ?? 0),
-    confidence_score:
-      job.confidence_score === null ? null : Number(job.confidence_score),
+    confidence_score: job.confidence_score === null ? null : Number(job.confidence_score),
+    upload_note: job.upload_note ?? null,
+    completed_at: job.completed_at ?? null,
     extracted_data: extractedData,
   };
 }
 
-function getLocalDemoInboxOverview(): InboxOverviewResult {
+function getLocalDemoAssetInboxOverview(assetId: string): AssetInboxOverviewResult {
+  const job = getLocalDemoJob(assetId);
   return {
     isConfigured: true,
-    companyName: localDemoIdentity.companyName,
-    jobs: [localDemoInboxJob],
+    assetId,
+    jobs: job ? [normalizeListItem(job)] : [],
+    pendingCount: job ? 1 : 0,
   };
 }
 
-function getLocalDemoInboxJobDetail(jobId: string): InboxJobDetailResult {
-  const job =
-    jobId === localDemoInboxJob.id ? normalizeJob(localDemoInboxJobDetail) : null;
-
+function getLocalDemoInboxJobDetail(
+  assetId: string,
+  jobId: string,
+): InboxJobDetailResult {
+  const job = getLocalDemoJob(assetId);
+  const matches = job?.id === jobId;
   return {
     isConfigured: true,
-    companyName: localDemoIdentity.companyName,
-    job,
+    job: matches && job ? normalizeJob(job) : null,
     signedUrl: null,
-    events: job
-      ? [
-          {
-            id: "demo-inbox-event-uploaded",
-            ingestion_job_id: job.id,
-            company_id: job.company_id,
-            event_type: "uploaded",
-            metadata: {},
-            created_at: job.created_at,
-          },
-          {
-            id: "demo-inbox-event-extracted",
-            ingestion_job_id: job.id,
-            company_id: job.company_id,
-            event_type: "extracted",
-            metadata: { demo: true },
-            created_at: job.updated_at,
-          },
-        ]
-      : [],
+    events:
+      matches && job
+        ? [
+            {
+              id: "demo-asset-inbox-event",
+              ingestion_job_id: job.id,
+              company_id: job.company_id,
+              event_type: "extracted",
+              metadata: { demo: true },
+              created_at: job.created_at,
+            },
+          ]
+        : [],
   };
 }
 
-const demoAsset = getLocalDemoDataset().assets[0];
+function getLocalDemoJob(assetId: string): IngestionJob | null {
+  const asset = getLocalDemoDataset().assets.find((item) => item.id === assetId);
+  if (!asset) {
+    return null;
+  }
 
-const demoExtraction: MaintenanceExtraction = {
-  detectedDocumentType: "Maintenance receipt",
-  asset: {
-    assetId: demoAsset?.id ?? null,
-    label: demoAsset ? `${demoAsset.unit_number} ${demoAsset.asset_name}` : null,
-    confidence: 0.91,
-    reason: "DEMO RECORD - NOT REAL.",
-  },
-  maintenanceDate: { value: new Date().toISOString().slice(0, 10), confidence: 0.88 },
-  mileage: { value: demoAsset?.current_mileage ?? null, confidence: 0.8 },
-  engineHours: { value: null, confidence: 0 },
-  serviceProvider: { value: "DEMO Provider - Receipt Scan", confidence: 0.86 },
-  maintenanceType: { value: "Oil and filter service", confidence: 0.9 },
-  notes: {
-    value: "Draft extracted from demo receipt. DEMO RECORD - NOT REAL.",
-    confidence: 0.78,
-  },
-  partsCost: { value: 82.5, confidence: 0.92 },
-  laborCost: { value: 45, confidence: 0.88 },
-  otherCost: { value: 0, confidence: 0.8 },
-  taxCost: { value: 9.56, confidence: 0.84 },
-  totalCost: { value: 137.06, confidence: 0.88 },
-  overallConfidence: 0.86,
-  warnings: ["Review demo values before saving. DEMO RECORD - NOT REAL."],
-};
-
-const localDemoInboxJob: InboxJobListItem = {
-  id: "demo-inbox-job",
-  original_file_name: "demo-maintenance-receipt.pdf",
-  status: "needs_review",
-  detected_document_type: "Maintenance receipt",
-  confidence_score: 0.86,
-  created_record_type: null,
-  created_record_id: null,
-  error_message: null,
-  created_at: new Date().toISOString(),
-};
-
-const localDemoInboxJobDetail: IngestionJob = {
-  ...localDemoInboxJob,
-  company_id: localDemoIdentity.companyId,
-  owner_id: "demo-owner",
-  asset_id: demoAsset?.id ?? null,
-  storage_bucket: "maintenance-attachments",
-  storage_path: `${localDemoIdentity.companyId}/inbox/demo-inbox-job/demo-maintenance-receipt.pdf`,
-  mime_type: "application/pdf",
-  file_size: 42_000,
-  source_type: "owner_upload",
-  extracted_data: demoExtraction,
-  corrected_data: null,
-  model_provider: "none",
-  model_version: null,
-  updated_at: new Date().toISOString(),
-};
+  const now = new Date().toISOString();
+  return {
+    id: `demo-inbox-${asset.id}`,
+    company_id: localDemoIdentity.companyId,
+    owner_id: "demo-owner",
+    asset_id: asset.id,
+    storage_bucket: "maintenance-attachments",
+    storage_path: `${localDemoIdentity.companyId}/assets/${asset.id}/inbox/demo-receipt.pdf`,
+    original_file_name: "demo-oil-change-invoice.pdf",
+    mime_type: "application/pdf",
+    file_size: 42_000,
+    source_type: "asset_upload",
+    detected_document_type: "Maintenance receipt",
+    status: "needs_review",
+    extracted_data: {
+      detectedDocumentType: "Maintenance receipt",
+      documentCategory: { value: "maintenance", confidence: 0.9 },
+      documentType: { value: "Maintenance receipt", confidence: 0.9 },
+      asset: {
+        assetId: asset.id,
+        label: `${asset.unit_number} ${asset.asset_name}`,
+        confidence: 1,
+        reason: "The upload came from this asset's Inbox.",
+      },
+      maintenanceDate: { value: now.slice(0, 10), confidence: 0.82 },
+      mileage: { value: asset.current_mileage, confidence: 0.75 },
+      engineHours: { value: null, confidence: 0 },
+      serviceProvider: { value: "Demo Service Center", confidence: 0.8 },
+      maintenanceType: { value: "Oil and filter service", confidence: 0.86 },
+      notes: { value: "DEMO RECORD - NOT REAL.", confidence: 0.7 },
+      partsCost: { value: 82.5, confidence: 0.9 },
+      laborCost: { value: 45, confidence: 0.88 },
+      otherCost: { value: 0, confidence: 0.8 },
+      taxCost: { value: 9.56, confidence: 0.82 },
+      totalCost: { value: 137.06, confidence: 0.88 },
+      complianceExpirationDate: { value: null, confidence: 0 },
+      overallConfidence: 0.84,
+      warnings: ["DEMO RECORD - NOT REAL. Review before saving."],
+    },
+    corrected_data: null,
+    confidence_score: 0.84,
+    model_provider: "mock",
+    model_version: "deterministic-asset-inbox-v1",
+    error_message: null,
+    upload_note: "Demo upload for interface review.",
+    created_record_type: null,
+    created_record_id: null,
+    completed_at: null,
+    created_at: now,
+    updated_at: now,
+  };
+}

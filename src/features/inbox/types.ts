@@ -5,6 +5,7 @@ export const ingestionStatuses = [
   "classifying",
   "extracted",
   "needs_review",
+  "needs_attention",
   "confirmed",
   "failed",
   "discarded",
@@ -12,7 +13,9 @@ export const ingestionStatuses = [
 
 export type IngestionStatus = (typeof ingestionStatuses)[number];
 
-export type IngestionRecordType = "maintenance_record" | "document";
+export type IngestionRecordType = "maintenance_record" | "compliance_record" | "document";
+
+export type InboxDocumentCategory = "maintenance" | "compliance" | "general";
 
 export type ExtractedField<T> = {
   value: T | null;
@@ -28,6 +31,8 @@ export type IngestionAssetSuggestion = {
 
 export type MaintenanceExtraction = {
   detectedDocumentType: string | null;
+  documentCategory?: ExtractedField<InboxDocumentCategory> | undefined;
+  documentType?: ExtractedField<string> | undefined;
   asset: IngestionAssetSuggestion;
   maintenanceDate: ExtractedField<string>;
   mileage: ExtractedField<number>;
@@ -40,6 +45,7 @@ export type MaintenanceExtraction = {
   otherCost: ExtractedField<number>;
   taxCost: ExtractedField<number>;
   totalCost: ExtractedField<number>;
+  complianceExpirationDate?: ExtractedField<string> | undefined;
   overallConfidence: number;
   warnings: string[];
 };
@@ -54,7 +60,7 @@ export type IngestionJob = {
   original_file_name: string;
   mime_type: string;
   file_size: number;
-  source_type: "owner_upload";
+  source_type: "owner_upload" | "asset_upload";
   detected_document_type: string | null;
   status: IngestionStatus;
   extracted_data: MaintenanceExtraction | Record<string, never>;
@@ -63,8 +69,10 @@ export type IngestionJob = {
   model_provider: string | null;
   model_version: string | null;
   error_message: string | null;
+  upload_note: string | null;
   created_record_type: IngestionRecordType | null;
   created_record_id: string | null;
+  completed_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -82,11 +90,13 @@ export type InboxUploadFormState = {
   status: "idle" | "error";
   code?: SafeActionErrorCode;
   message: string;
-  errors: Partial<Record<"file", string>>;
+  errors: Partial<Record<"file" | "note", string>>;
 };
 
 export type InboxReviewFields = {
-  assetId: string;
+  category: InboxDocumentCategory;
+  documentName: string;
+  documentType: string;
   maintenanceRuleId: string;
   maintenanceType: string;
   completionDate: string;
@@ -97,6 +107,12 @@ export type InboxReviewFields = {
   laborCost: string;
   otherCost: string;
   taxCost: string;
+  issuingOrganization: string;
+  identificationNumber: string;
+  effectiveDate: string;
+  expirationDate: string;
+  reminderDays: string;
+  documentNumber: string;
   notes: string;
   confirmMeterDecrease: boolean;
 };
@@ -119,5 +135,6 @@ export type InboxJobListItem = Pick<
   | "created_record_type"
   | "created_record_id"
   | "created_at"
+  | "completed_at"
   | "error_message"
 >;

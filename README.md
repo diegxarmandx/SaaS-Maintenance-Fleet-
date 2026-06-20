@@ -17,7 +17,7 @@ The repository now includes the local product foundation plus subscription-billi
 - Preventive maintenance rule creation, status calculations, and overview
 - Completed maintenance records with transactional rule advancement
 - Maintenance history, cost summaries, and secure attachment preparation
-- FleetReady Inbox for maintenance invoice/receipt/photo uploads with private storage, server-side AI extraction when configured, owner review, manual fallback, document-only save, and discard flows
+- Asset Inbox tabs for private receipts, invoices, registrations, insurance cards, inspections, photos, and other paperwork with owner review before records are created
 - Compliance requirement assignment, status calculations, overview, detail, edit, and archive flows
 - Compliance document attachment preparation with private signed access
 - Fleet document library with upload, preview, secure download, replacement, archive, search, filters, and expiration views
@@ -40,7 +40,7 @@ The repository now includes the local product foundation plus subscription-billi
 - Zod validation, React Hook Form forms, and unit/static tests
 - Centralized environment validation and error handling
 
-The app defers reliable PDF generation, broad document OCR, bulk import, live Supabase CI execution, production observability service wiring, and deployment. FleetReady Inbox supports maintenance invoice, receipt, and photo ingestion. Real extraction requires server-only OpenAI configuration. Stripe code supports test mode, but checkout needs real test price IDs before an owner can use it.
+The app defers reliable PDF generation, bulk import, live Supabase CI execution, production observability service wiring, and deployment. Asset Inbox extraction requires server-only OpenAI configuration; missing AI configuration leaves an editable Needs Attention item. Stripe code supports test mode, but checkout needs real test price IDs before an owner can use it.
 
 ## Routes
 
@@ -56,9 +56,6 @@ The app defers reliable PDF generation, broad document OCR, bulk import, live Su
 - `/dashboard`
 - `/fleet`
 - `/maintenance`
-- `/inbox`
-- `/inbox/new`
-- `/inbox/[jobId]`
 - `/compliance`
 - `/documents`
 - `/reports`
@@ -71,6 +68,8 @@ The app defers reliable PDF generation, broad document OCR, bulk import, live Su
 - `/fleet/new`
 - `/fleet/[assetId]`
 - `/fleet/[assetId]/edit`
+- `/fleet/[assetId]/upload`
+- `/fleet/[assetId]/inbox/[jobId]`
 - `/maintenance/rules/new`
 - `/maintenance/complete`
 - `/maintenance/history/[recordId]`
@@ -113,9 +112,9 @@ When Supabase environment variables are absent, owner pages render empty not-con
 ENABLE_LOCAL_DEMO=1 npm run dev
 ```
 
-The explicit local demo covers the dashboard, fleet, asset profiles, maintenance, Inbox preview states, compliance, documents, reports, and settings. Saving records, uploads, AI extraction, signed document downloads, authentication, billing actions, and tenant-security verification still require a configured Supabase project.
+The explicit local demo covers the dashboard, fleet, asset profile tabs, Asset Inbox preview states, maintenance, compliance, documents, reports, and settings. Saving records, uploads, signed document downloads, authentication, billing actions, and tenant-security verification still require a configured Supabase project.
 
-FleetReady Inbox uses these server-only variables:
+Asset Inbox AI extraction uses these server-only variables:
 
 ```bash
 AI_INGESTION_PROVIDER=none # use openai to enable real extraction
@@ -123,7 +122,7 @@ OPENAI_API_KEY=
 OPENAI_INGESTION_MODEL=gpt-4o-mini
 ```
 
-When `AI_INGESTION_PROVIDER=none` or `OPENAI_API_KEY` is missing, uploads still create a private Inbox draft in a configured Supabase project, then show the manual-entry fallback message instead of calling AI.
+When `AI_INGESTION_PROVIDER=none` or `OPENAI_API_KEY` is missing, uploads remain private and appear as Needs Attention so the owner can enter the fields manually.
 
 For real Supabase work, keep `ENABLE_LOCAL_DEMO=0` or omit it:
 

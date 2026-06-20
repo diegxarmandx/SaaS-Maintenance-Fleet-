@@ -10,7 +10,6 @@ const accessibilityRoutes = [
   "/terms",
   "/support",
   "/dashboard",
-  "/inbox",
   "/settings",
 ] as const;
 
@@ -23,6 +22,17 @@ test.describe("accessibility smoke tests", () => {
       await expectNoSeriousAccessibilityViolations(page, testInfo);
     });
   }
+
+  test("asset Inbox has no serious or critical axe violations", async ({
+    page,
+  }, testInfo) => {
+    await page.goto("/fleet");
+    await page.getByRole("link", { name: "DT-01", exact: true }).first().click();
+    await page.getByRole("link", { name: /Inbox/ }).click();
+    await expectNoSeriousAccessibilityViolations(page, testInfo);
+    await page.getByRole("link", { name: "Review item" }).click();
+    await expectNoSeriousAccessibilityViolations(page, testInfo);
+  });
 
   test("account deletion validation state has no serious or critical axe violations", async ({
     page,

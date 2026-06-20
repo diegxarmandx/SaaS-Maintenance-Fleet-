@@ -1,21 +1,22 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
 import {
   Archive,
   ClipboardCheck,
-  DollarSign,
   FileText,
   Gauge,
+  Inbox,
   Pencil,
   ShieldCheck,
 } from "lucide-react";
 
-import { ConfirmationSubmit } from "@/components/ui/confirmation-dialog";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { buttonClassName } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmationSubmit } from "@/components/ui/confirmation-dialog";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
+import type { getAssetComplianceSnapshot } from "@/features/compliance/server/queries";
+import type { getAssetDocumentSnapshot } from "@/features/documents/server/queries";
 import { AssetPhoto } from "@/features/fleet/components/asset-photo";
 import { MeterReadingForm } from "@/features/fleet/components/meter-reading-form";
 import {
@@ -25,22 +26,40 @@ import {
 } from "@/features/fleet/helpers";
 import { archiveAssetAction } from "@/features/fleet/server/actions";
 import type { AssetProfile } from "@/features/fleet/types";
-import type { getAssetComplianceSnapshot } from "@/features/compliance/server/queries";
-import type { getAssetDocumentSnapshot } from "@/features/documents/server/queries";
+import {
+  assetSections,
+  getAssetTimeline,
+  type AssetSection,
+} from "@/features/inbox/asset-helpers";
+import { AssetInboxPage } from "@/features/inbox/components/inbox-page";
+import type { AssetInboxOverviewResult } from "@/features/inbox/server/queries";
 import type { getAssetMaintenanceSnapshot } from "@/features/maintenance/server/queries";
+import { cn } from "@/lib/utils";
 
 type AssetProfilePageProps = {
   asset: AssetProfile;
+  section: AssetSection;
   maintenanceSnapshot: Awaited<ReturnType<typeof getAssetMaintenanceSnapshot>>;
   complianceSnapshot: Awaited<ReturnType<typeof getAssetComplianceSnapshot>>;
   documentSnapshot: Awaited<ReturnType<typeof getAssetDocumentSnapshot>>;
+  inboxSnapshot: AssetInboxOverviewResult;
+};
+
+const sectionLabels: Record<AssetSection, string> = {
+  overview: "Overview",
+  maintenance: "Maintenance",
+  compliance: "Compliance",
+  documents: "Documents",
+  inbox: "Inbox",
 };
 
 export function AssetProfilePage({
   asset,
+  section,
   maintenanceSnapshot,
   complianceSnapshot,
   documentSnapshot,
+  inboxSnapshot,
 }: AssetProfilePageProps) {
   const assetTitle = `${asset.unit_number} ${asset.asset_name}`;
 
@@ -85,393 +104,399 @@ export function AssetProfilePage({
         title={assetTitle}
       />
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="grid gap-5">
-          <section className="rounded-lg border border-border bg-surface p-4">
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <AssetPhoto
-                alt={assetTitle}
-                className="h-28 w-28 shrink-0"
-                src={asset.assetImageUrl}
-              />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <StatusBadge status={asset.attentionStatus} />
-                  <span className="rounded-md border border-border bg-surface-muted px-2 py-1 text-xs font-medium text-muted">
-                    {asset.status}
-                  </span>
-                </div>
-                <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <Metric
-                    label="Mileage"
-                    value={`${formatMeterValue(asset.current_mileage)} mi`}
-                  />
-                  <Metric
-                    label="Engine hours"
-                    value={`${formatMeterValue(asset.current_engine_hours)} hrs`}
-                  />
-                  <Metric label="Updated" value={formatShortDate(asset.updated_at)} />
-                  <Metric label="Plate" value={asset.license_plate || "Missing"} />
-                  <Metric
-                    label="VIN or serial"
-                    value={asset.vin_or_serial_number || "Missing"}
-                  />
-                  <Metric
-                    label="Purchase price"
-                    value={formatCurrency(asset.purchase_price)}
-                  />
-                </dl>
+      <nav
+        aria-label="Asset sections"
+        className="mb-5 overflow-x-auto border-b border-border"
+      >
+        <div className="flex min-w-max gap-1">
+          {assetSections.map((item) => (
+            <Link
+              aria-current={section === item ? "page" : undefined}
+              className={cn(
+                "relative flex min-h-11 items-center gap-2 px-3 py-2 text-sm font-medium text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                section === item &&
+                  "text-foreground after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:bg-primary",
+              )}
+              href={
+                item === "overview"
+                  ? `/fleet/${asset.id}`
+                  : `/fleet/${asset.id}?section=${item}`
+              }
+              key={item}
+            >
+              {sectionLabels[item]}
+              {item === "inbox" && inboxSnapshot.pendingCount > 0 ? (
+                <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs text-foreground">
+                  {inboxSnapshot.pendingCount}
+                </span>
+              ) : null}
+            </Link>
+          ))}
+        </div>
+      </nav>
+
+      {section === "overview" ? (
+        <OverviewSection
+          asset={asset}
+          complianceSnapshot={complianceSnapshot}
+          documentSnapshot={documentSnapshot}
+          inboxSnapshot={inboxSnapshot}
+          maintenanceSnapshot={maintenanceSnapshot}
+        />
+      ) : null}
+      {section === "maintenance" ? (
+        <MaintenanceSection assetId={asset.id} snapshot={maintenanceSnapshot} />
+      ) : null}
+      {section === "compliance" ? (
+        <ComplianceSection assetId={asset.id} snapshot={complianceSnapshot} />
+      ) : null}
+      {section === "documents" ? (
+        <DocumentsSection assetId={asset.id} snapshot={documentSnapshot} />
+      ) : null}
+      {section === "inbox" ? (
+        <AssetInboxPage assetId={asset.id} inbox={inboxSnapshot} />
+      ) : null}
+    </>
+  );
+}
+
+function OverviewSection({
+  asset,
+  maintenanceSnapshot,
+  complianceSnapshot,
+  documentSnapshot,
+  inboxSnapshot,
+}: Omit<AssetProfilePageProps, "section">) {
+  const timeline = getAssetTimeline({
+    meterReadings: asset.meterReadings,
+    maintenanceRecords: maintenanceSnapshot.recentRecords,
+    complianceRecords: complianceSnapshot.items.flatMap((item) =>
+      item.recordId
+        ? [
+            {
+              id: item.recordId,
+              compliance_type: item.compliance_type,
+              effective_date: item.effective_date,
+              expiration_date: item.expiration_date ?? asset.updated_at.slice(0, 10),
+            },
+          ]
+        : [],
+    ),
+    documents: documentSnapshot.recentDocuments,
+    completedInboxItems: inboxSnapshot.jobs.flatMap((job) =>
+      job.completed_at
+        ? [
+            {
+              id: job.id,
+              title: job.detected_document_type ?? job.original_file_name,
+              completed_at: job.completed_at,
+              created_record_type: job.created_record_type,
+              created_record_id: job.created_record_id,
+            },
+          ]
+        : [],
+    ),
+  }).slice(0, 12);
+
+  return (
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-5">
+        <section className="rounded-lg border border-border bg-surface p-4">
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <AssetPhoto
+              alt={`${asset.unit_number} ${asset.asset_name}`}
+              className="h-28 w-28 shrink-0"
+              src={asset.assetImageUrl}
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusBadge status={asset.attentionStatus} />
+                <span className="rounded-md border border-border bg-surface-muted px-2 py-1 text-xs font-medium text-foreground">
+                  {asset.status}
+                </span>
               </div>
-            </div>
-          </section>
-
-          <section className="grid gap-5 lg:grid-cols-2">
-            <PreparedSection
-              count={maintenanceSnapshot.rules.length}
-              icon={<ClipboardCheck aria-hidden="true" className="h-5 w-5" />}
-              title="Maintenance"
-            />
-            <PreparedSection
-              count={complianceSnapshot.items.length}
-              icon={<ShieldCheck aria-hidden="true" className="h-5 w-5" />}
-              title="Compliance"
-            />
-            <PreparedSection
-              count={documentSnapshot.recentDocuments.length}
-              icon={<FileText aria-hidden="true" className="h-5 w-5" />}
-              title="Documents"
-            />
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign aria-hidden="true" className="h-5 w-5 text-primary" />
-                  Expense summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-semibold text-foreground">
-                  {formatCurrency(asset.expenseTotal)}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-muted">
-                  Total completed maintenance cost recorded for this asset.
-                </p>
-              </CardContent>
-            </Card>
-          </section>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ClipboardCheck aria-hidden="true" className="h-5 w-5 text-primary" />
-                Maintenance status
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <StatusBadge status={maintenanceSnapshot.status} />
-              <div className="mt-4 grid gap-4 sm:grid-cols-3">
+              <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <Metric
-                  label="Active rules"
-                  value={maintenanceSnapshot.rules.length.toString()}
+                  label="Mileage"
+                  value={`${formatMeterValue(asset.current_mileage)} mi`}
                 />
                 <Metric
-                  label="Overdue"
-                  value={maintenanceSnapshot.overdueItems.length.toString()}
+                  label="Engine hours"
+                  value={`${formatMeterValue(asset.current_engine_hours)} hrs`}
+                />
+                <Metric label="Plate" value={asset.license_plate || "Missing"} />
+                <Metric
+                  label="VIN or serial"
+                  value={asset.vin_or_serial_number || "Missing"}
                 />
                 <Metric
                   label="Maintenance cost"
                   value={formatCurrency(maintenanceSnapshot.costSummary.totalCost)}
                 />
-              </div>
-              {maintenanceSnapshot.overdueItems.length > 0 ? (
-                <div className="mt-4 rounded-lg border border-danger/25 bg-danger/10 p-3">
-                  <h3 className="text-sm font-semibold text-danger">Overdue items</h3>
-                  <ul className="mt-2 grid gap-2 text-sm text-danger">
-                    {maintenanceSnapshot.overdueItems.slice(0, 3).map((rule) => (
-                      <li key={rule.id}>{rule.name}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              {maintenanceSnapshot.nextDueItems.length > 0 ? (
-                <div className="mt-4">
-                  <h3 className="text-sm font-semibold text-foreground">Next due</h3>
-                  <ul className="mt-2 grid gap-2 text-sm text-muted">
-                    {maintenanceSnapshot.nextDueItems.map((rule) => (
-                      <li key={rule.id}>
-                        {rule.name} - {formatShortDate(rule.next_due_date)}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              <div className="mt-4">
-                <a
-                  className="text-sm font-medium text-primary hover:underline"
-                  href="/maintenance"
-                >
-                  View maintenance
-                </a>
-              </div>
-            </CardContent>
-          </Card>
+                <Metric label="Updated" value={formatShortDate(asset.updated_at)} />
+              </dl>
+            </div>
+          </div>
+        </section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ShieldCheck aria-hidden="true" className="h-5 w-5 text-primary" />
-                Compliance status
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <StatusBadge status={complianceSnapshot.status} />
-              <div className="mt-4 grid gap-4 sm:grid-cols-3">
-                <Metric
-                  label="Tracked items"
-                  value={complianceSnapshot.items.length.toString()}
-                />
-                <Metric
-                  label="Expired"
-                  value={complianceSnapshot.expiredItems.length.toString()}
-                />
-                <Metric
-                  label="Missing"
-                  value={complianceSnapshot.missingItems.length.toString()}
-                />
-              </div>
-              {complianceSnapshot.expiredItems.length > 0 ? (
-                <div className="mt-4 rounded-lg border border-danger/25 bg-danger/10 p-3">
-                  <h3 className="text-sm font-semibold text-danger">Expired items</h3>
-                  <ul className="mt-2 grid gap-2 text-sm text-danger">
-                    {complianceSnapshot.expiredItems.slice(0, 3).map((item) => (
-                      <li key={item.id}>
-                        {item.compliance_type} - {formatShortDate(item.expiration_date)}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              {complianceSnapshot.missingItems.length > 0 ? (
-                <div className="mt-4 rounded-lg border border-sky-700/20 bg-sky-50 p-3">
-                  <h3 className="text-sm font-semibold text-sky-800">
-                    Missing assigned requirements
-                  </h3>
-                  <ul className="mt-2 grid gap-2 text-sm text-sky-800">
-                    {complianceSnapshot.missingItems.slice(0, 3).map((item) => (
-                      <li key={item.id}>{item.compliance_type}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              {complianceSnapshot.expiringItems.length > 0 ? (
-                <div className="mt-4">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Upcoming expirations
-                  </h3>
-                  <ul className="mt-2 grid gap-2 text-sm text-muted">
-                    {complianceSnapshot.expiringItems.slice(0, 5).map((item) => (
-                      <li key={item.id}>
-                        {item.compliance_type} - {formatShortDate(item.expiration_date)}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              <div className="mt-4">
-                <Link
-                  className="text-sm font-medium text-primary hover:underline"
-                  href="/compliance"
-                >
-                  View compliance
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <SummaryCard
+            icon={<ClipboardCheck aria-hidden="true" className="h-5 w-5" />}
+            label="Maintenance rules"
+            value={maintenanceSnapshot.rules.length}
+          />
+          <SummaryCard
+            icon={<ShieldCheck aria-hidden="true" className="h-5 w-5" />}
+            label="Compliance items"
+            value={complianceSnapshot.items.length}
+          />
+          <SummaryCard
+            icon={<FileText aria-hidden="true" className="h-5 w-5" />}
+            label="Documents"
+            value={documentSnapshot.recentDocuments.length}
+          />
+          <SummaryCard
+            icon={<Inbox aria-hidden="true" className="h-5 w-5" />}
+            label="Pending review"
+            value={inboxSnapshot.pendingCount}
+          />
+        </section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText aria-hidden="true" className="h-5 w-5 text-primary" />
-                Documents
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {documentSnapshot.categoryCounts.length > 0 ? (
-                <dl className="grid gap-3 sm:grid-cols-2">
-                  {documentSnapshot.categoryCounts.slice(0, 4).map((category) => (
-                    <Metric
-                      key={category.category}
-                      label={category.category}
-                      value={category.count.toString()}
-                    />
-                  ))}
-                </dl>
-              ) : (
-                <p className="text-sm leading-6 text-muted">
-                  No documents have been linked to this asset.
-                </p>
-              )}
-              {documentSnapshot.expiredDocuments.length > 0 ? (
-                <div className="mt-4 rounded-lg border border-danger/25 bg-danger/10 p-3">
-                  <h3 className="text-sm font-semibold text-danger">Expired documents</h3>
-                  <ul className="mt-2 grid gap-2 text-sm text-danger">
-                    {documentSnapshot.expiredDocuments.slice(0, 3).map((document) => (
-                      <li key={document.id}>{document.document_name}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              {documentSnapshot.expiringDocuments.length > 0 ? (
-                <div className="mt-4">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Upcoming document expirations
-                  </h3>
-                  <ul className="mt-2 grid gap-2 text-sm text-muted">
-                    {documentSnapshot.expiringDocuments.slice(0, 5).map((document) => (
-                      <li key={document.id}>
-                        {document.document_name} -{" "}
-                        {formatShortDate(document.expiration_date)}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              {documentSnapshot.recentDocuments.length > 0 ? (
-                <div className="mt-4">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Recently uploaded
-                  </h3>
-                  <ul className="mt-2 grid gap-2 text-sm text-muted">
-                    {documentSnapshot.recentDocuments.slice(0, 5).map((document) => (
-                      <li key={document.id}>
-                        <a
-                          className="font-medium text-foreground hover:text-primary"
-                          href={`/documents/${document.id}`}
-                        >
-                          {document.document_name}
-                        </a>
-                        {document.signedUrl ? (
-                          <a
-                            className="ml-2 text-primary hover:underline"
-                            href={document.signedUrl}
-                          >
-                            Secure file
-                          </a>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              <div className="mt-4">
-                <Link
-                  className="text-sm font-medium text-primary hover:underline"
-                  href="/documents"
-                >
-                  View documents
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Gauge aria-hidden="true" className="h-5 w-5 text-primary" />
-                Meter history
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {asset.meterReadings.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-border bg-background p-4 text-sm leading-6 text-muted">
-                  No meter readings yet. Add mileage or engine-hour readings to keep
-                  reminders accurate.
-                </div>
-              ) : (
-                <ol className="divide-y divide-border">
-                  {asset.meterReadings.map((reading) => (
-                    <li
-                      className="grid gap-2 py-3 text-sm sm:grid-cols-[160px_1fr_auto]"
-                      key={reading.id}
-                    >
-                      <span className="font-medium text-foreground">
-                        {reading.reading_type === "mileage" ? "Mileage" : "Engine hours"}
-                      </span>
-                      <span className="font-mono text-foreground">
-                        {formatMeterValue(reading.reading_value)}
-                      </span>
-                      <span className="text-muted">
-                        {formatShortDate(reading.reading_date)}
-                      </span>
-                      {reading.notes ? (
-                        <p className="text-muted sm:col-span-3">{reading.notes}</p>
-                      ) : null}
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent completed maintenance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {maintenanceSnapshot.recentRecords.length === 0 ? (
-                <p className="text-sm leading-6 text-muted">
-                  No completed maintenance has been recorded for this asset.
-                </p>
-              ) : (
-                <ol className="divide-y divide-border">
-                  {maintenanceSnapshot.recentRecords.map((record) => (
-                    <li
-                      className="flex items-center justify-between gap-3 py-3"
-                      key={record.id}
-                    >
-                      <div>
-                        <a
-                          className="text-sm font-medium text-foreground hover:text-primary"
-                          href={`/maintenance/history/${record.id}`}
-                        >
-                          {record.maintenance_type}
-                        </a>
-                        <p className="mt-1 text-xs text-muted">
-                          {formatShortDate(record.completion_date)}
-                        </p>
-                      </div>
-                      <span className="font-mono text-sm text-foreground">
-                        {formatCurrency(record.total_cost)}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <aside className="grid gap-5 self-start">
-          <Card>
-            <CardHeader>
-              <CardTitle>Add meter reading</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <MeterReadingForm assetId={asset.id} />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Overview notes</CardTitle>
-            </CardHeader>
-            <CardContent>
+        <Card>
+          <CardHeader>
+            <CardTitle>Asset timeline</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {timeline.length === 0 ? (
               <p className="text-sm leading-6 text-muted">
-                {asset.notes || "No notes recorded for this asset."}
+                Activity will appear here as paperwork, maintenance, compliance, and meter
+                readings are recorded.
               </p>
-            </CardContent>
-          </Card>
-        </aside>
+            ) : (
+              <ol className="divide-y divide-border">
+                {timeline.map((item) => (
+                  <li
+                    className="grid gap-1 py-3 sm:grid-cols-[120px_1fr_auto]"
+                    key={item.id}
+                  >
+                    <time className="text-sm text-muted">
+                      {formatShortDate(item.date)}
+                    </time>
+                    <span className="text-sm font-medium text-foreground">
+                      {item.title}
+                    </span>
+                    <span className="text-sm text-muted">{item.detail}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </CardContent>
+        </Card>
       </div>
-    </>
+
+      <aside className="grid content-start gap-5">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Gauge aria-hidden="true" className="h-5 w-5 text-primary" />
+              Add meter reading
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MeterReadingForm assetId={asset.id} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Overview notes</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm leading-6 text-muted">
+            {asset.notes || "No notes recorded for this asset."}
+          </CardContent>
+        </Card>
+      </aside>
+    </div>
+  );
+}
+
+function MaintenanceSection({
+  assetId,
+  snapshot,
+}: {
+  assetId: string;
+  snapshot: Awaited<ReturnType<typeof getAssetMaintenanceSnapshot>>;
+}) {
+  return (
+    <div className="grid gap-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+        <div>
+          <StatusBadge status={snapshot.status} />
+          <p className="mt-2 text-sm text-muted">
+            {snapshot.overdueItems.length} overdue · {snapshot.rules.length} active rules
+          </p>
+        </div>
+        <Link className={buttonClassName()} href="/maintenance/complete">
+          Record completed maintenance
+        </Link>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Maintenance rules</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {snapshot.rules.length === 0 ? (
+            <p className="text-sm text-muted">
+              No maintenance rules are connected to this asset.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {snapshot.rules.map((rule) => (
+                <li className="flex justify-between gap-3 py-3" key={rule.id}>
+                  <span className="text-sm font-medium">{rule.name}</span>
+                  <StatusBadge status={rule.status} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Completed maintenance</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {snapshot.recentRecords.length === 0 ? (
+            <p className="text-sm text-muted">No completed maintenance yet.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {snapshot.recentRecords.map((record) => (
+                <li
+                  className="flex items-center justify-between gap-3 py-3"
+                  key={record.id}
+                >
+                  <Link
+                    className="text-sm font-medium hover:text-primary"
+                    href={`/maintenance/history/${record.id}`}
+                  >
+                    {record.maintenance_type}
+                  </Link>
+                  <span className="font-mono text-sm">
+                    {formatCurrency(record.total_cost)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+      <Link
+        className="text-sm font-medium text-primary hover:underline"
+        href={`/fleet/${assetId}?section=inbox`}
+      >
+        Upload maintenance paperwork through this asset&apos;s Inbox
+      </Link>
+    </div>
+  );
+}
+
+function ComplianceSection({
+  assetId,
+  snapshot,
+}: {
+  assetId: string;
+  snapshot: Awaited<ReturnType<typeof getAssetComplianceSnapshot>>;
+}) {
+  return (
+    <div className="grid gap-5">
+      <div>
+        <StatusBadge status={snapshot.status} />
+        <p className="mt-2 text-sm text-muted">
+          {snapshot.expiredItems.length} expired · {snapshot.missingItems.length} missing
+        </p>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Compliance records</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {snapshot.items.length === 0 ? (
+            <p className="text-sm text-muted">
+              No compliance requirements are connected to this asset.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {snapshot.items.map((item) => (
+                <li className="flex justify-between gap-3 py-3" key={item.id}>
+                  <div>
+                    <p className="text-sm font-medium">{item.compliance_type}</p>
+                    <p className="mt-1 text-xs text-muted">
+                      {item.expiration_date
+                        ? `Expires ${formatShortDate(item.expiration_date)}`
+                        : "Expiration date missing"}
+                    </p>
+                  </div>
+                  <StatusBadge status={item.status} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+      <Link
+        className="text-sm font-medium text-primary hover:underline"
+        href={`/fleet/${assetId}?section=inbox`}
+      >
+        Upload compliance paperwork through this asset&apos;s Inbox
+      </Link>
+    </div>
+  );
+}
+
+function DocumentsSection({
+  assetId,
+  snapshot,
+}: {
+  assetId: string;
+  snapshot: Awaited<ReturnType<typeof getAssetDocumentSnapshot>>;
+}) {
+  return (
+    <div className="grid gap-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-muted">Private documents connected to this asset.</p>
+        <Link className={buttonClassName()} href={`/fleet/${assetId}/upload`}>
+          Upload paperwork
+        </Link>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Documents</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {snapshot.recentDocuments.length === 0 ? (
+            <p className="text-sm text-muted">
+              No documents have been linked to this asset.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {snapshot.recentDocuments.map((document) => (
+                <li
+                  className="flex items-center justify-between gap-3 py-3"
+                  key={document.id}
+                >
+                  <Link
+                    className="min-w-0 break-words text-sm font-medium hover:text-primary"
+                    href={`/documents/${document.id}`}
+                  >
+                    {document.document_name}
+                  </Link>
+                  <StatusBadge status={document.status} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -484,30 +509,23 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function PreparedSection({
+function SummaryCard({
   icon,
-  title,
-  count,
+  label,
+  value,
 }: {
-  icon: ReactNode;
-  title: string;
-  count: number;
+  icon: React.ReactNode;
+  label: string;
+  value: number;
 }) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <span className="text-primary">{icon}</span>
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-2xl font-semibold text-foreground">{count}</p>
-        <p className="mt-2 text-sm leading-6 text-muted">
-          {count === 1
-            ? "Record connected to this asset."
-            : "Records connected to this asset."}
-        </p>
+      <CardContent className="flex items-center gap-3 pt-4">
+        <span className="text-primary">{icon}</span>
+        <div>
+          <p className="text-2xl font-semibold">{value}</p>
+          <p className="text-sm text-muted">{label}</p>
+        </div>
       </CardContent>
     </Card>
   );

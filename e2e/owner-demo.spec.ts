@@ -9,7 +9,6 @@ const ownerRoutes = [
   { path: "/dashboard", heading: "Dashboard" },
   { path: "/fleet", heading: "Fleet assets" },
   { path: "/maintenance", heading: "Maintenance" },
-  { path: "/inbox", heading: "Inbox" },
   { path: "/compliance", heading: "Compliance" },
   { path: "/documents", heading: "Documents" },
   { path: "/reports", heading: "Reports" },
@@ -52,10 +51,6 @@ test.describe("owner demo smoke tests", () => {
       page.getByRole("heading", { name: "Maintenance", exact: true }),
     ).toBeVisible();
 
-    await navigation.getByRole("link", { name: "Inbox" }).click();
-    await expect(page).toHaveURL(/\/inbox$/);
-    await expect(page.getByRole("heading", { name: "Inbox", exact: true })).toBeVisible();
-
     await navigation.getByRole("link", { name: "Compliance" }).click();
     await expect(page).toHaveURL(/\/compliance$/);
     await expect(
@@ -83,6 +78,44 @@ test.describe("owner demo smoke tests", () => {
     await health.assertHealthy();
   });
 
+  test("asset profile exposes an asset-only Inbox and upload entry point", async ({
+    page,
+  }, testInfo) => {
+    const health = attachPageHealthMonitor(page, testInfo);
+
+    await page.goto("/fleet");
+    await page.getByRole("link", { name: "DT-01", exact: true }).first().click();
+    await page.getByRole("link", { name: /Inbox/ }).click();
+    await expect(page).toHaveURL(/section=inbox/);
+    await expect(page.getByText(/pending item/i).first()).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Upload paperwork" }).first(),
+    ).toBeVisible();
+
+    await page.getByRole("link", { name: "Review item" }).click();
+    await expect(page.getByRole("heading", { name: "Review paperwork" })).toBeVisible();
+    await expect(page.getByLabel("Save as")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Mark completed" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Needs attention" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Delete item" })).toBeVisible();
+    await page.getByRole("link", { name: "Inbox" }).last().click();
+
+    await page.getByRole("link", { name: "Upload paperwork" }).first().click();
+    await expect(
+      page.getByRole("heading", {
+        name: "Upload paperwork for DT-01",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(page.getByText(/attached to this asset automatically/i)).toBeVisible();
+    await health.assertHealthy();
+  });
+
+  test("global Inbox route is removed", async ({ page }) => {
+    const response = await page.goto("/inbox");
+    expect(response?.status()).toBe(404);
+  });
+
   test("settings exposes legal links and safe account data controls", async ({
     page,
   }, testInfo) => {
@@ -95,9 +128,7 @@ test.describe("owner demo smoke tests", () => {
         name: "Legal, support, export, and deletion controls",
       }),
     ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "Download JSON export" }),
-    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Download JSON export" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Privacy notice" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Terms of service" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Support" }).first()).toBeVisible();

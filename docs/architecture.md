@@ -184,17 +184,17 @@ Completed maintenance uses `public.complete_maintenance_and_update_rule(...)`, a
 
 Attachments use the private `maintenance-attachments` bucket. Server actions validate file type and size, use company-scoped non-guessable paths, and create signed URLs for preview/download. The browser never receives storage service credentials.
 
-## FleetReady Inbox Slice
+## Asset Inbox Slice
 
-FleetReady Inbox is an owner-reviewed AI draft workflow for maintenance invoices, receipts, and photos only.
+Asset Inbox is an owner-reviewed paperwork workflow scoped to a known fleet asset.
 
-- `/inbox` lists recent ingestion jobs and statuses.
-- `/inbox/new` uploads one private maintenance invoice, receipt, or photo into the `maintenance-attachments` bucket under `{company_id}/inbox/{job_id}/...`.
-- `/inbox/[jobId]` previews the private file through a signed URL, shows extracted editable fields, flags low-confidence/missing data, supports manual entry fallback, saves as document-only, discards the draft, or creates a completed maintenance record.
+- `/fleet/[assetId]?section=inbox` lists that asset's Pending Review, Completed, and Needs Attention items.
+- `/fleet/[assetId]/upload` uploads one private PDF or image under `{company_id}/assets/{asset_id}/inbox/{job_id}/...`.
+- `/fleet/[assetId]/inbox/[jobId]` previews the private file, shows editable extraction fields, and can create a new maintenance record, compliance record, or general document after owner confirmation.
 
-The AI adapter is server-only. The browser never receives `OPENAI_API_KEY`, private storage credentials, or public document URLs. If `AI_INGESTION_PROVIDER=none`, `OPENAI_API_KEY` is missing, or extraction fails, the job remains safe and shows the manual-entry fallback message.
+The AI adapter is server-only and receives the already-authorized asset context. The browser never receives `OPENAI_API_KEY`, private storage credentials, or public document URLs. If extraction is unavailable, the item becomes Needs Attention and remains editable.
 
-AI extraction can only prepare draft JSON. Final writes still pass through owner authentication, company ownership checks, Zod validation, meter-decrease confirmation, and the existing maintenance RPC. The database stores `ingestion_jobs` and `ingestion_job_events` for extraction metadata, corrected values, status, provider/model metadata, and created-record references.
+Final writes pass through owner authentication, company and asset ownership checks, Zod validation, meter-decrease confirmation, and transaction-backed database functions. There is no global Inbox, QR-code flow, public upload surface, or email forwarding.
 
 ## Compliance Slice
 
