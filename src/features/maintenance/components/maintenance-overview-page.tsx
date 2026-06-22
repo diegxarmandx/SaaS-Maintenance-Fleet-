@@ -7,6 +7,7 @@ import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { MobileCardList } from "@/components/ui/mobile-card-list";
+import { MetricCard } from "@/components/ui/metric-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
@@ -73,12 +74,27 @@ export function MaintenanceOverviewPage({
       ) : (
         <div className="grid gap-6">
           <section className="grid gap-3 sm:grid-cols-3">
-            <CountCard count={overview.counts.Current} label="Current" />
-            <CountCard count={overview.counts["Due soon"]} label="Due soon" />
-            <CountCard count={overview.counts.Overdue} label="Overdue" />
+            <MetricCard
+              detail="Active rules"
+              label="Current"
+              tone="success"
+              value={overview.counts.Current}
+            />
+            <MetricCard
+              detail="Active rules"
+              label="Due soon"
+              tone="warning"
+              value={overview.counts["Due soon"]}
+            />
+            <MetricCard
+              detail="Active rules"
+              label="Overdue"
+              tone="danger"
+              value={overview.counts.Overdue}
+            />
           </section>
 
-          <section className="rounded-lg border border-border bg-surface p-4">
+          <section className="rounded-lg border border-border bg-surface p-4 shadow-[var(--shadow-card)]">
             <form
               action="/maintenance"
               className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[minmax(0,1fr)_180px_180px_170px_160px_auto]"
@@ -230,22 +246,6 @@ export function MaintenanceOverviewPage({
         </div>
       )}
     </>
-  );
-}
-
-function CountCard({
-  label,
-  count,
-}: {
-  label: "Current" | "Due soon" | "Overdue";
-  count: number;
-}) {
-  return (
-    <section className="rounded-lg border border-border bg-surface p-4">
-      <StatusBadge status={label} />
-      <p className="mt-3 text-3xl font-semibold text-foreground">{count}</p>
-      <p className="mt-1 text-sm text-muted">Active rules</p>
-    </section>
   );
 }
 

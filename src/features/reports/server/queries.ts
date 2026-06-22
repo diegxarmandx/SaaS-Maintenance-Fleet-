@@ -254,7 +254,7 @@ function getDisconnectedReportData(searchParams: ReportSearchParams): ReportData
 
   return {
     isConfigured: false,
-    companyName: "FleetReady workspace",
+    companyName: "Maintly workspace",
     filters,
     preference,
     assets: [],

@@ -1,6 +1,6 @@
 # Playwright Smoke Tests
 
-FleetReady includes a local Playwright smoke-test suite for public pages, owner-demo navigation, account/data controls, mobile behavior, security headers, and accessibility.
+Maintly includes a local Playwright smoke-test suite for public pages, owner-demo navigation, account/data controls, mobile behavior, security headers, and accessibility.
 
 ## Install Browsers
 

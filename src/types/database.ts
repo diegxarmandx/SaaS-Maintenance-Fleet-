@@ -45,6 +45,12 @@ export type Database = {
         };
         Returns: string;
       };
+      update_owner_profile_name: {
+        Args: {
+          p_full_name: string;
+        };
+        Returns: undefined;
+      };
     };
   };
 };

@@ -44,4 +44,12 @@ test.describe("accessibility smoke tests", () => {
       .waitFor();
     await expectNoSeriousAccessibilityViolations(page, testInfo);
   });
+
+  test("editable company settings have no serious or critical axe violations", async ({
+    page,
+  }, testInfo) => {
+    await page.goto("/settings");
+    await page.getByRole("button", { name: "Edit company profile" }).click();
+    await expectNoSeriousAccessibilityViolations(page, testInfo);
+  });
 });

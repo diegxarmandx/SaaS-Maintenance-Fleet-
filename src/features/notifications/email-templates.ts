@@ -22,13 +22,13 @@ export function buildReminderEmail(
 ) {
   const url = new URL(candidate.href, appUrl).toString();
   const subject = candidate.title;
-  const text = `${candidate.message}\n\nOpen FleetReady: ${url}`;
+  const text = `${candidate.message}\n\nOpen Maintly: ${url}`;
   const html = [
     '<div style="font-family:Arial,sans-serif;line-height:1.5;color:#17211b">',
     `<h1 style="font-size:18px;margin:0 0 12px">${escapeHtml(candidate.title)}</h1>`,
     `<p>${escapeHtml(candidate.message)}</p>`,
-    `<p><a href="${url}" style="color:#17633a;font-weight:600">Open FleetReady</a></p>`,
-    '<p style="color:#64736b;font-size:12px">FleetReady tracks information entered by the owner and does not submit, renew, or guarantee legal compliance.</p>',
+    `<p><a href="${url}" style="color:#17633a;font-weight:600">Open Maintly</a></p>`,
+    '<p style="color:#64736b;font-size:12px">Maintly tracks information entered by the owner and does not submit, renew, or guarantee legal compliance.</p>',
     "</div>",
   ].join("");
 
@@ -40,9 +40,9 @@ export function buildWeeklyFleetSummaryEmail({
   dashboardUrl,
   counts,
 }: WeeklyFleetSummaryEmailInput) {
-  const subject = `Weekly FleetReady summary for ${companyName}`;
+  const subject = `Weekly Maintly summary for ${companyName}`;
   const text = [
-    `Weekly FleetReady summary for ${companyName}`,
+    `Weekly Maintly summary for ${companyName}`,
     "",
     `Overdue maintenance: ${counts.overdueMaintenance}`,
     `Maintenance due soon: ${counts.maintenanceDueSoon}`,
@@ -55,7 +55,7 @@ export function buildWeeklyFleetSummaryEmail({
   ].join("\n");
   const html = [
     '<div style="font-family:Arial,sans-serif;line-height:1.5;color:#17211b">',
-    `<h1 style="font-size:18px;margin:0 0 12px">Weekly FleetReady summary</h1>`,
+    `<h1 style="font-size:18px;margin:0 0 12px">Weekly Maintly summary</h1>`,
     `<p>${escapeHtml(companyName)}</p>`,
     "<ul>",
     `<li>Overdue maintenance: ${counts.overdueMaintenance}</li>`,

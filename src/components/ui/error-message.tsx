@@ -11,7 +11,7 @@ export function ErrorMessage({
 }: ErrorMessageProps) {
   return (
     <div
-      className="flex items-start gap-3 rounded-lg border border-danger/25 bg-danger/10 p-4 text-sm text-danger"
+      className="flex items-start gap-3 rounded-lg border border-danger/25 bg-danger/10 p-4 text-sm text-danger shadow-[var(--shadow-card)]"
       role="alert"
     >
       <AlertTriangle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />

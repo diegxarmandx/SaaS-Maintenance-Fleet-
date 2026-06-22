@@ -1,6 +1,6 @@
 # Security Headers
 
-FleetReady sets application security headers from `config/security-headers.ts` through the Next.js `headers()` configuration hook.
+Maintly sets application security headers from `config/security-headers.ts` through the Next.js `headers()` configuration hook.
 
 ## Header Set
 
@@ -23,7 +23,7 @@ The CSP is generated from directive arrays rather than a single hand-written str
 
 ## Unsafe Directives
 
-FleetReady keeps two unsafe directives for known framework and UI constraints:
+Maintly keeps two unsafe directives for known framework and UI constraints:
 
 - `script-src 'unsafe-inline'`: required by the current Next.js App Router hydration and Flight payloads because the app does not yet issue CSP nonces from proxy middleware.
 - `style-src 'unsafe-inline'`: required by existing inline chart width styles and by Next development styles.

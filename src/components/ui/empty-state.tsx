@@ -9,9 +9,9 @@ type EmptyStateProps = {
 
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
-    <section className="rounded-lg border border-dashed border-border bg-surface px-4 py-10 text-center">
+    <section className="rounded-lg border border-dashed border-slate-300 bg-surface px-5 py-12 text-center shadow-[var(--shadow-card)]">
       {icon ? (
-        <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-surface-muted text-muted">
+        <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
           {icon}
         </div>
       ) : null}

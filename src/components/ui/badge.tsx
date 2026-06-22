@@ -2,7 +2,7 @@ import type { HTMLAttributes } from "react";
 
 import { cn } from "@/lib/utils";
 
-type BadgeTone = "neutral" | "success" | "warning";
+type BadgeTone = "neutral" | "success" | "warning" | "danger" | "info";
 
 type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
   tone?: BadgeTone;
@@ -10,8 +10,10 @@ type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
 
 const toneClassNames: Record<BadgeTone, string> = {
   neutral: "border-border bg-surface-muted text-foreground",
-  success: "border-primary/20 bg-primary/10 text-primary",
-  warning: "border-accent/30 bg-accent/10 text-accent-foreground",
+  success: "border-success/25 bg-success/10 text-success",
+  warning: "border-warning/30 bg-warning/10 text-warning-foreground",
+  danger: "border-danger/25 bg-danger/10 text-danger",
+  info: "border-info/25 bg-info/10 text-info",
 };
 
 export function Badge({ className, tone = "neutral", ...props }: BadgeProps) {

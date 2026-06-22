@@ -16,7 +16,7 @@ const fallbackOwnerContext: OwnerWorkspaceContext = {
   ownerName: "Fleet owner",
   ownerEmail: null,
   companyId: null,
-  companyName: "FleetReady workspace",
+  companyName: "Maintly workspace",
 };
 
 const localDemoOwnerContext: OwnerWorkspaceContext = {
@@ -68,7 +68,7 @@ export async function getOwnerWorkspaceContext(): Promise<OwnerWorkspaceContext>
       ownerName: profile.full_name || user.email || "Fleet owner",
       ownerEmail: profile.email ?? user.email ?? null,
       companyId: profile.company_id,
-      companyName: company?.company_name ?? "FleetReady workspace",
+      companyName: company?.company_name ?? "Maintly workspace",
     };
   } catch {
     return fallbackOwnerContext;

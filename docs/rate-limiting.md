@@ -1,6 +1,6 @@
 # Rate Limiting and Abuse Protection
 
-FleetReady uses a centralized Redis-compatible rate-limit layer for owner-facing abuse protection. Production enforcement is designed for Vercel/serverless runtimes and uses Upstash Redis through `@upstash/ratelimit`.
+Maintly uses a centralized Redis-compatible rate-limit layer for owner-facing abuse protection. Production enforcement is designed for Vercel/serverless runtimes and uses Upstash Redis through `@upstash/ratelimit`.
 
 ## Required Environment
 

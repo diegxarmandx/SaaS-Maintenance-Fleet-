@@ -12,7 +12,7 @@ export default function OnboardingPage() {
       <section className="mx-auto w-full max-w-3xl rounded-lg border border-border bg-surface p-6 shadow-sm">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.12em] text-primary">
-            FleetReady
+            Maintly
           </p>
           <h1 className="mt-3 text-3xl font-semibold text-foreground">
             Create your owner workspace

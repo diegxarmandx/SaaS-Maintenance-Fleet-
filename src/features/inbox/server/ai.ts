@@ -54,7 +54,7 @@ export async function extractAssetDraftFromFile({
       provider: "none",
       model: null,
       ownerMessage:
-        "FleetReady could not read this file automatically. Review the fields and enter any missing details.",
+        "Maintly could not read this file automatically. Review the fields and enter any missing details.",
     };
   }
 
@@ -237,7 +237,7 @@ function extractionFailure(provider: "openai", model: string): IngestionExtracti
     provider,
     model,
     ownerMessage:
-      "FleetReady could not read this file automatically. Review the fields and enter any missing details.",
+      "Maintly could not read this file automatically. Review the fields and enter any missing details.",
   };
 }
 

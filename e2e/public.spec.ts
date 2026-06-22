@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { expectNoHorizontalOverflow, expectSecurityHeaders } from "./helpers/page-health";
 
 const publicRoutes = [
-  { path: "/", heading: /Keep every service, reading, and expiration under control/i },
+  { path: "/", heading: /Maintenance control for small fleets/i },
   { path: "/login", heading: "Sign in" },
   { path: "/signup", heading: "Create owner account" },
   { path: "/privacy", heading: "Privacy Notice" },
@@ -28,9 +28,7 @@ test.describe("public route smoke tests", () => {
   }) => {
     await page.goto("/");
 
-    await expect(
-      page.getByRole("link", { name: /start managing your fleet/i }),
-    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Get Started" }).first()).toBeVisible();
     await page.getByRole("link", { name: "Privacy" }).click();
     await expect(page).toHaveURL(/\/privacy$/);
     await expect(page.getByText(/Last updated:/i)).toBeVisible();
@@ -44,8 +42,30 @@ test.describe("public route smoke tests", () => {
     await page.getByRole("link", { name: "Support" }).click();
     await expect(page).toHaveURL(/\/support$/);
     await expect(
-      page.getByText("Production support intake is disabled until SUPPORT_EMAIL is configured."),
+      page.getByText(
+        "Production support intake is disabled until SUPPORT_EMAIL is configured.",
+      ),
     ).toBeVisible();
+  });
+
+  test("landing page hero photo loads", async ({ page }) => {
+    await page.goto("/");
+
+    const heroPhoto = page.getByRole("img", {
+      name: "Small commercial fleet parked outside a maintenance garage",
+    });
+
+    await expect(heroPhoto).toBeVisible();
+    await expect
+      .poll(() =>
+        heroPhoto.evaluate(
+          (image) =>
+            image instanceof HTMLImageElement &&
+            image.complete &&
+            image.naturalWidth > 0,
+        ),
+      )
+      .toBe(true);
   });
 
   test("representative routes include security headers", async ({ page }) => {
@@ -59,7 +79,7 @@ test.describe("public route smoke tests", () => {
 
     expect(response?.status()).toBe(404);
     await expect(
-      page.getByRole("heading", { name: "This FleetReady route is not available." }),
+      page.getByRole("heading", { name: "This Maintly route is not available." }),
     ).toBeVisible();
     await expect(page.getByRole("link", { name: "Go to dashboard" })).toBeVisible();
   });

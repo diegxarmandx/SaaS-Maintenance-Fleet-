@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 
   return new Response(csv, {
     headers: {
-      "Content-Disposition": `attachment; filename="fleetready-${type}-report.csv"`,
+      "Content-Disposition": `attachment; filename="maintly-${type}-report.csv"`,
       "Content-Type": "text/csv; charset=utf-8",
     },
   });

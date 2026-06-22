@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 
 import {
   getAuthRedirect,
@@ -6,6 +7,7 @@ import {
   isProtectedPath,
   normalizeProtectedRedirect,
 } from "../src/features/auth/redirects";
+import { config as proxyConfig } from "../src/proxy";
 
 describe("authentication redirects", () => {
   it("treats owner app routes as protected", () => {
@@ -92,5 +94,20 @@ describe("authentication redirects", () => {
     expect(normalizeProtectedRedirect("https://example.com/fleet")).toBe("/dashboard");
     expect(normalizeProtectedRedirect("//example.com/fleet")).toBe("/dashboard");
     expect(normalizeProtectedRedirect("/login")).toBe("/dashboard");
+  });
+
+  it("keeps public image assets outside the authentication proxy", () => {
+    expect(
+      unstable_doesMiddlewareMatch({
+        config: proxyConfig,
+        url: "https://maintly.example/images/fleetready-industrial-yard.png",
+      }),
+    ).toBe(false);
+    expect(
+      unstable_doesMiddlewareMatch({
+        config: proxyConfig,
+        url: "https://maintly.example/dashboard",
+      }),
+    ).toBe(true);
   });
 });

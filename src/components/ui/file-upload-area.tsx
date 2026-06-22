@@ -15,9 +15,9 @@ export function FileUploadArea({
   ...props
 }: FileUploadAreaProps) {
   return (
-    <label className="grid cursor-pointer gap-2 rounded-lg border border-dashed border-border bg-surface px-4 py-5 text-sm transition hover:border-primary">
+    <label className="grid cursor-pointer gap-3 rounded-lg border border-dashed border-slate-300 bg-surface-subtle px-4 py-6 text-sm transition-colors hover:border-primary hover:bg-primary/5">
       <span className="flex items-center gap-3 text-foreground">
-        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-muted text-primary">
+        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <UploadCloud aria-hidden="true" className="h-5 w-5" />
         </span>
         <span>

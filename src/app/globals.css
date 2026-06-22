@@ -1,23 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6f7f9;
-  --foreground: #17202a;
+  --background: #f8fafc;
+  --foreground: #111827;
   --surface: #ffffff;
-  --surface-muted: #eef2f5;
-  --surface-subtle: #f9fafb;
-  --primary: #155e63;
+  --surface-muted: #f1f5f9;
+  --surface-subtle: #f8fafc;
+  --primary: #0f766e;
+  --primary-hover: #0d655e;
   --primary-foreground: #ffffff;
-  --accent: #b7791f;
-  --accent-foreground: #2f1f05;
-  --muted: #65727f;
-  --border: #d7dee6;
-  --danger: #b42318;
-  --success: #16803c;
-  --warning: #b7791f;
-  --warning-foreground: #3d2704;
-  --info: #1d5f99;
-  --ring: #26757a;
+  --navy: #0f172a;
+  --navy-muted: #1e293b;
+  --accent: #f59e0b;
+  --accent-foreground: #78350f;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --success: #16a34a;
+  --warning: #f59e0b;
+  --warning-foreground: #78350f;
+  --info: #2563eb;
+  --ring: #14b8a6;
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
+  --shadow-elevated: 0 10px 25px rgb(15 23 42 / 0.08), 0 3px 8px rgb(15 23 42 / 0.06);
   --app-font-sans:
     "IBM Plex Sans Variable", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
@@ -33,6 +39,8 @@
   --color-surface-subtle: var(--surface-subtle);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-navy: var(--navy);
+  --color-navy-muted: var(--navy-muted);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-muted: var(--muted);
@@ -55,12 +63,19 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
 ::selection {
-  background: color-mix(in oklab, var(--primary) 22%, white);
+  background: color-mix(in oklab, var(--primary) 24%, white);
 }
 
 :focus-visible {
-  outline: 3px solid color-mix(in oklab, var(--ring) 55%, white);
+  outline: 3px solid color-mix(in oklab, var(--ring) 62%, white);
   outline-offset: 2px;
 }
 

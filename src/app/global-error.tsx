@@ -24,7 +24,7 @@ export default function GlobalErrorBoundary({ error, reset }: GlobalErrorBoundar
               System error
             </p>
             <h1 className="mt-3 text-2xl font-semibold text-foreground">
-              FleetReady needs a refresh.
+              Maintly needs a refresh.
             </h1>
             <p className="mt-3 text-sm leading-6 text-muted">{getErrorMessage(error)}</p>
             <Button className="mt-6" type="button" onClick={reset}>

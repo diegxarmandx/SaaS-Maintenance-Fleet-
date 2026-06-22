@@ -1,5 +1,4 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
 import {
   AlertTriangle,
   ClipboardCheck,
@@ -11,6 +10,7 @@ import {
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { MetricCard } from "@/components/ui/metric-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type {
@@ -43,34 +43,40 @@ export function DashboardPageView({ dashboard }: DashboardPageViewProps) {
       ) : (
         <div className="grid gap-6">
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-            <SummaryCard
+            <MetricCard
               icon={<Gauge aria-hidden="true" className="h-5 w-5" />}
               label="Active assets"
+              tone="primary"
               value={dashboard.summary.totalActiveAssets}
             />
-            <SummaryCard
+            <MetricCard
               icon={<ClipboardCheck aria-hidden="true" className="h-5 w-5" />}
               label="Due soon"
+              tone="warning"
               value={dashboard.summary.maintenanceDueSoon}
             />
-            <SummaryCard
+            <MetricCard
               icon={<AlertTriangle aria-hidden="true" className="h-5 w-5" />}
               label="Overdue"
+              tone="danger"
               value={dashboard.summary.overdueMaintenance}
             />
-            <SummaryCard
+            <MetricCard
               icon={<FileText aria-hidden="true" className="h-5 w-5" />}
               label="Docs expiring"
+              tone="warning"
               value={dashboard.summary.documentsExpiringSoon}
             />
-            <SummaryCard
+            <MetricCard
               icon={<FileText aria-hidden="true" className="h-5 w-5" />}
               label="Docs expired"
+              tone="danger"
               value={dashboard.summary.expiredDocuments}
             />
-            <SummaryCard
+            <MetricCard
               icon={<ShieldCheck aria-hidden="true" className="h-5 w-5" />}
               label="Missing compliance"
+              tone="warning"
               value={dashboard.summary.missingComplianceItems}
             />
           </section>
@@ -144,26 +150,6 @@ export function DashboardPageView({ dashboard }: DashboardPageViewProps) {
         </div>
       )}
     </>
-  );
-}
-
-function SummaryCard({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: number;
-  icon: ReactNode;
-}) {
-  return (
-    <section className="rounded-lg border border-border bg-surface p-4">
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-        {icon}
-      </div>
-      <p className="mt-3 text-3xl font-semibold text-foreground">{value}</p>
-      <p className="mt-1 text-sm text-muted">{label}</p>
-    </section>
   );
 }
 

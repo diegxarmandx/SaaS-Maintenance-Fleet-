@@ -7,7 +7,7 @@ Last updated: 2026-06-15
 - Created a Next.js App Router application with TypeScript, Tailwind CSS, and ESLint.
 - Added strict TypeScript compiler options.
 - Added Prettier configuration.
-- Added branded FleetReady shell and placeholder routes.
+- Added branded Maintly shell and placeholder routes.
 - Added auth form shells using React Hook Form and Zod.
 - Added reusable UI primitives.
 - Added owner module boundaries for dashboard, fleet, maintenance, Inbox, compliance, documents, reports, and settings.

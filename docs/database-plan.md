@@ -2,7 +2,7 @@
 
 ## Tenancy Model
 
-FleetReady is company-scoped and owner-only. Supabase Auth identifies the owner, `profiles.company_id` identifies the tenant, and Row Level Security restricts every tenant-owned table to `public.is_member_of_company(company_id)`.
+Maintly is company-scoped and owner-only. Supabase Auth identifies the owner, `profiles.company_id` identifies the tenant, and Row Level Security restricts every tenant-owned table to `public.is_member_of_company(company_id)`.
 
 Profiles can exist with `company_id = null` while onboarding is incomplete. Once onboarding is complete, the owner is linked to one company.
 
@@ -56,7 +56,7 @@ The legal/account-controls migration is:
 
 It adds the `account_deletion_status` enum and `account_deletion_requests` table for owner-requested account/company deletion. The table records owner ID, company ID, request/confirmation/processing/completion/failure/cancellation timestamps, status, a confirmation hash, and an internal failure reason field.
 
-The FleetReady Inbox migration is:
+The Maintly Inbox migration is:
 
 - `supabase/migrations/20260617120000_fleetready_inbox_ingestion.sql`
 - `supabase/migrations/20260620120000_asset_inbox.sql`

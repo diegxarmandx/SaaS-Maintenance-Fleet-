@@ -159,7 +159,7 @@ export async function requestAccountDeletionAction(
     return {
       status: "success",
       message:
-        "Deletion request recorded. FleetReady has not deleted data yet; processing must be completed through the documented operations workflow.",
+        "Deletion request recorded. Maintly has not deleted data yet; processing must be completed through the documented operations workflow.",
       request: {
         id: requestId,
         status: "confirmed",

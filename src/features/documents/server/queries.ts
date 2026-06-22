@@ -283,7 +283,7 @@ export async function getAssetDocumentSnapshot(assetId: string) {
 function getDisconnectedDocumentLibrary(filters: DocumentFilters): DocumentLibraryResult {
   return {
     isConfigured: false,
-    companyName: "FleetReady workspace",
+    companyName: "Maintly workspace",
     timezone: "UTC",
     documents: [],
     allDocuments: [],

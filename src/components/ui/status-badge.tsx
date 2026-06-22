@@ -16,17 +16,17 @@ type StatusBadgeProps = {
 };
 
 const statusStyles: Record<AssetAttentionStatus, string> = {
-  Current: "border-primary/25 bg-primary/10 text-primary",
-  Active: "border-primary/25 bg-primary/10 text-primary",
-  "Due soon": "border-accent/35 bg-accent/10 text-accent-foreground",
-  "Expiring soon": "border-accent/35 bg-accent/10 text-accent-foreground",
+  Current: "border-success/25 bg-success/10 text-success",
+  Active: "border-success/25 bg-success/10 text-success",
+  "Due soon": "border-warning/30 bg-warning/10 text-warning-foreground",
+  "Expiring soon": "border-warning/30 bg-warning/10 text-warning-foreground",
   Overdue: "border-danger/25 bg-danger/10 text-danger",
   Expired: "border-danger/25 bg-danger/10 text-danger",
   "Past due": "border-danger/25 bg-danger/10 text-danger",
-  Missing: "border-info/25 bg-info/10 text-info",
+  Missing: "border-warning/30 bg-warning/10 text-warning-foreground",
   Archived: "border-border bg-surface-muted text-muted",
   Canceled: "border-border bg-surface-muted text-muted",
-  "Read-only": "border-warning/35 bg-warning/10 text-warning-foreground",
+  "Read-only": "border-info/25 bg-info/10 text-info",
 };
 
 const statusIcons = {

@@ -1,6 +1,6 @@
-# FleetReady Owner App
+# Maintly Owner App
 
-FleetReady is an owner-only fleet maintenance SaaS foundation for small fleets of roughly 1 to 25 vehicles, trailers, or equipment assets. The initial subscription envelope supports active-asset limits up to 30 while keeping the product focused on small-fleet owners.
+Maintly is an owner-only fleet maintenance SaaS foundation for small fleets of roughly 1 to 25 vehicles, trailers, or equipment assets. The initial subscription envelope supports active-asset limits up to 30 while keeping the product focused on small-fleet owners.
 
 ## Current Status
 

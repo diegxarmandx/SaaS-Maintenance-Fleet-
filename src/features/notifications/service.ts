@@ -801,7 +801,7 @@ async function maybeSendWeeklySummary(
     related_entity_id: company.id,
     notification_key: `weekly-summary:${new Date().toISOString().slice(0, 10)}`,
     title: "Weekly fleet summary sent",
-    message: "FleetReady sent the weekly owner summary email.",
+    message: "Maintly sent the weekly owner summary email.",
     href: "/dashboard",
     severity: "info",
     email_delivery_status: "sent",

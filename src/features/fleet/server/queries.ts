@@ -251,7 +251,7 @@ function getDisconnectedFleetList(filters: FleetListFilters): FleetListResult {
     totalCount: 0,
     pageSize: FLEET_PAGE_SIZE,
     filters,
-    companyName: "FleetReady workspace",
+    companyName: "Maintly workspace",
     isConfigured: false,
     subscription: null,
   };

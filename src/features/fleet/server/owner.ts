@@ -56,7 +56,7 @@ export async function getOwnerDatabaseContext(): Promise<OwnerDatabaseContext | 
     supabase,
     ownerId: user.id,
     companyId: profile.company_id,
-    companyName: company?.company_name ?? "FleetReady workspace",
+    companyName: company?.company_name ?? "Maintly workspace",
     preferredTimezone: company?.preferred_timezone ?? "UTC",
   };
 }

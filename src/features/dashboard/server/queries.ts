@@ -203,7 +203,7 @@ export async function getDashboardData(): Promise<DashboardData> {
 function getDisconnectedDashboardData(): DashboardData {
   return {
     isConfigured: false,
-    companyName: "FleetReady workspace",
+    companyName: "Maintly workspace",
     summary: {
       totalActiveAssets: 0,
       maintenanceDueSoon: 0,

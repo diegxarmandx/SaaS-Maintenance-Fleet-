@@ -303,7 +303,7 @@ function getDisconnectedMaintenanceOverview(
 ): MaintenanceOverviewResult {
   return {
     isConfigured: false,
-    companyName: "FleetReady workspace",
+    companyName: "Maintly workspace",
     timezone: "UTC",
     rules: [],
     allRules: [],

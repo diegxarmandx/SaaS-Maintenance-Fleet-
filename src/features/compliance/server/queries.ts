@@ -255,7 +255,7 @@ function getDisconnectedComplianceOverview(
 ): ComplianceOverviewResult {
   return {
     isConfigured: false,
-    companyName: "FleetReady workspace",
+    companyName: "Maintly workspace",
     timezone: "UTC",
     items: [],
     allItems: [],

@@ -286,7 +286,7 @@ describe("database migration security", () => {
     expect(step7MigrationSql).not.toContain("audit_events_owner_update");
   });
 
-  it("adds owner-scoped FleetReady Inbox ingestion audit tables", () => {
+  it("adds owner-scoped Maintly Inbox ingestion audit tables", () => {
     expect(inboxMigrationSql).toContain(
       "create table if not exists public.ingestion_jobs",
     );

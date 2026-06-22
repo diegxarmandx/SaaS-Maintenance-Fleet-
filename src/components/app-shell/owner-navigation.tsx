@@ -50,8 +50,8 @@ export function OwnerNavigation({ className, compact = false }: OwnerNavigationP
               "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition",
               compact && "min-w-max",
               active
-                ? "bg-primary text-primary-foreground"
-                : "text-muted hover:bg-surface-muted hover:text-foreground",
+                ? "bg-primary text-white shadow-sm"
+                : "text-slate-300 hover:bg-white/8 hover:text-white",
             )}
             href={item.href}
           >

@@ -100,7 +100,7 @@ export function ComplianceRecordForm({
       <section className="rounded-lg border border-border bg-surface p-4">
         <h2 className="text-base font-semibold text-foreground">Compliance record</h2>
         <p className="mt-1 text-sm leading-6 text-muted">
-          Records track information entered by the owner; FleetReady does not submit,
+          Records track information entered by the owner; Maintly does not submit,
           renew, or guarantee legal compliance.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">

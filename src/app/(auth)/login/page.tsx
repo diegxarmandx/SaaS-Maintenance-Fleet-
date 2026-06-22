@@ -22,7 +22,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     : params.redirectTo;
 
   return (
-    <section className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-sm">
+    <section className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-[var(--shadow-elevated)] sm:p-8">
       <Link
         className={buttonClassName({
           variant: "ghost",
@@ -35,10 +35,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         Back to landing page
       </Link>
       <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.12em] text-primary">
-          FleetReady
+        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-primary">
+          Maintly
         </p>
-        <h1 className="mt-3 text-2xl font-semibold text-foreground">Sign in</h1>
+        <h1 className="mt-3 text-2xl font-semibold text-navy">Sign in</h1>
         <p className="mt-2 text-sm leading-6 text-muted">
           Access the owner workspace for fleet maintenance and compliance.
         </p>
@@ -61,7 +61,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           Create an account
         </Link>
       </p>
-      <nav aria-label="Account support links" className="mt-6 flex flex-wrap gap-4 text-xs">
+      <nav
+        aria-label="Account support links"
+        className="mt-6 flex flex-wrap gap-4 text-xs"
+      >
         <Link className="font-medium text-muted hover:text-primary" href="/support">
           Support
         </Link>

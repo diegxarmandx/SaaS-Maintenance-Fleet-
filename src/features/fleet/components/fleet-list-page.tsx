@@ -89,7 +89,7 @@ export function FleetListPage({ result }: FleetListPageProps) {
         </section>
       ) : null}
 
-      <section className="mb-4 rounded-lg border border-border bg-surface p-4">
+      <section className="mb-4 rounded-lg border border-border bg-surface p-4 shadow-[var(--shadow-card)]">
         <form
           action="/fleet"
           className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_190px_auto]"

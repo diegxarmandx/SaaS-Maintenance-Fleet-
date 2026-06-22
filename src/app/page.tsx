@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import type { LucideIcon } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
   BellRing,
+  CheckCircle2,
   ClipboardCheck,
   FileClock,
+  FileText,
   Gauge,
   History,
   ReceiptText,
@@ -15,172 +18,272 @@ import {
 } from "lucide-react";
 
 import { buttonClassName } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { legalLinks } from "@/features/legal/content";
 
 export const metadata: Metadata = {
-  title: "Fleet Maintenance Software for Small Fleet Owners",
+  title: "Maintly | Fleet Maintenance Software for Small Fleet Owners",
   description:
-    "FleetReady helps small-fleet owners track preventive maintenance, mileage, service reminders, documents, and repair costs from one dashboard.",
+    "Maintly helps small-fleet owners track preventive maintenance, mileage, service reminders, documents, compliance, and costs from one practical dashboard.",
 };
+
+const benefits = [
+  {
+    title: "Prevent missed maintenance",
+    description: "Keep mileage, hour, and calendar service due dates visible.",
+    icon: BellRing,
+  },
+  {
+    title: "Track service history",
+    description: "Build a dependable record for every truck, trailer, and machine.",
+    icon: History,
+  },
+  {
+    title: "Manage documents",
+    description: "Keep registrations, insurance, inspections, and receipts organized.",
+    icon: FileText,
+  },
+  {
+    title: "Monitor costs",
+    description: "See maintenance spending by asset without accounting clutter.",
+    icon: ReceiptText,
+  },
+  {
+    title: "Reduce downtime",
+    description: "Catch overdue work and expirations before they stop a unit.",
+    icon: Wrench,
+  },
+] as const;
 
 const features = [
   {
     title: "Preventive maintenance",
     description:
-      "Set service schedules by mileage, engine hours, or calendar intervals before missed service becomes downtime.",
+      "Set recurring service rules by mileage, engine hours, or calendar intervals and keep the next due point clear.",
     icon: Wrench,
   },
   {
     title: "Service reminders",
     description:
-      "See upcoming and overdue work with alerts based on the readings and dates you manage.",
+      "Prioritize due-soon and overdue work from readings and dates you control.",
     icon: BellRing,
   },
   {
     title: "Repair and expense records",
     description:
-      "Record completed service, providers, notes, receipts, and costs without turning the app into accounting software.",
+      "Record completed work, providers, notes, receipts, and costs in one asset history.",
     icon: ReceiptText,
   },
   {
     title: "Vehicle history",
     description:
-      "Keep each truck, trailer, or equipment file organized with readings, service history, compliance, and documents.",
+      "Review meter readings, maintenance, compliance, paperwork, and costs for each unit.",
     icon: History,
   },
   {
     title: "Fleet overview",
     description:
-      "Scan active assets, due work, expiring documents, and missing compliance items from one owner dashboard.",
+      "Scan active assets, due work, expiring documents, and missing requirements at a glance.",
     icon: Truck,
   },
 ] as const;
 
-const howItWorks = [
+const workflow = [
   {
-    title: "Add your vehicles",
+    number: "01",
+    title: "Add your units",
     description:
-      "Create records for trucks, trailers, vans, or equipment with unit numbers, mileage, hours, and service notes.",
+      "Create records for the vehicles, trailers, and equipment you personally manage.",
   },
   {
-    title: "Set maintenance schedules",
+    number: "02",
+    title: "Set service rules",
     description:
-      "Track recurring services like oil changes, inspections, brakes, tires, and equipment-specific maintenance.",
+      "Define oil changes, inspections, brakes, tires, and equipment-specific intervals.",
   },
   {
-    title: "Track services and alerts",
+    number: "03",
+    title: "Stay ready",
     description:
-      "Log completed work, store documents, and keep upcoming or overdue items visible before they surprise you.",
+      "Log completed work, store paperwork, and act on the next item that needs attention.",
   },
 ] as const;
 
-const previewRows = [
-  ["DT-01", "Oil and filter", "Due soon"],
-  ["MD-14", "Inspection document", "Expired"],
-  ["FB-03", "Registration", "Current"],
+const attentionRows = [
+  {
+    unit: "DT-01",
+    item: "Oil and filter service",
+    detail: "Due in 640 miles",
+    status: "Due soon" as const,
+  },
+  {
+    unit: "MD-14",
+    item: "Registration renewal",
+    detail: "Expired 3 days ago",
+    status: "Expired" as const,
+  },
+  {
+    unit: "FB-03",
+    item: "Annual inspection",
+    detail: "Current through Sep 18",
+    status: "Current" as const,
+  },
 ] as const;
 
 export default function Home() {
   return (
     <main className="min-h-dvh bg-background">
-      <header className="border-b border-border bg-surface/95">
-        <nav
-          aria-label="Main navigation"
-          className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8"
-        >
-          <Link className="flex items-center gap-3 text-foreground" href="/">
-            <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground">
-              <Truck aria-hidden="true" className="h-5 w-5" />
-            </span>
-            <span className="text-lg font-semibold">FleetReady</span>
-          </Link>
-          <div className="hidden items-center gap-6 text-sm font-medium text-muted md:flex">
-            <a className="hover:text-primary" href="#features">
-              Features
-            </a>
-            <a className="hover:text-primary" href="#how-it-works">
-              Workflow
-            </a>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              className={buttonClassName({ variant: "ghost", size: "sm" })}
-              href="/login"
-            >
-              Log In
+      <section className="relative isolate overflow-hidden bg-navy text-white">
+        <Image
+          alt="Small commercial fleet parked outside a maintenance garage"
+          className="absolute inset-0 z-0 h-full w-full object-cover object-[45%_center] sm:object-[62%_center]"
+          fill
+          priority
+          sizes="100vw"
+          src="/images/fleetready-industrial-yard.png"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 z-[1] bg-navy/45"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 z-[2] bg-[linear-gradient(90deg,rgba(15,23,42,0.88),rgba(15,23,42,0.66)_50%,rgba(15,118,110,0.34)),linear-gradient(180deg,rgba(15,23,42,0.18),rgba(15,23,42,0.66))]"
+        />
+        <header className="relative z-10 border-b border-white/15">
+          <nav
+            aria-label="Main navigation"
+            className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8"
+          >
+            <Link className="flex items-center gap-3 text-white" href="/">
+              <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary shadow-lg">
+                <ShieldCheck aria-hidden="true" className="h-5 w-5" />
+              </span>
+              <span className="text-lg font-semibold">Maintly</span>
             </Link>
-            <Link
-              className={buttonClassName({ variant: "primary", size: "sm" })}
-              href="/signup"
-            >
-              Sign Up
-            </Link>
-          </div>
-        </nav>
-      </header>
-
-      <section className="border-b border-border bg-surface">
-        <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-14 sm:px-6 sm:py-18 lg:px-8">
-          <div className="max-w-3xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-primary">
-              Small-fleet maintenance software
-            </p>
-            <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-tight text-foreground sm:text-5xl lg:text-6xl">
-              Keep every service, reading, and expiration under control.
-            </h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-muted sm:text-lg">
-              FleetReady helps small-fleet owners and owner-operators track preventive
-              maintenance, mileage or engine hours, repair costs, vehicle history,
-              documents, and service alerts from one practical dashboard.
-            </p>
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <Link className={buttonClassName({ variant: "primary" })} href="/signup">
-                Start Managing Your Fleet
-                <ArrowRight aria-hidden="true" className="h-4 w-4" />
-              </Link>
-              <Link className={buttonClassName({ variant: "secondary" })} href="/login">
+            <div className="hidden items-center gap-7 text-sm font-medium text-slate-200 md:flex">
+              <a className="transition hover:text-white" href="#features">
+                Features
+              </a>
+              <a className="transition hover:text-white" href="#workflow">
+                How it works
+              </a>
+              <a className="transition hover:text-white" href="#product">
+                Product
+              </a>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                className={buttonClassName({
+                  variant: "ghost",
+                  size: "sm",
+                  className: "text-white hover:bg-white/10",
+                })}
+                href="/login"
+              >
                 Log In
               </Link>
+              <Link className={buttonClassName({ size: "sm" })} href="/signup">
+                Get Started
+              </Link>
+            </div>
+          </nav>
+        </header>
+
+        <div className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-12 pt-16 sm:px-6 sm:pb-16 sm:pt-20 lg:px-8 lg:pt-24">
+          <div className="max-w-2xl">
+            <h1 className="max-w-xl text-4xl font-semibold leading-[1.08] text-white [text-shadow:0_2px_12px_rgb(0_0_0/0.4)] sm:text-5xl lg:text-6xl">
+              Maintenance control for small fleets.
+            </h1>
+            <p className="mt-6 max-w-xl text-base leading-7 text-slate-100 [text-shadow:0_1px_8px_rgb(0_0_0/0.5)] sm:text-lg">
+              Track vehicles, trailers, equipment, services, documents, expenses, and
+              reminders from one simple dashboard built for small fleet operators.
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link className={buttonClassName()} href="/signup">
+                Get Started
+                <ArrowRight aria-hidden="true" className="h-4 w-4" />
+              </Link>
+              <a
+                className={buttonClassName({
+                  variant: "secondary",
+                  className:
+                    "border-white/45 bg-navy/45 text-white backdrop-blur-sm hover:border-white/70 hover:bg-navy/65",
+                })}
+                href="#features"
+              >
+                See How It Works
+              </a>
+            </div>
+            <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-slate-100">
+              <TrustPoint>Built for small fleets</TrustPoint>
+              <TrustPoint>Private fleet documents</TrustPoint>
+              <TrustPoint>No dispatch clutter</TrustPoint>
             </div>
           </div>
 
           <div
-            aria-label="FleetReady dashboard preview"
-            className="rounded-lg border border-border bg-background p-3 shadow-sm"
+            aria-label="Maintly dashboard preview"
+            className="mt-14 overflow-hidden rounded-lg border border-white/30 bg-surface text-foreground shadow-[var(--shadow-elevated)]"
+            id="product"
           >
-            <div className="rounded-lg border border-border bg-surface">
-              <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
-                    Owner dashboard
-                  </p>
-                  <h2 className="mt-1 text-xl font-semibold text-foreground">
-                    Fleet readiness
-                  </h2>
-                </div>
-                <div className="inline-flex w-fit items-center gap-2 rounded-lg border border-warning bg-[#fff8eb] px-3 py-2 text-sm font-medium text-warning-foreground">
-                  <FileClock aria-hidden="true" className="h-4 w-4" />5 items need
-                  attention
-                </div>
+            <div className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-primary">
+                  Fleet readiness
+                </p>
+                <h2 className="mt-1 text-xl font-semibold text-navy">
+                  Today&apos;s owner dashboard
+                </h2>
               </div>
-              <div className="grid gap-3 p-4 md:grid-cols-3">
-                <PreviewMetric label="Active assets" value="12" icon={Gauge} />
-                <PreviewMetric label="Due soon" value="4" icon={ClipboardCheck} />
-                <PreviewMetric label="Expired docs" value="1" icon={ShieldCheck} />
+              <div className="inline-flex w-fit items-center gap-2 text-sm font-medium text-warning-foreground">
+                <FileClock aria-hidden="true" className="h-4 w-4 text-warning" />5 items
+                need attention
               </div>
-              <div className="border-t border-border p-4">
-                <div className="overflow-hidden rounded-lg border border-border">
-                  {previewRows.map(([unit, item, status]) => (
+            </div>
+            <div className="grid bg-background md:grid-cols-[0.85fr_1.15fr]">
+              <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4 md:grid-cols-2">
+                <PreviewMetric
+                  icon={Gauge}
+                  label="Active assets"
+                  tone="primary"
+                  value="12"
+                />
+                <PreviewMetric
+                  icon={ClipboardCheck}
+                  label="Due soon"
+                  tone="warning"
+                  value="4"
+                />
+                <PreviewMetric icon={Wrench} label="Overdue" tone="danger" value="2" />
+                <PreviewMetric
+                  icon={FileText}
+                  label="Expired docs"
+                  tone="danger"
+                  value="1"
+                />
+              </div>
+              <div className="border-t border-border bg-surface p-4 md:border-l md:border-t-0 sm:p-5">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-navy">Needs attention</h3>
+                  <span className="text-xs font-medium text-primary">Priority order</span>
+                </div>
+                <div className="divide-y divide-border">
+                  {attentionRows.map((row) => (
                     <div
-                      className="grid gap-2 border-b border-border bg-surface-subtle px-4 py-3 text-sm last:border-b-0 sm:grid-cols-[0.7fr_1.4fr_0.9fr] sm:items-center"
-                      key={`${unit}-${item}`}
+                      className="grid gap-2 py-3 sm:grid-cols-[84px_minmax(0,1fr)_auto] sm:items-center"
+                      key={`${row.unit}-${row.item}`}
                     >
-                      <span className="font-semibold text-foreground">{unit}</span>
-                      <span className="text-muted">{item}</span>
-                      <span className="inline-flex w-fit items-center rounded-md border border-border bg-surface px-2 py-1 text-xs font-medium text-foreground">
-                        {status}
+                      <span className="text-sm font-semibold text-navy">{row.unit}</span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium text-foreground">
+                          {row.item}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-muted">
+                          {row.detail}
+                        </span>
                       </span>
+                      <StatusBadge status={row.status} />
                     </div>
                   ))}
                 </div>
@@ -190,118 +293,136 @@ export default function Home() {
         </div>
       </section>
 
-      <section
-        aria-labelledby="features-heading"
-        className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 lg:px-8"
-        id="features"
-      >
-        <div className="max-w-2xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-primary">
-            What owners track
-          </p>
-          <h2
-            className="mt-3 text-3xl font-semibold leading-tight text-foreground"
-            id="features-heading"
-          >
-            Maintenance records without fleet-management clutter.
-          </h2>
-          <p className="mt-3 text-sm leading-6 text-muted">
-            FleetReady focuses on owner-managed readiness: assets, readings, preventive
-            service, compliance dates, documents, alerts, and reports.
-          </p>
-        </div>
-        <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          {features.map((feature) => (
-            <Card key={feature.title}>
-              <CardHeader>
-                <feature.icon aria-hidden="true" className="h-5 w-5 text-primary" />
-                <CardTitle>{feature.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm leading-6 text-muted">{feature.description}</p>
-              </CardContent>
-            </Card>
+      <section className="border-b border-border bg-surface" aria-label="Owner benefits">
+        <div className="mx-auto grid w-full max-w-7xl divide-y divide-border px-4 sm:grid-cols-2 sm:divide-x sm:divide-y-0 sm:px-6 lg:grid-cols-5 lg:px-8">
+          {benefits.map((benefit) => (
+            <div className="flex gap-3 px-3 py-6 sm:px-5" key={benefit.title}>
+              <benefit.icon
+                aria-hidden="true"
+                className="mt-0.5 h-5 w-5 shrink-0 text-primary"
+              />
+              <div>
+                <h2 className="text-sm font-semibold text-navy">{benefit.title}</h2>
+                <p className="mt-1 text-xs leading-5 text-muted">{benefit.description}</p>
+              </div>
+            </div>
           ))}
         </div>
       </section>
 
       <section
-        aria-labelledby="how-heading"
-        className="border-y border-border bg-surface"
-        id="how-it-works"
+        aria-labelledby="features-heading"
+        className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
+        id="features"
       >
-        <div className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
-          <div className="max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-primary">
-              Workflow
+        <div className="grid gap-10 lg:grid-cols-[0.7fr_1.3fr] lg:gap-16">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-primary">
+              Built for owner-managed fleets
             </p>
             <h2
-              className="mt-3 text-3xl font-semibold leading-tight text-foreground"
-              id="how-heading"
+              className="mt-3 text-3xl font-semibold leading-tight text-navy sm:text-4xl"
+              id="features-heading"
             >
-              A short path from account to dashboard.
+              Everything you need to keep every unit ready.
             </h2>
+            <p className="mt-4 max-w-xl text-base leading-7 text-muted">
+              Maintly stays focused on the records a small fleet owner actually needs:
+              assets, meters, preventive service, compliance, documents, alerts, and
+              costs.
+            </p>
           </div>
-          <ol className="mt-8 grid gap-4 md:grid-cols-3">
-            {howItWorks.map((step, index) => (
-              <li
-                className="rounded-lg border border-border bg-background p-5"
-                key={step.title}
+          <div className="divide-y divide-border border-y border-border">
+            {features.map((feature) => (
+              <div
+                className="grid gap-3 py-5 sm:grid-cols-[44px_190px_minmax(0,1fr)] sm:items-start"
+                key={feature.title}
               >
-                <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground">
-                  {index + 1}
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <feature.icon aria-hidden="true" className="h-5 w-5" />
                 </span>
-                <h3 className="mt-4 text-lg font-semibold text-foreground">
-                  {step.title}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-muted">{step.description}</p>
+                <h3 className="text-base font-semibold text-navy">{feature.title}</h3>
+                <p className="text-sm leading-6 text-muted">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section
+        className="bg-navy text-white"
+        id="workflow"
+        aria-labelledby="workflow-title"
+      >
+        <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+          <div className="max-w-2xl">
+            <h2
+              className="text-3xl font-semibold leading-tight text-white sm:text-4xl"
+              id="workflow-title"
+            >
+              A clear path from first unit to fleet readiness.
+            </h2>
+            <p className="mt-4 text-base leading-7 text-slate-300">
+              Set up the fleet once, then keep the next service, expiration, or document
+              action visible.
+            </p>
+          </div>
+          <ol className="mt-10 grid gap-px overflow-hidden rounded-lg border border-slate-700 bg-slate-700 md:grid-cols-3">
+            {workflow.map((step) => (
+              <li className="bg-navy-muted p-6" key={step.number}>
+                <span className="font-mono text-sm font-semibold text-teal-300">
+                  {step.number}
+                </span>
+                <h3 className="mt-6 text-xl font-semibold text-white">{step.title}</h3>
+                <p className="mt-3 text-sm leading-6 text-slate-300">
+                  {step.description}
+                </p>
               </li>
             ))}
           </ol>
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-5 rounded-lg border border-border bg-surface p-6 shadow-sm md:flex-row md:items-center md:justify-between">
+      <section className="border-b border-border bg-surface">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-14 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-primary">
-              Ready when your next service is due
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-primary">
+              Ready for the next service date
             </p>
-            <h2 className="mt-2 text-2xl font-semibold text-foreground">
-              Create your owner workspace and start with your fleet records.
+            <h2 className="mt-2 max-w-2xl text-2xl font-semibold leading-tight text-navy sm:text-3xl">
+              Put your fleet records, maintenance, and paperwork in one owner workspace.
             </h2>
           </div>
           <Link
             className={buttonClassName({
-              variant: "primary",
-              className: "w-full md:w-auto",
+              className: "w-full shrink-0 md:w-auto",
             })}
             href="/signup"
           >
-            Sign Up
+            Get Started
             <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </Link>
         </div>
       </section>
 
-      <footer className="border-t border-border bg-surface">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 text-sm text-muted sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
-          <p className="font-medium text-foreground">FleetReady</p>
+      <footer className="bg-navy text-slate-300">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-7 text-sm sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
+          <Link className="flex items-center gap-2 font-semibold text-white" href="/">
+            <ShieldCheck aria-hidden="true" className="h-5 w-5 text-teal-300" />
+            Maintly
+          </Link>
           <nav aria-label="Footer navigation" className="flex flex-wrap gap-4">
-            <a className="hover:text-primary" href="#features">
+            <a className="hover:text-white" href="#features">
               Features
             </a>
-            <a className="hover:text-primary" href="#how-it-works">
-              Workflow
+            <a className="hover:text-white" href="#workflow">
+              How it works
             </a>
-            <Link className="hover:text-primary" href="/login">
+            <Link className="hover:text-white" href="/login">
               Log In
             </Link>
-            <Link className="hover:text-primary" href="/signup">
-              Sign Up
-            </Link>
             {legalLinks.map((link) => (
-              <Link className="hover:text-primary" href={link.href} key={link.href}>
+              <Link className="hover:text-white" href={link.href} key={link.href}>
                 {link.label}
               </Link>
             ))}
@@ -312,17 +433,37 @@ export default function Home() {
   );
 }
 
-type PreviewMetricProps = {
+function TrustPoint({ children }: { children: string }) {
+  return (
+    <span className="inline-flex items-center gap-2">
+      <CheckCircle2 aria-hidden="true" className="h-4 w-4 text-teal-300" />
+      {children}
+    </span>
+  );
+}
+
+function PreviewMetric({
+  label,
+  value,
+  icon: Icon,
+  tone,
+}: {
   label: string;
   value: string;
   icon: LucideIcon;
-};
+  tone: "primary" | "warning" | "danger";
+}) {
+  const toneClassName =
+    tone === "warning"
+      ? "text-warning"
+      : tone === "danger"
+        ? "text-danger"
+        : "text-primary";
 
-function PreviewMetric({ label, value, icon: Icon }: PreviewMetricProps) {
   return (
-    <div className="rounded-lg border border-border bg-surface-subtle p-4">
-      <Icon aria-hidden="true" className="h-5 w-5 text-primary" />
-      <p className="mt-4 text-3xl font-semibold text-foreground">{value}</p>
+    <div className="bg-surface p-4 sm:p-5">
+      <Icon aria-hidden="true" className={`h-5 w-5 ${toneClassName}`} />
+      <p className="mt-4 text-3xl font-semibold text-navy">{value}</p>
       <p className="mt-1 text-sm text-muted">{label}</p>
     </div>
   );

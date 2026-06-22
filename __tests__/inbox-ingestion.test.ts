@@ -10,7 +10,7 @@ import { aiMaintenanceExtractionSchema } from "../src/features/inbox/validation"
 
 const assetId = "22222222-2222-4222-8222-222222222222";
 
-describe("FleetReady Inbox ingestion helpers", () => {
+describe("Maintly Inbox ingestion helpers", () => {
   it("normalizes AI extraction and matches an owner asset", () => {
     const parsed = aiMaintenanceExtractionSchema.parse({
       detectedDocumentType: "Maintenance receipt",

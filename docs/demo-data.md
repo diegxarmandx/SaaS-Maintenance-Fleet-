@@ -1,6 +1,6 @@
 # Demo Data
 
-FleetReady includes development-only demo data for reviewing the existing owner-only application with realistic fictional data. It does not add product features.
+Maintly includes development-only demo data for reviewing the existing owner-only application with realistic fictional data. It does not add product features.
 
 ## Purpose
 

@@ -16,12 +16,12 @@ export const privacySections: LegalSection[] = [
   {
     title: "Scope",
     body:
-      "This privacy notice describes the owner-only FleetReady application being prepared for launch. It is a product and engineering baseline, not legal advice.",
+      "This privacy notice describes the owner-only Maintly application being prepared for launch. It is a product and engineering baseline, not legal advice.",
   },
   {
     title: "Information owners provide",
     body:
-      "FleetReady stores account, company, fleet asset, maintenance, compliance, document, notification, and subscription information entered by the fleet owner.",
+      "Maintly stores account, company, fleet asset, maintenance, compliance, document, notification, and subscription information entered by the fleet owner.",
     bullets: [
       "Owner profile and company contact details",
       "Vehicle, trailer, and equipment records",
@@ -56,7 +56,7 @@ export const termsSections: LegalSection[] = [
   {
     title: "Owner-only product",
     body:
-      "FleetReady is designed for the fleet owner to manage small-fleet maintenance records. It does not provide driver, mechanic, dispatch, routing, trip, payroll, invoicing, repair scheduling, work order, or repair-status workflows.",
+      "Maintly is designed for the fleet owner to manage small-fleet maintenance records. It does not provide driver, mechanic, dispatch, routing, trip, payroll, invoicing, repair scheduling, work order, or repair-status workflows.",
   },
   {
     title: "Account responsibilities",
@@ -66,7 +66,7 @@ export const termsSections: LegalSection[] = [
   {
     title: "No compliance guarantee",
     body:
-      "FleetReady can help organize requirements, due dates, and documents, but it does not renew, file, certify, or guarantee legal compliance for a fleet.",
+      "Maintly can help organize requirements, due dates, and documents, but it does not renew, file, certify, or guarantee legal compliance for a fleet.",
   },
   {
     title: "Billing and access",

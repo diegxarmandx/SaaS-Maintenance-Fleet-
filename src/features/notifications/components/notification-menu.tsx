@@ -22,7 +22,7 @@ export function NotificationMenu({ notifications }: NotificationMenuProps) {
     <details className="relative">
       <summary
         aria-label={`${unreadCount} unread notifications`}
-        className="relative flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-lg border border-border bg-surface text-muted shadow-sm hover:text-primary"
+        className="relative flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-lg border border-border bg-surface text-muted shadow-[var(--shadow-card)] transition-colors hover:border-slate-300 hover:text-primary"
       >
         <Bell aria-hidden="true" className="h-5 w-5" />
         {unreadCount > 0 ? (
@@ -31,7 +31,7 @@ export function NotificationMenu({ notifications }: NotificationMenuProps) {
           </span>
         ) : null}
       </summary>
-      <div className="absolute right-0 mt-2 w-[min(360px,calc(100vw-2rem))] rounded-lg border border-border bg-surface p-3 text-sm shadow-lg">
+      <div className="absolute right-0 mt-2 w-[min(360px,calc(100vw-2rem))] rounded-lg border border-border bg-surface p-3 text-sm shadow-[var(--shadow-elevated)]">
         <div className="flex items-center justify-between gap-3">
           <p className="font-semibold text-foreground">Notifications</p>
           {unreadCount > 0 ? (

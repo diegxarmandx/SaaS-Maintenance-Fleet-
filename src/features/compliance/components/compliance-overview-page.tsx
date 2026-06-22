@@ -8,6 +8,7 @@ import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { MobileCardList } from "@/components/ui/mobile-card-list";
+import { MetricCard } from "@/components/ui/metric-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination } from "@/components/ui/pagination";
 import { Select } from "@/components/ui/select";
@@ -61,14 +62,39 @@ export function ComplianceOverviewPage({ overview }: ComplianceOverviewPageProps
       ) : (
         <div className="grid gap-6">
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <CountCard count={overview.counts.Current} label="Current" />
-            <CountCard count={overview.counts["Expiring soon"]} label="Expiring soon" />
-            <CountCard count={overview.counts.Expired} label="Expired" />
-            <CountCard count={overview.counts.Missing} label="Missing" />
-            <CountCard count={overview.counts.Archived} label="Archived" />
+            <MetricCard
+              detail="Compliance items"
+              label="Current"
+              tone="success"
+              value={overview.counts.Current}
+            />
+            <MetricCard
+              detail="Compliance items"
+              label="Expiring soon"
+              tone="warning"
+              value={overview.counts["Expiring soon"]}
+            />
+            <MetricCard
+              detail="Compliance items"
+              label="Expired"
+              tone="danger"
+              value={overview.counts.Expired}
+            />
+            <MetricCard
+              detail="Compliance items"
+              label="Missing"
+              tone="warning"
+              value={overview.counts.Missing}
+            />
+            <MetricCard
+              detail="Compliance items"
+              label="Archived"
+              tone="neutral"
+              value={overview.counts.Archived}
+            />
           </section>
 
-          <section className="rounded-lg border border-border bg-surface p-4">
+          <section className="rounded-lg border border-border bg-surface p-4 shadow-[var(--shadow-card)]">
             <form
               action="/compliance"
               className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_190px_190px_170px_170px_auto]"
@@ -174,22 +200,6 @@ export function ComplianceOverviewPage({ overview }: ComplianceOverviewPageProps
         </div>
       )}
     </>
-  );
-}
-
-function CountCard({
-  label,
-  count,
-}: {
-  label: "Current" | "Expiring soon" | "Expired" | "Missing" | "Archived";
-  count: number;
-}) {
-  return (
-    <section className="rounded-lg border border-border bg-surface p-4">
-      <StatusBadge status={label} />
-      <p className="mt-3 text-3xl font-semibold text-foreground">{count}</p>
-      <p className="mt-1 text-sm text-muted">Compliance items</p>
-    </section>
   );
 }
 

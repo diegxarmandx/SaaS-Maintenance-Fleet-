@@ -1,6 +1,6 @@
 # Storage Security
 
-FleetReady uses private Supabase Storage buckets and treats PostgreSQL metadata as the authorization boundary for downloads.
+Maintly uses private Supabase Storage buckets and treats PostgreSQL metadata as the authorization boundary for downloads.
 
 ## Buckets
 

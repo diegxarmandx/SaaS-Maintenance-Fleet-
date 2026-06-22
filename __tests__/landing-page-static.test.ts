@@ -21,4 +21,14 @@ describe("public landing page", () => {
     expect(landingPageSource).toContain("Vehicle history");
     expect(landingPageSource).toContain("Fleet overview");
   });
+
+  it("renders the hero photo as a loadable image", () => {
+    expect(landingPageSource).toContain('import Image from "next/image"');
+    expect(landingPageSource).toContain(
+      'alt="Small commercial fleet parked outside a maintenance garage"',
+    );
+    expect(landingPageSource).not.toContain(
+      "bg-[url('/images/fleetready-industrial-yard.png')]",
+    );
+  });
 });

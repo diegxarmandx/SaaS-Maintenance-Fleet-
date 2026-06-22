@@ -26,7 +26,7 @@
 - `src/features/dashboard`: Owner dashboard boundary with server aggregates, attention ordering, and dashboard UI
 - `src/features/fleet`: Fleet asset boundary with constants, validation, pure helpers, server queries/actions, responsive list UI, asset forms, asset profile, and meter-reading form
 - `src/features/maintenance`: Preventive maintenance boundary with status calculations, rule forms, completed record entry, history, cost summaries, attachment handling, and server actions/queries
-- `src/features/inbox`: FleetReady Inbox boundary for maintenance invoice/receipt/photo upload, server-side AI extraction, owner review, document-only save, discard, and audit status tracking
+- `src/features/inbox`: Maintly Inbox boundary for maintenance invoice/receipt/photo upload, server-side AI extraction, owner review, document-only save, discard, and audit status tracking
 - `src/features/compliance`: Compliance boundary with assigned requirements, status calculations, record forms, attachment handling, server actions/queries, and responsive overview/detail UI
 - `src/features/documents`: Document boundary with file validation, document library UI, relationship handling, signed URL helpers, document version history, and server actions/queries
 - `src/features/notifications`: In-app notification, reminder generation, email template, cron auth, and preference logic
@@ -124,7 +124,7 @@ Stripe price IDs are environment variables. The code does not hard-code live pri
 
 Checkout is started from a server action after owner and company context are verified. Billing Portal access is also server initiated and requires an existing Stripe customer ID. Checkout success redirects are treated as informational only. The verified `/api/stripe/webhook` route uses Stripe signature verification and then persists event IDs in `stripe_events` before processing, so duplicate webhooks are idempotent.
 
-Webhook processing syncs `subscription_records` and `companies` for checkout completion, subscription create/update/delete, and successful or failed invoice payment. Server code uses the service-role Supabase client. Event payload storage keeps only the fields FleetReady needs for idempotency and troubleshooting.
+Webhook processing syncs `subscription_records` and `companies` for checkout completion, subscription create/update/delete, and successful or failed invoice payment. Server code uses the service-role Supabase client. Event payload storage keeps only the fields Maintly needs for idempotency and troubleshooting.
 
 Subscription-state behavior:
 
@@ -198,7 +198,7 @@ Final writes pass through owner authentication, company and asset ownership chec
 
 ## Compliance Slice
 
-Step 5 implements owner-managed compliance tracking without implying that FleetReady submits, renews, or guarantees legal compliance.
+Step 5 implements owner-managed compliance tracking without implying that Maintly submits, renews, or guarantees legal compliance.
 
 - `/compliance` lists compliance records and assigned requirements with search, asset/type/status filters, expiration sorting, desktop table, mobile cards, and current/expiring/expired/missing/archived counts.
 - `/compliance/requirements/new` assigns a required compliance category to an asset so missing records become visible.
@@ -244,7 +244,7 @@ Unit tests cover:
 - Responsive fleet list structure
 - Maintenance status calculations for date, mileage, hours, combined intervals, reminder thresholds, and timezone behavior
 - Completed maintenance cost calculations and cost summaries, including tax cost
-- FleetReady Inbox extraction normalization, asset matching, meter-decrease warnings, cost mismatch warnings, and RLS migration checks
+- Maintly Inbox extraction normalization, asset matching, meter-decrease warnings, cost mismatch warnings, and RLS migration checks
 - Static migration checks for the maintenance transaction RPC, seeded system templates, attachment metadata ownership, and archive behavior
 - Responsive maintenance UI structure and asset-profile maintenance integration
 - Compliance status calculations for expiration, reminder windows, missing requirements, archived state, urgency, and timezone boundaries

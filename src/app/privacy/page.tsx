@@ -8,7 +8,7 @@ import { LegalPage } from "@/features/legal/legal-page";
 
 export const metadata: Metadata = {
   title: "Privacy",
-  description: "FleetReady privacy notice draft for small-fleet owners.",
+  description: "Maintly privacy notice draft for small-fleet owners.",
 };
 
 export default function PrivacyPage() {

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Bell, Building2, Gauge, Shield, UserCircle } from "lucide-react";
+import { Bell, Shield } from "lucide-react";
 
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import {
@@ -25,6 +25,8 @@ import {
   type NotificationAnalytics,
 } from "@/features/settings/components/notification-analytics";
 import { NotificationPreferencesForm } from "@/features/settings/components/notification-preferences-form";
+import { AccountSettingsForms } from "@/features/settings/components/account-settings-forms";
+import { parseMeasurementPreferences } from "@/features/settings/helpers";
 import type { NotificationPreference } from "@/features/notifications/types";
 import { getOwnerDatabaseContext } from "@/features/fleet/server/owner";
 
@@ -38,7 +40,11 @@ export default async function SettingsPage() {
   const context = await getOwnerDatabaseContext();
 
   if (!context) {
-    return shouldUseLocalDemoData ? <LocalDemoSettingsPage /> : <DisconnectedSettingsPage />;
+    return shouldUseLocalDemoData ? (
+      <LocalDemoSettingsPage />
+    ) : (
+      <DisconnectedSettingsPage />
+    );
   }
 
   const [
@@ -103,7 +109,7 @@ function DisconnectedSettingsPage() {
       />
       <PageHeader
         description="Manage company identity, owner preferences, billing, notifications, and account safety."
-        eyebrow="FleetReady workspace"
+        eyebrow="Maintly workspace"
         title="Settings"
       />
       <EmptyState
@@ -195,75 +201,42 @@ function SettingsContent({
         title="Settings"
       />
       <div className="grid gap-8">
-        <section className="grid gap-4 lg:grid-cols-2" aria-label="Owner workspace">
-          <SettingsSummaryCard
-            description="Company information used for owner-facing records and billing context."
-            icon={<Building2 aria-hidden="true" className="h-5 w-5" />}
-            title="Company profile"
-          >
-            <SettingsDescriptionList
-              rows={[
-                ["Company", companyProfile?.company_name ?? companyName],
-                ["Owner", companyProfile?.owner_name ?? "Not recorded"],
-                ["Email", companyProfile?.email ?? "Not recorded"],
-                ["Phone", companyProfile?.phone ?? "Not recorded"],
-                ["Address", companyProfile?.address ?? "Not recorded"],
-              ]}
-            />
-          </SettingsSummaryCard>
-          <SettingsSummaryCard
-            description="The authenticated owner profile for this single-owner workspace."
-            icon={<UserCircle aria-hidden="true" className="h-5 w-5" />}
-            title="Owner profile"
-          >
-            <SettingsDescriptionList
-              rows={[
-                [
-                  "Name",
-                  ownerProfile?.full_name || companyProfile?.owner_name || "Fleet owner",
-                ],
-                ["Email", ownerProfile?.email ?? companyProfile?.email ?? "Not recorded"],
-                ["Onboarding", ownerProfile?.onboarding_status ?? "complete"],
-              ]}
-            />
-          </SettingsSummaryCard>
-          <SettingsSummaryCard
-            description="Defaults that keep dates, mileage, and engine-hour entries consistent."
-            icon={<Gauge aria-hidden="true" className="h-5 w-5" />}
-            title="Measurement and defaults"
-          >
-            <SettingsDescriptionList
-              rows={[
-                ["Timezone", companyProfile?.preferred_timezone ?? preferredTimezone],
-                [
-                  "Measurement",
-                  formatMeasurementSettings(
-                    companyProfile?.preferred_measurement_settings ?? null,
-                  ),
-                ],
-                ["Maintenance defaults", "Configured in maintenance rule forms"],
-                ["Compliance defaults", "Configured in compliance requirement forms"],
-                [
-                  "Document preferences",
-                  "PDF, JPEG, and PNG uploads up to the configured limit",
-                ],
-              ]}
-            />
-          </SettingsSummaryCard>
-          <SettingsSummaryCard
-            description="Security boundaries for owner access and protected files."
-            icon={<Shield aria-hidden="true" className="h-5 w-5" />}
-            title="Account security"
-          >
-            <SettingsDescriptionList
-              rows={[
-                ["Authentication", "Supabase email/password"],
-                ["Tenant access", "Company-scoped row-level security"],
-                ["File access", "Private buckets with server-created signed URLs"],
-                ["Password changes", "Use the password reset flow from the login page"],
-              ]}
-            />
-          </SettingsSummaryCard>
+        <section className="grid gap-4" aria-label="Owner workspace">
+          <AccountSettingsForms
+            companyProfile={{
+              companyName: companyProfile?.company_name ?? companyName,
+              companyEmail: companyProfile?.email ?? ownerProfile?.email ?? "",
+              phone: companyProfile?.phone ?? "",
+              address: companyProfile?.address ?? "",
+            }}
+            ownerProfile={{
+              fullName:
+                ownerProfile?.full_name || companyProfile?.owner_name || "Fleet owner",
+              email: ownerProfile?.email ?? companyProfile?.email ?? "Not recorded",
+            }}
+            workspacePreferences={{
+              preferredTimezone: companyProfile?.preferred_timezone ?? preferredTimezone,
+              ...parseMeasurementPreferences(
+                companyProfile?.preferred_measurement_settings,
+              ),
+            }}
+          />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <SettingsSummaryCard
+              description="Security boundaries for owner access and protected files."
+              icon={<Shield aria-hidden="true" className="h-5 w-5" />}
+              title="Account security"
+            >
+              <SettingsDescriptionList
+                rows={[
+                  ["Authentication", "Supabase email/password"],
+                  ["Tenant access", "Company-scoped row-level security"],
+                  ["File access", "Private buckets with server-created signed URLs"],
+                  ["Password changes", "Use the password reset flow from the login page"],
+                ]}
+              />
+            </SettingsSummaryCard>
+          </div>
         </section>
 
         <SubscriptionSettings snapshot={subscriptionSnapshot} />
@@ -355,24 +328,6 @@ function SettingsDescriptionList({ rows }: { rows: Array<[string, string]> }) {
       ))}
     </dl>
   );
-}
-
-function formatMeasurementSettings(settings: unknown) {
-  if (!settings || typeof settings !== "object") {
-    return "Miles with engine-hour tracking";
-  }
-
-  const record = settings as {
-    distanceUnit?: unknown;
-    engineHourTracking?: unknown;
-  };
-  const distanceUnit = record.distanceUnit === "kilometers" ? "Kilometers" : "Miles";
-  const hours =
-    record.engineHourTracking === false
-      ? "engine-hour tracking off"
-      : "engine-hour tracking on";
-
-  return `${distanceUnit}, ${hours}`;
 }
 
 function defaultPreference(companyId: string): NotificationPreference {

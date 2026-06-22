@@ -12,16 +12,16 @@ type ButtonClassNameOptions = {
 };
 
 const baseButtonClassName =
-  "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-55";
 
 const variantClassNames: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary text-primary-foreground shadow-sm hover:bg-[#0f4f54] focus-visible:outline-ring",
+    "bg-primary text-primary-foreground shadow-[var(--shadow-card)] hover:bg-[var(--primary-hover)] focus-visible:outline-ring",
   secondary:
-    "border border-border bg-surface text-foreground shadow-sm hover:border-primary hover:text-primary focus-visible:outline-ring",
+    "border border-border bg-surface text-foreground shadow-[var(--shadow-card)] hover:border-slate-300 hover:bg-surface-muted focus-visible:outline-ring",
   ghost: "text-foreground hover:bg-surface-muted focus-visible:outline-ring",
   danger:
-    "bg-danger text-white shadow-sm hover:bg-[#931b12] focus-visible:outline-danger",
+    "bg-danger text-white shadow-[var(--shadow-card)] hover:bg-[var(--danger-hover)] focus-visible:outline-danger",
 };
 
 const sizeClassNames: Record<ButtonSize, string> = {

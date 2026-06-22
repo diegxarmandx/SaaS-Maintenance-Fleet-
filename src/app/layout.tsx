@@ -4,8 +4,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "FleetReady",
-    template: "%s | FleetReady",
+    default: "Maintly",
+    template: "%s | Maintly",
   },
   description: "Owner-only fleet maintenance, compliance, and document tracking.",
 };

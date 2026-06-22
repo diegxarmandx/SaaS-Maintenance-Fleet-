@@ -1,6 +1,6 @@
 # Scheduled Jobs
 
-FleetReady prepares one scheduled reminder endpoint in Step 6:
+Maintly prepares one scheduled reminder endpoint in Step 6:
 
 ```text
 GET /api/cron/reminders

@@ -154,4 +154,50 @@ test.describe("owner demo smoke tests", () => {
 
     await health.assertHealthy();
   });
+
+  test("account settings support edit, cancel, validation, and immediate saved values", async ({
+    page,
+  }, testInfo) => {
+    const health = attachPageHealthMonitor(page, testInfo);
+
+    await page.goto("/settings");
+
+    await page.getByRole("button", { name: "Edit company profile" }).click();
+    await page
+      .getByRole("textbox", { name: "Company name", exact: true })
+      .fill("Changed but canceled");
+    await page.getByRole("button", { name: "Cancel company profile changes" }).click();
+    await expect(page.getByText("Northstar Fleet Services LLC").first()).toBeVisible();
+    await expect(page.getByText("Changed but canceled")).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Edit company profile" }).click();
+    await page.getByLabel("Company email").fill("not-an-email");
+    await page.getByRole("button", { name: "Save company profile" }).click();
+    await expect(page.getByText("Enter a valid company email address.")).toBeVisible();
+
+    await page.getByLabel("Company email").fill("fleet-owner@example.test");
+    await page
+      .getByRole("textbox", { name: "Company name", exact: true })
+      .fill("Northstar Fleet Operations");
+    await page.getByRole("button", { name: "Save company profile" }).click();
+    await expect(page.getByText("Company profile saved.")).toBeVisible();
+    await expect(page.getByText("Northstar Fleet Operations").first()).toBeVisible();
+
+    await page.getByRole("button", { name: "Edit owner profile" }).click();
+    await page.getByLabel("Owner name").fill("Alex Morgan");
+    await page.getByRole("button", { name: "Save owner profile" }).click();
+    await expect(page.getByText("Owner profile saved.")).toBeVisible();
+    await expect(page.getByText("Alex Morgan")).toBeVisible();
+
+    await page.getByRole("button", { name: "Edit workspace preferences" }).click();
+    await page.getByLabel("Distance unit").selectOption("kilometers");
+    await page.getByLabel("Track engine hours").uncheck();
+    await page.getByRole("button", { name: "Save workspace preferences" }).click();
+    await expect(page.getByText("Workspace preferences saved.")).toBeVisible();
+    await expect(page.getByText("Kilometers")).toBeVisible();
+    await expect(page.getByText("Off")).toBeVisible();
+
+    await expectNoHorizontalOverflow(page);
+    await health.assertHealthy();
+  });
 });

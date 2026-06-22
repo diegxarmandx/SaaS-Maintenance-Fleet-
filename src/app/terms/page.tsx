@@ -5,7 +5,7 @@ import { LegalPage } from "@/features/legal/legal-page";
 
 export const metadata: Metadata = {
   title: "Terms",
-  description: "FleetReady terms of service draft for small-fleet owners.",
+  description: "Maintly terms of service draft for small-fleet owners.",
 };
 
 export default function TermsPage() {

@@ -1,6 +1,6 @@
 # Notification Behavior
 
-FleetReady notifications are owner-only and company-scoped. They are reminders about records the owner has entered; they do not submit, renew, dispatch, assign, or manage work for anyone else.
+Maintly notifications are owner-only and company-scoped. They are reminders about records the owner has entered; they do not submit, renew, dispatch, assign, or manage work for anyone else.
 
 ## Generated Notifications
 
@@ -36,7 +36,7 @@ Production reminder email delivery supports:
 
 ```text
 EMAIL_PROVIDER=resend
-EMAIL_FROM=FleetReady <reminders@example.com>
+EMAIL_FROM=Maintly <reminders@example.com>
 RESEND_API_KEY=<secret>
 ```
 

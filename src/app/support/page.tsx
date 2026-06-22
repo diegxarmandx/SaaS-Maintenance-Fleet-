@@ -15,7 +15,7 @@ import { getSupportContact } from "@/features/legal/support";
 
 export const metadata: Metadata = {
   title: "Support",
-  description: "FleetReady support contact information and request guidance.",
+  description: "Maintly support contact information and request guidance.",
 };
 
 export default function SupportPage() {
@@ -33,7 +33,7 @@ export default function SupportPage() {
           href="/"
         >
           <ArrowLeft aria-hidden="true" className="h-4 w-4" />
-          Back to FleetReady
+          Back to Maintly
         </Link>
 
         <header className="mb-8">

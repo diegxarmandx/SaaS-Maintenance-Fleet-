@@ -88,7 +88,7 @@ export function ReportsPageView({ reports }: ReportsPageViewProps) {
         />
       </div>
       <div className="hidden print:block">
-        <h1 className="text-2xl font-semibold">FleetReady reports</h1>
+        <h1 className="text-2xl font-semibold">Maintly reports</h1>
         <p className="mt-1 text-sm text-muted">
           {reports.companyName} · Generated {new Date().toISOString().slice(0, 10)}
         </p>

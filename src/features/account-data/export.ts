@@ -404,7 +404,7 @@ export function buildOwnerDataExport(input: OwnerDataExportInput): OwnerDataExpo
 
 export function buildOwnerDataExportFilename(companyName: string, generatedAt: Date) {
   const date = generatedAt.toISOString().slice(0, 10);
-  const slug = slugify(companyName) || "fleetready-company";
+  const slug = slugify(companyName) || "maintly-company";
 
   return `${slug}-${date}-owner-data-export-v1.json`;
 }

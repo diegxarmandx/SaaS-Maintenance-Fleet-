@@ -2,7 +2,7 @@
 
 ## Product Outcome
 
-FleetReady helps a single fleet owner manage maintenance readiness, compliance obligations, documents, expirations, subscription access, and owner-facing reports for a small fleet of approximately 1 to 25 vehicles, trailers, or pieces of equipment. The initial billing plan envelope supports up to 30 active assets while preserving the small-fleet focus.
+Maintly helps a single fleet owner manage maintenance readiness, compliance obligations, documents, expirations, subscription access, and owner-facing reports for a small fleet of approximately 1 to 25 vehicles, trailers, or pieces of equipment. The initial billing plan envelope supports up to 30 active assets while preserving the small-fleet focus.
 
 ## Operational User Type
 
@@ -14,7 +14,7 @@ The owner is the accountable user for every asset, reading, rule, compliance req
 
 ## Included Capabilities
 
-FleetReady manages only these areas:
+Maintly manages only these areas:
 
 - Fleet assets
 - Mileage and engine-hour readings
@@ -30,7 +30,7 @@ FleetReady manages only these areas:
 
 ## Excluded Capabilities
 
-FleetReady must not expand into these areas:
+Maintly must not expand into these areas:
 
 - Managers
 - Drivers

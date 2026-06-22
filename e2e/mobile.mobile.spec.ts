@@ -64,6 +64,26 @@ test.describe("mobile smoke tests", () => {
     await health.assertHealthy();
   });
 
+  test("editable account settings remain usable on mobile", async ({
+    page,
+  }, testInfo) => {
+    const health = attachPageHealthMonitor(page, testInfo);
+
+    await page.goto("/settings");
+    await page.getByRole("button", { name: "Edit company profile" }).click();
+    await expect(
+      page.getByRole("textbox", { name: "Company name", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Save company profile" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Cancel company profile changes" }),
+    ).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await health.assertHealthy();
+  });
+
   test("asset Inbox tabs and upload page remain usable on mobile", async ({
     page,
   }, testInfo) => {

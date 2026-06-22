@@ -1668,7 +1668,7 @@ export function summarizeDemoDataset(data) {
 
 export function demoPdfBytes(title) {
   const safeTitle = String(title).replace(/[()\\]/g, " ");
-  const body = `DEMO DOCUMENT - NOT VALID\\n${safeTitle}\\nFictional FleetReady seed artifact.`;
+  const body = `DEMO DOCUMENT - NOT VALID\\n${safeTitle}\\nFictional Maintly seed artifact.`;
   const pdf = `%PDF-1.4
 1 0 obj
 << /Type /Catalog /Pages 2 0 R >>

@@ -12,7 +12,7 @@ export default function ResetPasswordPage() {
     <section className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-sm">
       <div>
         <p className="text-sm font-semibold uppercase tracking-[0.12em] text-primary">
-          FleetReady
+          Maintly
         </p>
         <h1 className="mt-3 text-2xl font-semibold text-foreground">
           Choose a new password

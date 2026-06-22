@@ -19,7 +19,7 @@ export function getStripeClient() {
   stripeClient ??= new Stripe(serverEnv.STRIPE_SECRET_KEY, {
     apiVersion: STRIPE_API_VERSION,
     appInfo: {
-      name: "FleetReady",
+      name: "Maintly",
       version: "0.1.0",
     },
   });
