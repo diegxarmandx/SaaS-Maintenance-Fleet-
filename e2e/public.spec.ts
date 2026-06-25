@@ -4,6 +4,7 @@ import { expectNoHorizontalOverflow, expectSecurityHeaders } from "./helpers/pag
 
 const publicRoutes = [
   { path: "/", heading: /Maintenance control for small fleets/i },
+  { path: "/pricing", heading: /Simple pricing for small fleets/i },
   { path: "/login", heading: "Sign in" },
   { path: "/signup", heading: "Create owner account" },
   { path: "/privacy", heading: "Privacy Notice" },
@@ -66,6 +67,42 @@ test.describe("public route smoke tests", () => {
         ),
       )
       .toBe(true);
+  });
+
+  test("pricing page shows every tier and preserves the selected plan", async ({
+    page,
+  }) => {
+    await page.goto("/pricing");
+
+    await expect(
+      page.getByRole("heading", { name: "Starter", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Small Fleet", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Growing Fleet", exact: true }),
+    ).toBeVisible();
+
+    const smallFleetCta = page.getByRole("link", { name: "Choose Small Fleet" });
+    await expect(smallFleetCta).toHaveAttribute("href", "/signup?plan=small_fleet");
+  });
+
+  test("email confirmation return shows success and preserves onboarding destination", async ({
+    page,
+  }) => {
+    await page.goto(
+      "/login?confirmed=1&redirectTo=%2Fonboarding%3Fplan%3Dsmall_fleet",
+    );
+
+    await expect(
+      page.getByText(
+        "Email confirmed. Sign in to finish setting up your workspace.",
+      ),
+    ).toBeVisible();
+    await expect(page).toHaveURL(
+      /\/login\?confirmed=1&redirectTo=%2Fonboarding%3Fplan%3Dsmall_fleet$/,
+    );
   });
 
   test("representative routes include security headers", async ({ page }) => {

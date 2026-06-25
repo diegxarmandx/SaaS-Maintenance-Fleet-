@@ -19,7 +19,10 @@ import {
   formatSubscriptionStatus,
   getSubscriptionCapabilities,
 } from "@/features/billing/access";
-import { subscriptionPlans } from "@/features/billing/plans";
+import {
+  subscriptionPlans,
+  type SubscriptionPlanKey,
+} from "@/features/billing/plans";
 import {
   openStripeBillingPortalAction,
   startStripeCheckoutAction,
@@ -30,9 +33,13 @@ import { formatShortDate } from "@/features/fleet/helpers";
 
 type SubscriptionSettingsProps = {
   snapshot: SubscriptionSnapshot;
+  selectedPlanKey?: SubscriptionPlanKey | null | undefined;
 };
 
-export function SubscriptionSettings({ snapshot }: SubscriptionSettingsProps) {
+export function SubscriptionSettings({
+  snapshot,
+  selectedPlanKey,
+}: SubscriptionSettingsProps) {
   const capabilities = getSubscriptionCapabilities({
     status: snapshot.status,
     activeAssetCount: snapshot.activeAssetCount,
@@ -86,11 +93,17 @@ export function SubscriptionSettings({ snapshot }: SubscriptionSettingsProps) {
         <div className="grid gap-4 md:grid-cols-3">
           {subscriptionPlans.map((plan) => {
             const isCurrentPlan = currentPlanKey === plan.key;
-            const isConfigured = Boolean(plan.stripePriceId) && checkoutConfigured;
+            const isSelectedPlan = selectedPlanKey === plan.key;
+            const isConfigured =
+              !plan.requiresStripe || (Boolean(plan.stripePriceId) && checkoutConfigured);
 
             return (
               <Card
-                className={plan.highlight ? "border-primary/40 shadow-md" : undefined}
+                className={
+                  isSelectedPlan || plan.highlight
+                    ? "border-primary/40 shadow-md"
+                    : undefined
+                }
                 key={plan.key}
               >
                 <CardHeader>
@@ -99,7 +112,7 @@ export function SubscriptionSettings({ snapshot }: SubscriptionSettingsProps) {
                       <CardTitle>{plan.name}</CardTitle>
                       <CardDescription>{plan.description}</CardDescription>
                     </div>
-                    {isCurrentPlan ? (
+                    {isCurrentPlan || isSelectedPlan ? (
                       <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                         <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
                       </span>
@@ -109,7 +122,12 @@ export function SubscriptionSettings({ snapshot }: SubscriptionSettingsProps) {
                 <CardContent>
                   <p className="text-3xl font-semibold text-foreground">
                     {plan.assetLimit}
-                    <span className="ml-1 text-sm font-medium text-muted">assets</span>
+                    <span className="ml-1 text-sm font-medium text-muted">
+                      asset limit
+                    </span>
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {plan.assetRangeLabel}
                   </p>
                   <p className="mt-2 text-sm text-muted">
                     Suggested range: {plan.suggestedMonthlyPrice}
@@ -121,14 +139,22 @@ export function SubscriptionSettings({ snapshot }: SubscriptionSettingsProps) {
                         variant: isCurrentPlan ? "secondary" : "primary",
                         className: "w-full",
                       })}
-                      disabled={!isConfigured}
+                      disabled={!isConfigured || !plan.requiresStripe}
                       type="submit"
                     >
                       <CreditCard aria-hidden="true" className="h-4 w-4" />
-                      {isCurrentPlan ? "Change in Stripe" : "Choose plan"}
+                      {!plan.requiresStripe
+                        ? isCurrentPlan
+                          ? "Current free plan"
+                          : "Free plan selected"
+                        : isCurrentPlan
+                          ? "Change in Stripe"
+                          : isSelectedPlan
+                            ? "Continue to Stripe"
+                            : "Choose plan"}
                     </button>
                   </form>
-                  {!isConfigured ? (
+                  {!isConfigured && plan.requiresStripe ? (
                     <p className="mt-3 flex gap-2 text-xs leading-5 text-muted">
                       <Lock aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                       Configure Stripe test keys, webhook secret, and price IDs to enable

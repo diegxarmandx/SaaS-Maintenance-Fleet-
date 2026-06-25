@@ -89,17 +89,37 @@ describe("subscription billing migration", () => {
     expect(billingMigrationSql).not.toContain("stripe_events_owner_access");
   });
 
-  it("enforces active-asset limits in the database and onboarding starter limit", () => {
+  it("enforces active-asset limits in the database and onboarding plan limits", () => {
     expect(billingMigrationSql).toContain(
       "create or replace function public.enforce_active_asset_limit",
     );
     expect(billingMigrationSql).toContain("assets_active_asset_limit");
     expect(billingMigrationSql).toContain("status, asset_limit");
     expect(billingMigrationSql).toContain(
-      "values (new_company_id, 'trial', 5, 'starter')",
-    );
-    expect(billingMigrationSql).toContain(
       "Subscription status does not allow creating or reactivating active assets.",
+    );
+  });
+});
+
+describe("subscription plan onboarding migration", () => {
+  const planSelectionMigrationSql = readFileSync(
+    new URL(
+      "../supabase/migrations/20260624150000_onboarding_subscription_plan_selection.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  it("accepts a tenant-selected plan and maps it to database-owned asset limits", () => {
+    expect(planSelectionMigrationSql).toContain("p_plan_key text default 'free'");
+    expect(planSelectionMigrationSql).toContain("selected_plan_key := coalesce");
+    expect(planSelectionMigrationSql).toContain("when 'free' then 1");
+    expect(planSelectionMigrationSql).toContain("when 'starter' then 5");
+    expect(planSelectionMigrationSql).toContain(
+      "values (new_company_id, 'trial', selected_asset_limit, selected_plan_key)",
+    );
+    expect(planSelectionMigrationSql).toContain(
+      "check (plan_key is null or plan_key in ('free', 'starter', 'small_fleet', 'growing_fleet'))",
     );
   });
 });

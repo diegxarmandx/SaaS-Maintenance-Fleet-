@@ -16,6 +16,11 @@ import {
   genericSignUpErrorMessage,
 } from "@/features/auth/messages";
 import { getPostLoginRedirect } from "@/features/auth/redirects";
+import {
+  buildEmailConfirmationRedirect,
+  getSignupCompletion,
+} from "@/features/auth/signup-flow";
+import { isSubscriptionPlanKey } from "@/features/billing/plans";
 import { serverEnv } from "@/lib/env/server";
 import {
   checkAuthRateLimit,
@@ -83,34 +88,47 @@ export async function signInAction(
   redirect(destination);
 }
 
-export async function signUpAction(values: SignupFormValues): Promise<AuthActionResult> {
+export async function signUpAction(
+  values: SignupFormValues,
+  selectedPlanKey?: string | null,
+): Promise<AuthActionResult> {
   const parsed = signupFormSchema.safeParse(values);
 
   if (!parsed.success) {
     return { status: "error", message: "Enter a valid owner name, email, and password." };
   }
 
+  const planKey = isSubscriptionPlanKey(selectedPlanKey) ? selectedPlanKey : "free";
+  const onboardingPath = `/onboarding?plan=${encodeURIComponent(planKey)}`;
+  const appUrl = serverEnv.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
   try {
     const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.password,
       options: {
         data: {
           full_name: parsed.data.ownerName,
         },
-        emailRedirectTo: `${serverEnv.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/onboarding`,
+        emailRedirectTo: buildEmailConfirmationRedirect(appUrl, onboardingPath),
       },
     });
 
     if (error) {
       return { status: "error", message: genericSignUpErrorMessage };
     }
+
+    const completion = getSignupCompletion({ session: data.session });
+
+    if (completion.requiresEmailConfirmation) {
+      return { status: "success", message: completion.message };
+    }
   } catch {
     return { status: "error", message: genericSignUpErrorMessage };
   }
 
-  redirect("/onboarding");
+  redirect(onboardingPath);
 }
 
 export async function signOutAction() {

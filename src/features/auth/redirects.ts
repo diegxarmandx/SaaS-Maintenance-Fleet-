@@ -10,10 +10,14 @@ export type AuthRedirectInput = {
 const authRoutes = new Set(["/login", "/signup"]);
 const publicRoutes = new Set([
   "/",
+  "/pricing",
   "/login",
   "/signup",
   "/forgot-password",
   "/reset-password",
+  "/privacy",
+  "/terms",
+  "/support",
 ]);
 
 export function isProtectedPath(pathname: string) {

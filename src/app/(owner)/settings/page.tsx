@@ -13,6 +13,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { SubscriptionSettings } from "@/features/billing/components/subscription-settings";
+import { parseSubscriptionPlanKey } from "@/features/billing/plans";
 import { getSubscriptionSnapshot } from "@/features/billing/server/subscription";
 import type { SubscriptionSnapshot } from "@/features/billing/types";
 import { AccountDataSettings } from "@/features/account-data/components/account-data-settings";
@@ -36,12 +37,22 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function SettingsPage() {
-  const context = await getOwnerDatabaseContext();
+type SettingsPageProps = {
+  searchParams: Promise<{
+    plan?: string | string[] | undefined;
+  }>;
+};
+
+export default async function SettingsPage({ searchParams }: SettingsPageProps) {
+  const [context, params] = await Promise.all([
+    getOwnerDatabaseContext(),
+    searchParams,
+  ]);
+  const selectedPlanKey = parseSubscriptionPlanKey(params.plan);
 
   if (!context) {
     return shouldUseLocalDemoData ? (
-      <LocalDemoSettingsPage />
+      <LocalDemoSettingsPage selectedPlanKey={selectedPlanKey} />
     ) : (
       <DisconnectedSettingsPage />
     );
@@ -95,6 +106,7 @@ export default async function SettingsPage() {
       ownerProfile={ownerProfile}
       preference={preference}
       preferredTimezone={context.preferredTimezone}
+      selectedPlanKey={selectedPlanKey}
       subscriptionSnapshot={subscriptionSnapshot}
       deletionRequest={deletionRequest}
     />
@@ -120,7 +132,11 @@ function DisconnectedSettingsPage() {
   );
 }
 
-function LocalDemoSettingsPage() {
+function LocalDemoSettingsPage({
+  selectedPlanKey,
+}: {
+  selectedPlanKey: ReturnType<typeof parseSubscriptionPlanKey>;
+}) {
   const dataset = getLocalDemoDataset();
   const preference = dataset.notificationPreference as NotificationPreference;
   const analytics = buildNotificationAnalytics(dataset.notifications);
@@ -165,6 +181,7 @@ function LocalDemoSettingsPage() {
       ownerProfile={ownerProfile}
       preference={preference}
       preferredTimezone={localDemoIdentity.timezone}
+      selectedPlanKey={selectedPlanKey}
       subscriptionSnapshot={subscriptionSnapshot}
       deletionRequest={null}
     />
@@ -178,6 +195,7 @@ function SettingsContent({
   ownerProfile,
   preference,
   preferredTimezone,
+  selectedPlanKey,
   subscriptionSnapshot,
   deletionRequest,
 }: {
@@ -187,6 +205,7 @@ function SettingsContent({
   ownerProfile: OwnerSettingsRecord | null;
   preference: NotificationPreference;
   preferredTimezone: string;
+  selectedPlanKey: ReturnType<typeof parseSubscriptionPlanKey>;
   subscriptionSnapshot: SubscriptionSnapshot;
   deletionRequest: AccountDeletionRequestSummary | null;
 }) {
@@ -239,7 +258,10 @@ function SettingsContent({
           </div>
         </section>
 
-        <SubscriptionSettings snapshot={subscriptionSnapshot} />
+        <SubscriptionSettings
+          selectedPlanKey={selectedPlanKey}
+          snapshot={subscriptionSnapshot}
+        />
 
         <AccountDataSettings
           companyName={companyName}

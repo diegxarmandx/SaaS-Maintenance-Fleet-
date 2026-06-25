@@ -42,6 +42,7 @@ export type Database = {
           p_address: string;
           p_preferred_timezone: string;
           p_preferred_measurement_settings: Json;
+          p_plan_key?: string;
         };
         Returns: string;
       };

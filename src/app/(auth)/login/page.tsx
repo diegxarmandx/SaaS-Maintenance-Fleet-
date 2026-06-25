@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { buttonClassName } from "@/components/ui/button";
 import { LoginForm } from "@/features/auth/components/auth-form";
+import { emailConfirmedMessage } from "@/features/auth/signup-flow";
 
 export const metadata: Metadata = {
   title: "Sign In",
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 
 type LoginPageProps = {
   searchParams: Promise<{
+    confirmed?: string | string[] | undefined;
     redirectTo?: string | string[] | undefined;
   }>;
 };
@@ -20,6 +22,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const redirectTo = Array.isArray(params.redirectTo)
     ? params.redirectTo[0]
     : params.redirectTo;
+  const confirmed = Array.isArray(params.confirmed)
+    ? params.confirmed[0]
+    : params.confirmed;
 
   return (
     <section className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-[var(--shadow-elevated)] sm:p-8">
@@ -43,6 +48,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           Access the owner workspace for fleet maintenance and compliance.
         </p>
       </div>
+      {confirmed === "1" ? (
+        <p
+          className="mt-5 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm leading-6 text-primary"
+          role="status"
+        >
+          {emailConfirmedMessage}
+        </p>
+      ) : null}
       <LoginForm redirectTo={redirectTo} />
       <p className="mt-4 text-sm text-muted">
         <Link

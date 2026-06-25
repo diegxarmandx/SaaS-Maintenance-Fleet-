@@ -171,6 +171,9 @@ export default function Home() {
               <a className="transition hover:text-white" href="#product">
                 Product
               </a>
+              <Link className="transition hover:text-white" href="/pricing">
+                Pricing
+              </Link>
             </div>
             <div className="flex items-center gap-2">
               <Link
@@ -405,6 +408,34 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="bg-primary px-4 py-14 text-white sm:px-6 sm:py-16 lg:px-8">
+        <div className="mx-auto grid w-full max-w-7xl gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-teal-100">
+              Plans for 1 to 30 active assets
+            </p>
+            <h2 className="mt-3 max-w-3xl text-3xl font-semibold leading-tight text-white sm:text-4xl">
+              Choose the plan that fits your fleet.
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-teal-50 sm:text-base">
+              Start with the active-asset limit you need now. Every tier includes the
+              complete maintenance, compliance, document, and reporting workspace.
+            </p>
+          </div>
+          <Link
+            className={buttonClassName({
+              variant: "secondary",
+              className:
+                "w-full border-white bg-white text-navy hover:border-white hover:bg-teal-50 lg:w-auto",
+            })}
+            href="/pricing"
+          >
+            View pricing
+            <ArrowRight aria-hidden="true" className="h-4 w-4" />
+          </Link>
+        </div>
+      </section>
+
       <footer className="bg-navy text-slate-300">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-7 text-sm sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <Link className="flex items-center gap-2 font-semibold text-white" href="/">
@@ -418,6 +449,9 @@ export default function Home() {
             <a className="hover:text-white" href="#workflow">
               How it works
             </a>
+            <Link className="hover:text-white" href="/pricing">
+              Pricing
+            </Link>
             <Link className="hover:text-white" href="/login">
               Log In
             </Link>

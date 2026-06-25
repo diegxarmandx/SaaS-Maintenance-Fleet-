@@ -6,6 +6,7 @@ import {
   companyOnboardingSchema,
   type CompanyOnboardingValues,
 } from "@/features/onboarding/validation/onboarding";
+import { isSubscriptionPlanKey } from "@/features/billing/plans";
 import type { SafeActionErrorCode } from "@/lib/action-errors";
 import { enforceOwnerUserRateLimit } from "@/lib/rate-limit/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -22,6 +23,7 @@ export type OnboardingActionResult = {
 
 export async function completeOnboardingAction(
   values: CompanyOnboardingValues,
+  selectedPlanKey?: string | null,
 ): Promise<OnboardingActionResult> {
   const parsed = companyOnboardingSchema.safeParse(values);
 
@@ -55,6 +57,8 @@ export async function completeOnboardingAction(
 
     await enforceOwnerUserRateLimit("mutation", user.id);
 
+    const planKey = isSubscriptionPlanKey(selectedPlanKey) ? selectedPlanKey : "free";
+
     const { error } = await supabase.rpc("complete_company_onboarding", {
       p_company_name: parsed.data.companyName,
       p_owner_name: parsed.data.ownerName,
@@ -66,6 +70,7 @@ export async function completeOnboardingAction(
         distanceUnit: parsed.data.distanceUnit,
         engineHourTracking: parsed.data.engineHourTracking,
       },
+      p_plan_key: planKey,
     });
 
     if (error) {
@@ -79,6 +84,12 @@ export async function completeOnboardingAction(
     const safeError = toSafeActionError(error, { action: "onboarding.complete" });
 
     return { status: "error", ...safeError };
+  }
+
+  if (isSubscriptionPlanKey(selectedPlanKey)) {
+    redirect(
+      `/settings?plan=${encodeURIComponent(selectedPlanKey)}#subscription`,
+    );
   }
 
   redirect("/dashboard");

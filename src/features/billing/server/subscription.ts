@@ -5,7 +5,7 @@ import type { OwnerDatabaseContext } from "@/features/fleet/server/owner";
 import { AppError } from "@/lib/errors";
 import type { SupabaseServerClient } from "@/features/fleet/server/owner";
 
-const DEFAULT_ASSET_LIMIT = 5;
+const DEFAULT_ASSET_LIMIT = 1;
 
 type SubscriptionRecordRow = Partial<SubscriptionRecord> & {
   status?: string | null;
@@ -83,7 +83,12 @@ export function getPlanKeyFromPriceId(
     return null;
   }
 
-  const planKeys: SubscriptionPlanKey[] = ["starter", "small_fleet", "growing_fleet"];
+  const planKeys: SubscriptionPlanKey[] = [
+    "free",
+    "starter",
+    "small_fleet",
+    "growing_fleet",
+  ];
   return (
     planKeys.find((planKey) => getSubscriptionPlan(planKey)?.stripePriceId === priceId) ??
     null

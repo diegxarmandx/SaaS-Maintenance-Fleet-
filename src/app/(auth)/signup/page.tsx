@@ -4,12 +4,32 @@ import { ArrowLeft } from "lucide-react";
 
 import { buttonClassName } from "@/components/ui/button";
 import { SignupForm } from "@/features/auth/components/auth-form";
+import {
+  getSubscriptionPlan,
+  parseSubscriptionPlanKey,
+  subscriptionPlans,
+} from "@/features/billing/plans";
 
 export const metadata: Metadata = {
   title: "Create Account",
 };
 
-export default function SignupPage() {
+type SignupPageProps = {
+  searchParams: Promise<{
+    plan?: string | string[] | undefined;
+  }>;
+};
+
+export default async function SignupPage({ searchParams }: SignupPageProps) {
+  const planKey = parseSubscriptionPlanKey((await searchParams).plan) ?? "free";
+  const selectedPlan = getSubscriptionPlan(planKey);
+  const planOptions = subscriptionPlans.map((plan) => ({
+    key: plan.key,
+    name: plan.name,
+    assetRangeLabel: plan.assetRangeLabel,
+    suggestedMonthlyPrice: plan.suggestedMonthlyPrice,
+  }));
+
   return (
     <section className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-[var(--shadow-elevated)] sm:p-8">
       <Link
@@ -32,7 +52,20 @@ export default function SignupPage() {
           Start a single-owner workspace for fleet maintenance records.
         </p>
       </div>
-      <SignupForm />
+      {selectedPlan ? (
+        <div className="mt-5 rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-primary">
+            Selected plan
+          </p>
+          <p className="mt-1 text-sm font-semibold text-navy">
+            {selectedPlan.name} · {selectedPlan.assetRangeLabel}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-muted">
+            You can review or change this tier before continuing to billing.
+          </p>
+        </div>
+      ) : null}
+      <SignupForm planKey={planKey} planOptions={planOptions} />
       <p className="mt-4 text-xs leading-5 text-muted">
         By creating an account, you agree to the{" "}
         <Link

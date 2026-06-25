@@ -16,7 +16,11 @@ import {
   type CompanyOnboardingValues,
 } from "@/features/onboarding/validation/onboarding";
 
-export function OnboardingForm() {
+export function OnboardingForm({
+  planKey,
+}: {
+  planKey?: string | null | undefined;
+}) {
   const [result, setResult] = useState<OnboardingActionResult | null>(null);
   const {
     register,
@@ -37,7 +41,7 @@ export function OnboardingForm() {
   });
 
   const onSubmit: SubmitHandler<CompanyOnboardingValues> = async (values) => {
-    setResult(await completeOnboardingAction(values));
+    setResult(await completeOnboardingAction(values, planKey));
   };
 
   return (

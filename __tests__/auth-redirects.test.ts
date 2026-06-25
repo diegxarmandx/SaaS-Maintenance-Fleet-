@@ -13,6 +13,10 @@ describe("authentication redirects", () => {
   it("treats owner app routes as protected", () => {
     expect(isProtectedPath("/dashboard")).toBe(true);
     expect(isProtectedPath("/login")).toBe(false);
+    expect(isProtectedPath("/pricing")).toBe(false);
+    expect(isProtectedPath("/privacy")).toBe(false);
+    expect(isProtectedPath("/terms")).toBe(false);
+    expect(isProtectedPath("/support")).toBe(false);
   });
 
   it("redirects anonymous owners to login for protected routes", () => {

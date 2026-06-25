@@ -10,6 +10,7 @@ describe("public landing page", () => {
   it("routes landing authentication calls to the existing auth pages", () => {
     expect(landingPageSource).toContain('href="/login"');
     expect(landingPageSource).toContain('href="/signup"');
+    expect(landingPageSource).toContain('href="/pricing"');
     expect(landingPageSource).toContain("legalLinks.map");
     expect(landingPageSource).not.toContain('href="/dashboard"');
   });
@@ -30,5 +31,10 @@ describe("public landing page", () => {
     expect(landingPageSource).not.toContain(
       "bg-[url('/images/fleetready-industrial-yard.png')]",
     );
+  });
+
+  it("includes a prominent pricing call to action", () => {
+    expect(landingPageSource).toContain("Choose the plan that fits your fleet");
+    expect(landingPageSource).toContain("View pricing");
   });
 });

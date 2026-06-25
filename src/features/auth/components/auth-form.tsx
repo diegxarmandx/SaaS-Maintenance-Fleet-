@@ -7,6 +7,7 @@ import { useForm, type SubmitHandler } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import {
   requestPasswordResetAction,
   signInAction,
@@ -22,6 +23,13 @@ import {
   type SignupFormValues,
 } from "@/features/auth/validation/auth";
 import { getErrorMessage } from "@/lib/errors";
+
+type SignupPlanOption = {
+  key: string;
+  name: string;
+  assetRangeLabel: string;
+  suggestedMonthlyPrice: string;
+};
 
 export function LoginForm({ redirectTo }: { redirectTo?: string | null | undefined }) {
   const [result, setResult] = useState<AuthActionResult | null>(null);
@@ -72,7 +80,15 @@ export function LoginForm({ redirectTo }: { redirectTo?: string | null | undefin
   );
 }
 
-export function SignupForm() {
+export function SignupForm({
+  planKey,
+  planOptions = [],
+}: {
+  planKey?: string | null | undefined;
+  planOptions?: SignupPlanOption[];
+}) {
+  const defaultPlanKey = planKey ?? planOptions[0]?.key ?? "";
+  const [selectedPlanKey, setSelectedPlanKey] = useState(defaultPlanKey);
   const [result, setResult] = useState<AuthActionResult | null>(null);
   const {
     register,
@@ -88,12 +104,30 @@ export function SignupForm() {
   });
 
   const onSubmit: SubmitHandler<SignupFormValues> = async (values) => {
-    setResult(await signUpAction(values));
+    setResult(await signUpAction(values, selectedPlanKey));
   };
 
   return (
     <form className="mt-6 grid gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
       <FormStatus result={result} />
+      <div className="grid gap-2">
+        <Label htmlFor="signup-plan">Preferred plan</Label>
+        <Select
+          id="signup-plan"
+          name="plan"
+          onChange={(event) => setSelectedPlanKey(event.target.value)}
+          value={selectedPlanKey}
+        >
+          {planOptions.map((plan) => (
+            <option key={plan.key} value={plan.key}>
+              {plan.name} · {plan.assetRangeLabel} · {plan.suggestedMonthlyPrice}
+            </option>
+          ))}
+        </Select>
+        <p className="text-xs leading-5 text-muted">
+          You can change this before checkout. Free does not require Stripe.
+        </p>
+      </div>
       <div className="grid gap-2">
         <Label htmlFor="signup-owner-name">Owner name</Label>
         <Input
@@ -125,8 +159,8 @@ export function SignupForm() {
         />
         <FieldError message={errors.password?.message} />
       </div>
-      <Button disabled={isSubmitting} type="submit">
-        Create account
+      <Button disabled={isSubmitting || result?.status === "success"} type="submit">
+        {result?.status === "success" ? "Confirmation email sent" : "Create account"}
       </Button>
     </form>
   );
